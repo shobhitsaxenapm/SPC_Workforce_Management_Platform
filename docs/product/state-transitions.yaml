@@ -1,0 +1,114 @@
+transitions:
+  job_status:
+    states:
+      - "Draft"
+      - "Published"
+      - "Closed"
+    allowed:
+      - from: "Draft"
+        to: ["Published"]
+      - from: "Published"
+        to: ["Closed"]
+
+  candidate_stage:
+    states:
+      - "Applied"
+      - "Under Review"
+      - "Screening"
+      - "Shortlisted"
+      - "Interview Scheduled"
+      - "Interview Completed"
+      - "Selected"
+      - "Offer Sent"
+      - "Offer Accepted"
+      - "Ready for Onboarding"
+      - "Rejected"
+      - "Withdrawn"
+    allowed:
+      - from: "Applied"
+        to: ["Under Review", "Rejected", "Withdrawn"]
+      - from: "Under Review"
+        to: ["Screening", "Rejected", "Withdrawn"]
+      - from: "Screening"
+        to: ["Shortlisted", "Rejected", "Withdrawn"]
+      - from: "Shortlisted"
+        to: ["Interview Scheduled", "Rejected", "Withdrawn"]
+      - from: "Interview Scheduled"
+        to: ["Interview Completed", "Rejected", "Withdrawn"]
+      - from: "Interview Completed"
+        to: ["Selected", "Rejected", "Withdrawn"]
+      - from: "Selected"
+        to: ["Offer Sent", "Rejected", "Withdrawn"]
+      - from: "Offer Sent"
+        to: ["Offer Accepted", "Rejected", "Withdrawn"]
+      - from: "Offer Accepted"
+        to: ["Ready for Onboarding", "Rejected", "Withdrawn"]
+      - from: "Ready for Onboarding"
+        to: ["Withdrawn"]
+
+  onboarding_stage:
+    states:
+      - "Offer Sent"
+      - "Offer Accepted"
+      - "Documents Pending"
+      - "Documents Verified"
+      - "Joining Date Set"
+      - "Onboarding Completed"
+    allowed:
+      - from: "Offer Sent"
+        to: ["Offer Accepted"]
+      - from: "Offer Accepted"
+        to: ["Documents Pending"]
+      - from: "Documents Pending"
+        to: ["Documents Verified"]
+      - from: "Documents Verified"
+        to: ["Joining Date Set"]
+      - from: "Joining Date Set"
+        to: ["Onboarding Completed"]
+
+  approval_status:
+    states:
+      - "Pending"
+      - "Approved"
+      - "Rejected"
+    allowed:
+      - from: "Pending"
+        to: ["Approved", "Rejected"]
+
+  document_status:
+    states:
+      - "Pending"
+      - "Submitted"
+      - "Approved"
+      - "Rejected"
+    allowed:
+      - from: "Pending"
+        to: ["Submitted"]
+      - from: "Submitted"
+        to: ["Approved", "Rejected"]
+      - from: "Rejected"
+        to: ["Submitted"]
+
+  employee_status:
+    states:
+      - "Active"
+      - "Inactive"
+    allowed:
+      - from: "Active"
+        to: ["Inactive"]
+      - from: "Inactive"
+        to: ["Active"]
+
+  contract_status:
+    states:
+      - "Pending Approval"
+      - "Active"
+      - "Expiring Soon"
+      - "Expired"
+    allowed:
+      - from: "Pending Approval"
+        to: ["Active", "Rejected"]
+      - from: "Active"
+        to: ["Expiring Soon", "Expired"]
+      - from: "Expiring Soon"
+        to: ["Expired", "Active"]
