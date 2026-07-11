@@ -1,47 +1,162 @@
 # Functional Requirements
 
-This document specifies the core functional requirements for the SPC Workforce Management Platform. All status flags default to `Not Audited`.
+This document specifies the expanded, atomic functional requirements for the SPC Workforce Management Platform. All statuses default to `Not Audited`.
 
 ---
 
-### AUTH-001 — Entry Login Redirection
+### AUTH-001 — Display login landing page and credentials inputs (Email + Password).
+
+**Module:** Authentication  
+**Role:** All Roles / Guest  
+**Route:** `/login`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
+
+**Requirement**
+
+Display login landing page and credentials inputs (Email + Password).
+
+**Trigger**
+
+User attempts to navigate to a protected URL or opens /login directly.
+
+**Expected Behaviour**
+
+Renders SPC Management Portal landing page with credential fields.
+
+**Validation Rules**
+
+- Form validates structure before submission.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### AUTH-002 — Email and password validation on login entry.
+
+**Module:** Authentication  
+**Role:** Guest  
+**Route:** `/login`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
+
+**Requirement**
+
+Email and password validation on login entry.
+
+**Trigger**
+
+User enters fields or clicks Login.
+
+**Expected Behaviour**
+
+Error message displays for incorrect email format or blank password.
+
+**Validation Rules**
+
+- Email must conform to RFC standard format, password must be non-empty.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### AUTH-003 — Credentials submission validation.
+
+**Module:** Authentication  
+**Role:** Guest  
+**Route:** `/login`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
+
+**Requirement**
+
+Credentials submission validation.
+
+**Trigger**
+
+User clicks 'Log In' submit button.
+
+**Expected Behaviour**
+
+Authenticates credentials and redirects to Dashboard on success.
+
+**Validation Rules**
+
+- Credentials are verified against database auth records.
+
+**Cross-Module Impact / Dependencies**
+
+ROLE-001 (loads user roles)
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### AUTH-004 — JWT local session persistence.
 
 **Module:** Authentication  
 **Role:** All Roles  
-**Route:** `/login`  
-**Priority:** High  
-**Status:** Not Audited
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
 
 **Requirement**
 
-The system must redirect unauthenticated entry attempts to `/login` and provide login options (Email + Password).
+JWT local session persistence.
 
 **Trigger**
 
-A user attempts to load any protected page or navigates to `/login` directly.
+Successful user login validation.
 
 **Expected Behaviour**
 
-1. Renders the landing login screen.
-2. Form submits details to the server authentication endpoint.
-3. Successful authentication routes the user to `/dashboard` (or codebase equivalent `/`).
+JWT token is stored in localStorage / sessionStorage to persist login state.
 
 **Validation Rules**
 
-- Email format validation.
-- Password cannot be blank.
+- Token must be valid and cryptographically signed.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Saves the JWT access token in safe storage (localStorage/sessionStorage) across page loads.
-
-**Cross-Module Impact**
-
-Grants session access across all protected HRMS sub-modules.
-
-**Permission Rules**
-
-All users and guest candiates can load the login pages.
+None
 
 **Completion Criteria**
 
@@ -57,43 +172,117 @@ All users and guest candiates can load the login pages.
 
 ---
 
-### ROLE-001 — Enforce Admin & HR RBAC
+### AUTH-005 — Logout session clearance.
+
+**Module:** Authentication  
+**Role:** All Roles  
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
+
+**Requirement**
+
+Logout session clearance.
+
+**Trigger**
+
+User clicks the Logout option in user dropdown profile.
+
+**Expected Behaviour**
+
+Removes session token and redirects user to /login.
+
+**Validation Rules**
+
+- Token storage is emptied.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### AUTH-006 — Route guards unauthenticated redirection.
+
+**Module:** Authentication  
+**Role:** All Roles / Guest  
+**Route:** `All Protected Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-AUTH-01  
+
+**Requirement**
+
+Route guards unauthenticated redirection.
+
+**Trigger**
+
+Unauthenticated user tries to access protected page directly.
+
+**Expected Behaviour**
+
+Redirects user to /login.
+
+**Validation Rules**
+
+- Access is blocked if token is absent or invalid.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ROLE-001 — Enforce Company Admin full global access permissions.
 
 **Module:** Users & Roles  
-**Role:** Company Admin, HR  
-**Route:** `/users`  
-**Priority:** High  
-**Status:** Not Audited
+**Role:** Company Admin  
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
 
 **Requirement**
 
-The platform must limit page access and CRUD operations based on `company_admin` or `hr` roles.
+Enforce Company Admin full global access permissions.
 
 **Trigger**
 
-A user clicks on a sidebar link or triggers page actions.
+Company Admin accesses any screen or triggers CRUD actions.
 
 **Expected Behaviour**
 
-1. If the role is `hr`, settings configurations, approvals, departments, and user lists are blocked.
-2. If the role is `company_admin`, full access is granted.
-3. Attempting to bypass URL checks shows the Unauthorized Access screen.
+Unrestricted access granted to all HR, operations, settings, and billing features.
 
 **Validation Rules**
 
-- Active user role checks are run on every route mount.
+- Active user model has role == 'company_admin'.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-The role settings remain configured inside user database models.
-
-**Cross-Module Impact**
-
-Restricts sidebar render flags and route mounts.
-
-**Permission Rules**
-
-Role assignments can be managed only by Company Admin users.
+AUTH-004
 
 **Completion Criteria**
 
@@ -109,43 +298,243 @@ Role assignments can be managed only by Company Admin users.
 
 ---
 
-### NAV-001 — Admin Sidebar Navigation
+### ROLE-002 — Enforce HR role-based access restrictions.
+
+**Module:** Users & Roles  
+**Role:** HR  
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
+
+**Requirement**
+
+Enforce HR role-based access restrictions.
+
+**Trigger**
+
+HR user attempts to load admin-only pages or edit admin-only configurations.
+
+**Expected Behaviour**
+
+Access is blocked, and page displays Unauthorized Access message.
+
+**Validation Rules**
+
+- Active user model has role == 'hr'. Blocks access to users management, department CRUD, activity timeline, and contracts approvals.
+
+**Cross-Module Impact / Dependencies**
+
+AUTH-004
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ROLE-003 — Enforce Public Candidate guest access bounds.
+
+**Module:** Users & Roles  
+**Role:** Public Candidate  
+**Route:** `/jobs, /public/upload-documents/:token`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
+
+**Requirement**
+
+Enforce Public Candidate guest access bounds.
+
+**Trigger**
+
+Guest attempts to access private internal portals.
+
+**Expected Behaviour**
+
+Redirects guest candidate to /login or blocks navigation.
+
+**Validation Rules**
+
+- Candidate does not possess internal user token.
+
+**Cross-Module Impact / Dependencies**
+
+AUTH-006
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ROLE-004 — Sidebar visibility filtering based on role.
+
+**Module:** Users & Roles  
+**Role:** All Roles  
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
+
+**Requirement**
+
+Sidebar visibility filtering based on role.
+
+**Trigger**
+
+User context loads on sidebar mount.
+
+**Expected Behaviour**
+
+Sidebar menus show or hide matching user role (e.g. settings hidden from HR).
+
+**Validation Rules**
+
+- Menu item checks list role eligibility.
+
+**Cross-Module Impact / Dependencies**
+
+NAV-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ROLE-005 — Action controls disabling based on role.
+
+**Module:** Users & Roles  
+**Role:** All Roles  
+**Route:** `All Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
+
+**Requirement**
+
+Action controls disabling based on role.
+
+**Trigger**
+
+Page mounts with interactive actions (e.g. approve contract).
+
+**Expected Behaviour**
+
+Disables or hides action buttons if user lacks necessary permissions.
+
+**Validation Rules**
+
+- Component checks role flags before rendering action elements.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ROLE-006 — Unauthorized redirection logic for URL bypasses.
+
+**Module:** Users & Roles  
+**Role:** All Roles  
+**Route:** `All Protected Routes`  
+**Status:** Not Audited  
+**Test ID:** TEST-ROLE-01  
+
+**Requirement**
+
+Unauthorized redirection logic for URL bypasses.
+
+**Trigger**
+
+User types restricted URL in browser address bar directly.
+
+**Expected Behaviour**
+
+Intercepts navigation and redirects to /unauthorized or dashboard.
+
+**Validation Rules**
+
+- Checks route eligibility list against user role.
+
+**Cross-Module Impact / Dependencies**
+
+AUTH-006
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DASH-001 — Statistics overview counts cards.
 
 **Module:** Dashboard  
 **Role:** Company Admin, HR  
 **Route:** `/dashboard`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-DASH-01  
 
 **Requirement**
 
-The system must show sidebar menus matching the active user role permissions.
+Statistics overview counts cards.
 
 **Trigger**
 
-The user authenticates successfully and mounts the application shell.
+User loads /dashboard overview screen.
 
 **Expected Behaviour**
 
-1. Company Admin sidebar shows Dashboard, Candidates, Pending Approvals, Departments, HR Management, HR Activity History, Contracts, Employee Management.
-2. Clicking a navigation item updates route parameters and main panel views.
-3. Active items show visual indicator highlights.
+Displays counts: Total HR Users, Active HR Users, Job Openings, Candidates.
 
 **Validation Rules**
 
-- Protected sub-routes check permissions.
+- Counts must reconcile with database collections.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Sidebar collapsed/expanded state is saved.
-
-**Cross-Module Impact**
-
-Switches main viewport layouts.
-
-**Permission Rules**
-
-Internal authenticated roles only.
+HRM-001, JOB-001, CAN-001
 
 **Completion Criteria**
 
@@ -161,43 +550,33 @@ Internal authenticated roles only.
 
 ---
 
-### DASH-001 — Admin Dashboard Statistics
+### DASH-002 — Priority work queue action mapping.
 
 **Module:** Dashboard  
 **Role:** Company Admin, HR  
 **Route:** `/dashboard`  
-**Priority:** Medium  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-DASH-01  
 
 **Requirement**
 
-The dashboard must display summary count cards and historical growth trends charts.
+Priority work queue action mapping.
 
 **Trigger**
 
-The user loads `/dashboard`.
+User loads /dashboard.
 
 **Expected Behaviour**
 
-1. Statistics cards load: Total HR Users, Active HR Users, Job Openings, Candidates.
-2. Trend charts render: HR Users Growth, Job Openings Trend, Candidates by Stage, Candidates by Sourcing.
-3. Data reconciles with active database counts.
+Lists actionable entries (at-risk requirements, pending timesheets, document blockers).
 
 **Validation Rules**
 
-- Values must recalculate dynamically.
+- Items generate dynamically from risk and pending collections.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Metrics pull current calculations on load.
-
-**Cross-Module Impact**
-
-Updates instantly as candidates, users, or openings are changed.
-
-**Permission Rules**
-
-Company Admin and HR roles can read metrics.
+ONB-001, CON-001
 
 **Completion Criteria**
 
@@ -213,43 +592,159 @@ Company Admin and HR roles can read metrics.
 
 ---
 
-### JOB-001 — Job Desk Openings Management
+### DASH-003 — AI Advisory operational summary card.
+
+**Module:** Dashboard  
+**Role:** Company Admin, HR  
+**Route:** `/dashboard`  
+**Status:** Not Audited  
+**Test ID:** TEST-DASH-01  
+
+**Requirement**
+
+AI Advisory operational summary card.
+
+**Trigger**
+
+User loads /dashboard.
+
+**Expected Behaviour**
+
+Displays AI risk warnings (unusual drop in sourcing, late joining risks).
+
+**Validation Rules**
+
+- Must show advisory label, justification, evidence, and recommended actions.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DASH-004 — Recent operational activity feed.
+
+**Module:** Dashboard  
+**Role:** Company Admin, HR  
+**Route:** `/dashboard`  
+**Status:** Not Audited  
+**Test ID:** TEST-DASH-01  
+
+**Requirement**
+
+Recent operational activity feed.
+
+**Trigger**
+
+User loads /dashboard.
+
+**Expected Behaviour**
+
+Appends chronological timeline of recent HR activity entries.
+
+**Validation Rules**
+
+- Displays actor, time, action context, and linked entity.
+
+**Cross-Module Impact / Dependencies**
+
+ACT-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DASH-005 — HR and Candidates growth trend charts.
+
+**Module:** Dashboard  
+**Role:** Company Admin, HR  
+**Route:** `/dashboard`  
+**Status:** Not Audited  
+**Test ID:** TEST-DASH-01  
+
+**Requirement**
+
+HR and Candidates growth trend charts.
+
+**Trigger**
+
+User loads /dashboard.
+
+**Expected Behaviour**
+
+Renders charts: HR Users Growth, Job Openings Trend, Candidates by Stage, Sourcing.
+
+**Validation Rules**
+
+- Trend charts accurately plot database collections numbers over time.
+
+**Cross-Module Impact / Dependencies**
+
+JOB-001, CAN-001, HRM-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-001 — Post new job postings linked to client requirements.
 
 **Module:** Job Desk  
 **Role:** HR, Company Admin  
 **Route:** `/job-desk`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
 
 **Requirement**
 
-Allows posting job descriptions, editing parameters, deleting records, and managing status toggles (Draft, Published, Closed).
+Post new job postings linked to client requirements.
 
 **Trigger**
 
-HR clicks "Post New Job" or selects an item from Job Desk.
+User clicks 'Post New Job' or launches job wizard.
 
 **Expected Behaviour**
 
-1. Opens Job Posting form or drawer.
-2. Submitting saves job parameters (Title, Experience, Deadline, Skills).
-3. Status changes publish jobs immediately to public careers view.
+Inherits requirement properties (Client, Req Code, Skills) and maps job structure.
 
 **Validation Rules**
 
-- Job Title, Location, and Application Deadline are mandatory inputs.
+- Mandatory inheritances must be present and locked.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Job data is written permanently.
-
-**Cross-Module Impact**
-
-Published jobs show on the public website.
-
-**Permission Rules**
-
-HR and Company Admin users.
+None
 
 **Completion Criteria**
 
@@ -265,43 +760,537 @@ HR and Company Admin users.
 
 ---
 
-### CAN-001 — Candidate Resume Parser
+### JOB-002 — Job desk listings rendering.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Job desk listings rendering.
+
+**Trigger**
+
+User loads /job-desk screen.
+
+**Expected Behaviour**
+
+Renders list containing code, client, openings, fulfillment status, and recruiter.
+
+**Validation Rules**
+
+- List updates as jobs status changes.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-003 — Create job from client requirement wizard.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Create job from client requirement wizard.
+
+**Trigger**
+
+User launches Create Job wizard.
+
+**Expected Behaviour**
+
+Guides user through multi-step form to input job details (title, skills, description).
+
+**Validation Rules**
+
+- Job title, location, deadline, and required skills are mandatory.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-004 — Prevent openings exceeding requirement positions.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Prevent openings exceeding requirement positions.
+
+**Trigger**
+
+User inputs openings count in Job form.
+
+**Expected Behaviour**
+
+Warns user or blocks publishing if openings exceed remaining requirement slot counts.
+
+**Validation Rules**
+
+- openings <= requirement.positionsRequired - requirement.positionsFilled.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-005 — Save job as draft.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Save job as draft.
+
+**Trigger**
+
+User clicks 'Save Draft' in Job creation wizard.
+
+**Expected Behaviour**
+
+Saves job details to database in status `Draft`.
+
+**Validation Rules**
+
+- Basic details mapped; does not publish to careers page.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-006 — Publish job.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Publish job.
+
+**Trigger**
+
+User clicks 'Publish Job' in form or details screen.
+
+**Expected Behaviour**
+
+Job status transitions to `Published` and renders on public careers page.
+
+**Validation Rules**
+
+- Job description and skills must be complete before publishing.
+
+**Cross-Module Impact / Dependencies**
+
+PUB-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-007 — Edit job details.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Edit job details.
+
+**Trigger**
+
+User clicks Edit Job details button.
+
+**Expected Behaviour**
+
+Loads job editor form with existing data.
+
+**Validation Rules**
+
+- Edits validate standard required inputs before updating.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-008 — Unpublish or delete job.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Unpublish or delete job.
+
+**Trigger**
+
+User selects Unpublish or Delete.
+
+**Expected Behaviour**
+
+Job status switches to closed / draft or record is deleted.
+
+**Validation Rules**
+
+- Active candidates in pipeline are flagged if job is deleted.
+
+**Cross-Module Impact / Dependencies**
+
+PUB-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-009 — View job details page.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+View job details page.
+
+**Trigger**
+
+User opens job details view.
+
+**Expected Behaviour**
+
+Displays job metadata, project mappings, requirements logs, and applicants progress.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-010 — View job applicants list by pipeline stage.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk/:id/applicants`  
+**Status:** Not Audited  
+**Test ID:** TEST-APP-01  
+
+**Requirement**
+
+View job applicants list by pipeline stage.
+
+**Trigger**
+
+User clicks applicants tab in job details.
+
+**Expected Behaviour**
+
+Displays candidates currently applied grouped by pipeline stages (Kanban or filtered list).
+
+**Validation Rules**
+
+- Applicants match active applications table records.
+
+**Cross-Module Impact / Dependencies**
+
+CAN-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-011 — AI Candidate Match and Insights.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk/:id/applicants`  
+**Status:** Not Audited  
+**Test ID:** TEST-APP-01  
+
+**Requirement**
+
+AI Candidate Match and Insights.
+
+**Trigger**
+
+User opens applicants details or triggers analysis.
+
+**Expected Behaviour**
+
+Displays AI Advisory match score, strengths, and gaps.
+
+**Validation Rules**
+
+- AI results display advisory label and evidence list.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-012 — Export applicants to CSV file.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk/:id/applicants`  
+**Status:** Not Audited  
+**Test ID:** TEST-APP-01  
+
+**Requirement**
+
+Export applicants to CSV file.
+
+**Trigger**
+
+User clicks 'Export Applicants' button.
+
+**Expected Behaviour**
+
+Downloads a CSV file containing applicant name, email, phone, stage, and match details.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### JOB-013 — Refresh job list.
+
+**Module:** Job Desk  
+**Role:** HR, Company Admin  
+**Route:** `/job-desk`  
+**Status:** Not Audited  
+**Test ID:** TEST-JOB-01  
+
+**Requirement**
+
+Refresh job list.
+
+**Trigger**
+
+User clicks Refresh button on Job Desk dashboard.
+
+**Expected Behaviour**
+
+Forces reloading of job collections data from storage.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-001 — Candidates pool directory search and render.
 
 **Module:** Candidates  
 **Role:** HR, Company Admin  
 **Route:** `/candidates`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
 
 **Requirement**
 
-The system must parse candidate files (PDF/DOCX) or accept pasted raw resume text to create candidate profiles.
+Candidates pool directory search and render.
 
 **Trigger**
 
-User clicks "Add Raw Resume Text" (modal) or "Upload Resume File" on candidates screen.
+User loads candidates pool directory screen.
 
 **Expected Behaviour**
 
-1. Form accepts files or pasted text.
-2. Saving creates Candidate profile card.
-3. Matches extracted skills with active JDs to suggest match scores.
+Displays table containing candidate details, top skills, stage, and source.
 
 **Validation Rules**
 
-- Paste text cannot be blank. File format must check extensions (.pdf, .docx).
+- Search bar filters candidate cards dynamically.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Profiles save permanently.
-
-**Cross-Module Impact**
-
-Candidate record is added to candidate list pools.
-
-**Permission Rules**
-
-HR and Company Admin roles.
+None
 
 **Completion Criteria**
 
@@ -317,43 +1306,33 @@ HR and Company Admin roles.
 
 ---
 
-### APP-001 — AI Applicants Analysis
+### CAN-002 — Filter candidate pools.
 
-**Module:** Job Desk  
+**Module:** Candidates  
 **Role:** HR, Company Admin  
-**Route:** `/job-desk/:jobId/applicants`  
-**Priority:** Medium  
-**Status:** Not Audited
+**Route:** `/candidates`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
 
 **Requirement**
 
-Allows analyzing candidate lists using advisory AI matched parameters, tracking pipeline stages, and exporting applicant data.
+Filter candidate pools.
 
 **Trigger**
 
-HR opens Job Applicants and clicks "Analyze Candidates using AI".
+User expands filters dropdown checklist.
 
 **Expected Behaviour**
 
-1. Renders match summaries: match score, strengths, gaps.
-2. Clicking "Export Applicants" downloads CSV file.
-3. Allows changing applicant stages via dropdown (Screening, Shortlisted, Selected).
+Permits filtering lists by experience range, location, and duplicate flags.
 
 **Validation Rules**
 
-- Target stage change dropdowns must follow sequential flows.
+- None.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Pipeline changes persist.
-
-**Cross-Module Impact**
-
-Updates candidates by stage chart counts.
-
-**Permission Rules**
-
-HR and Company Admin.
+None
 
 **Completion Criteria**
 
@@ -369,43 +1348,327 @@ HR and Company Admin.
 
 ---
 
-### ONB-001 — Onboarding Pipeline Checklist
+### CAN-003 — Add raw resume text modal.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Add raw resume text modal.
+
+**Trigger**
+
+User clicks 'Add Raw Resume Text' button.
+
+**Expected Behaviour**
+
+Opens a text box modal allowing pasting raw candidate resume details.
+
+**Validation Rules**
+
+- Pasted text cannot be blank.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-004 — Upload resume files.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Upload resume files.
+
+**Trigger**
+
+User clicks 'Upload Resume' or drags file.
+
+**Expected Behaviour**
+
+Accepts resume attachments and parses metadata details.
+
+**Validation Rules**
+
+- File format must check extensions (.pdf, .docx).
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-005 — Resume details parser.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Resume details parser.
+
+**Trigger**
+
+User clicks 'Parse' on pasted raw text or uploaded resume.
+
+**Expected Behaviour**
+
+AI advisory parser extracts candidate name, skills, experience, and education.
+
+**Validation Rules**
+
+- Extracted details must populate form fields for validation before creation.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-006 — Job description matching (JD Match).
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Job description matching (JD Match).
+
+**Trigger**
+
+User accesses candidate search matches or clicks Match.
+
+**Expected Behaviour**
+
+Compares candidate skills with active job descriptions to compute matches.
+
+**Validation Rules**
+
+- JD Match calculates score percentage statically/dynamically.
+
+**Cross-Module Impact / Dependencies**
+
+JOB-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-007 — Candidate details profile modal.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Candidate details profile modal.
+
+**Trigger**
+
+User clicks candidate row item or profile.
+
+**Expected Behaviour**
+
+Opens details layout showing professional profile, application history, and skills list.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-008 — Change candidate stage.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+Change candidate stage.
+
+**Trigger**
+
+User selects stage option in details dropdown.
+
+**Expected Behaviour**
+
+Modifies candidate application stage in-memory or database.
+
+**Validation Rules**
+
+- Dropdown checks sequence guidelines.
+
+**Cross-Module Impact / Dependencies**
+
+JOB-010
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CAN-009 — AI duplicate candidate detection.
+
+**Module:** Candidates  
+**Role:** HR, Company Admin  
+**Route:** `/candidates/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-CAN-01  
+
+**Requirement**
+
+AI duplicate candidate detection.
+
+**Trigger**
+
+Candidate profile with identical name/email/phone mounts.
+
+**Expected Behaviour**
+
+Displays AI Advisory warning of duplicate profile with merging option.
+
+**Validation Rules**
+
+- warning labels must specify evidence (e.g. matching phone). Merging requires confirmation.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-001 — Onboarding pipeline list rendering.
 
 **Module:** Employee Management  
 **Role:** HR, Company Admin  
 **Route:** `/employees/onboarding`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
 
 **Requirement**
 
-Tracks onboarding stages (Offer Sent, Offer Accepted, Documents Pending, Documents Verified, Joining Date Set, Onboarding Completed) and converts candidate files to Employee records.
+Onboarding pipeline list rendering.
 
 **Trigger**
 
-HR opens the Onboarding pipeline or advances selected candidates.
+User loads onboarding pipeline dashboard screen.
 
 **Expected Behaviour**
 
-1. pipeline renders current compliance stage of candidates.
-2. "Complete Onboarding" button generates active Employee profile.
-3. Progress bar allows skipping stages.
+Displays table containing candidate onboardings, join dates, and document compliance statuses.
 
 **Validation Rules**
 
-- Employee record cannot be created without verification checklist approvals.
+- List synchronizes with onboarding case states.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Checklist states remain saved.
-
-**Cross-Module Impact**
-
-Converts candidate profiles to active employee records.
-
-**Permission Rules**
-
-HR and Company Admin roles.
+None
 
 **Completion Criteria**
 
@@ -421,43 +1684,117 @@ HR and Company Admin roles.
 
 ---
 
-### APR-001 — Approvals Gateways
+### ONB-002 — Create onboarding folder.
 
-**Module:** Pending Approvals  
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Create onboarding folder.
+
+**Trigger**
+
+Candidate applications move to Selected or Offer Accepted.
+
+**Expected Behaviour**
+
+Automatically initializes onboarding case folder with documents checklist.
+
+**Validation Rules**
+
+- onboarding status begins as Not Started.
+
+**Cross-Module Impact / Dependencies**
+
+JOB-010
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-003 — Request onboarding approvals.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Request onboarding approvals.
+
+**Trigger**
+
+HR clicks 'Request Approval' button in onboarding pipeline.
+
+**Expected Behaviour**
+
+Submits case to approvals queue and changes status to Approval Pending.
+
+**Validation Rules**
+
+- Offer terms and compensation details are mandatory inputs.
+
+**Cross-Module Impact / Dependencies**
+
+APR-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-004 — Approve onboarding clearances.
+
+**Module:** Employee Management  
 **Role:** Company Admin  
-**Route:** `/approvals/pending`  
-**Priority:** High  
-**Status:** Not Audited
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
 
 **Requirement**
 
-Admins must review, approve, or reject onboarding offer requests and contract deployment clearances.
+Approve onboarding clearances.
 
 **Trigger**
 
-HR submits onboarding clearances or contracts for authorization.
+Admin clicks Approve in onboarding view or approvals list.
 
 **Expected Behaviour**
 
-1. Pending entries display in Admin review grid.
-2. Admin reviews rates, terms, and compensation packages.
-3. Click "Approve" transitions statuses to approved.
+Transitions onboarding authorization status to Approved.
 
 **Validation Rules**
 
-- Rejection action requires inputting review notes.
+- Authorized Admin check is run.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Approvals write checkmarks to database state fields.
-
-**Cross-Module Impact**
-
-Approved status unlocks contract deployment activation and document dispatch.
-
-**Permission Rules**
-
-Company Admin only.
+APR-001
 
 **Completion Criteria**
 
@@ -473,43 +1810,285 @@ Company Admin only.
 
 ---
 
-### DOC-001 — Secure Document Verification
+### ONB-005 — Reject onboarding clearances.
+
+**Module:** Employee Management  
+**Role:** Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Reject onboarding clearances.
+
+**Trigger**
+
+Admin clicks Reject in onboarding clearances.
+
+**Expected Behaviour**
+
+Rejects onboarding offer; prompts Admin to enter validation feedback reason.
+
+**Validation Rules**
+
+- Rejection note cannot be blank.
+
+**Cross-Module Impact / Dependencies**
+
+APR-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-006 — Send offer document packages.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Send offer document packages.
+
+**Trigger**
+
+HR clicks 'Send Offer' control buttons.
+
+**Expected Behaviour**
+
+Dispatches offer letter package (requires previous approval unless overridden).
+
+**Validation Rules**
+
+- Clearance approval state must be valid.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-007 — Mark offer accepted.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Mark offer accepted.
+
+**Trigger**
+
+HR clicks 'Mark Offer Accepted' action button.
+
+**Expected Behaviour**
+
+Changes case state to Offer Accepted.
+
+**Validation Rules**
+
+- Offer must be in Sent status.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-008 — Complete onboarding conversions.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Complete onboarding conversions.
+
+**Trigger**
+
+HR clicks 'Complete Onboarding' button.
+
+**Expected Behaviour**
+
+Transitions onboarding status to Completed and instantiates new employee record.
+
+**Validation Rules**
+
+- All mandatory document checklist verification slots must be cleared.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-009 — Onboarding progress and timeline skips.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Onboarding progress and timeline skips.
+
+**Trigger**
+
+User clicks progress timeline slots.
+
+**Expected Behaviour**
+
+Allows HR or Admin to bypass/advance onboarding checklists steps manually.
+
+**Validation Rules**
+
+- Skips are logged with reasons.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ONB-010 — Manage offer templates.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-ONB-01  
+
+**Requirement**
+
+Manage offer templates.
+
+**Trigger**
+
+User loads templates tab under onboarding screen.
+
+**Expected Behaviour**
+
+Allows creating, duplicating, activating, or deleting offer configuration templates.
+
+**Validation Rules**
+
+- Template name, roll mapping, and basic components are required.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DOC-001 — Request onboarding documents.
 
 **Module:** Onboarding  
 **Role:** HR, Company Admin  
-**Route:** `/public/upload-documents/:token`  
-**Priority:** High  
-**Status:** Not Audited
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
 
 **Requirement**
 
-Sends token-based upload links to candidates, reviews submitted files, and records audit marks.
+Request onboarding documents.
 
 **Trigger**
 
-HR triggers "Request Documents" from the onboarding panel.
+HR clicks 'Request Documents' buttons.
 
 **Expected Behaviour**
 
-1. System sends token-based email link.
-2. Candidate uploads ID files (PDF/JPG/PNG).
-3. HR verifies documents, flagging approvals or rejection reasons.
+System generates token-based document upload link and updates status to Documents Pending.
 
 **Validation Rules**
 
-- Token check confirms links are active and not expired.
+- Onboarding status must be Offer Accepted.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Uploaded file references remain saved.
-
-**Cross-Module Impact**
-
-Approved documents clear the documents check in the onboarding checklist.
-
-**Permission Rules**
-
-HR and Admins verify; candidate uploads files.
+ONB-001
 
 **Completion Criteria**
 
@@ -525,44 +2104,243 @@ HR and Admins verify; candidate uploads files.
 
 ---
 
-### EMP-001 — Employee Profile Directory
+### DOC-002 — Token-based secure upload access checks.
+
+**Module:** Onboarding  
+**Role:** Public Candidate  
+**Route:** `/public/upload-documents/:token`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
+
+**Requirement**
+
+Token-based secure upload access checks.
+
+**Trigger**
+
+Candidate loads public upload route directly via link.
+
+**Expected Behaviour**
+
+Validates link token security signature and loads required upload slots.
+
+**Validation Rules**
+
+- Checks token expiry date and signature integrity. Rejects invalid tokens.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DOC-003 — Public candidate document upload form.
+
+**Module:** Onboarding  
+**Role:** Public Candidate  
+**Route:** `/public/upload-documents/:token`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
+
+**Requirement**
+
+Public candidate document upload form.
+
+**Trigger**
+
+Candidate drags/uploads Pan, Aadhaar, or address proof file.
+
+**Expected Behaviour**
+
+System maps uploaded file items references under respective slots.
+
+**Validation Rules**
+
+- All mandatory slots (Pan, Aadhaar) must contain file uploads before submitting.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DOC-004 — Upload file validation rules.
+
+**Module:** Onboarding  
+**Role:** Public Candidate  
+**Route:** `/public/upload-documents/:token`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
+
+**Requirement**
+
+Upload file validation rules.
+
+**Trigger**
+
+Candidate attaches file to document slots.
+
+**Expected Behaviour**
+
+System verifies file extension types and size bounds.
+
+**Validation Rules**
+
+- File types must be PDF, JPG, or PNG. Maximum size is 5MB.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DOC-005 — Re-upload rejected documents.
+
+**Module:** Onboarding  
+**Role:** Public Candidate  
+**Route:** `/public/upload-documents/:token`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
+
+**Requirement**
+
+Re-upload rejected documents.
+
+**Trigger**
+
+Candidate reviews rejection logs and re-uploads document files.
+
+**Expected Behaviour**
+
+Overwrites previous document reference and flags for review.
+
+**Validation Rules**
+
+- Must follow upload file validation rules.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DOC-006 — HR verification clearances checklists.
+
+**Module:** Onboarding  
+**Role:** HR, Company Admin  
+**Route:** `/employees/onboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-DOC-01  
+
+**Requirement**
+
+HR verification clearances checklists.
+
+**Trigger**
+
+HR inspects candidate uploads on onboarding case details screen.
+
+**Expected Behaviour**
+
+Allows HR to click Approve or Reject (requiring notes) on each upload card.
+
+**Validation Rules**
+
+- Rejections require entering reason notes.
+
+**Cross-Module Impact / Dependencies**
+
+ONB-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-001 — Employees profiles directory list rendering.
 
 **Module:** Employee Management  
 **Role:** HR, Company Admin  
 **Route:** `/employees`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
 
 **Requirement**
 
-Provides a directory of employees, manual profile creation form, and spreadsheet bulk upload controls.
+Employees profiles directory list rendering.
 
 **Trigger**
 
-User opens employee list, clicks "Add Employee", or uploads file.
+User loads `/employees` screen.
 
 **Expected Behaviour**
 
-1. Manual form saves details (Personal, Department, Code).
-2. Bulk upload validates Excel/CSV columns and imports records.
-3. Renders directory searches and profile pages.
+Renders employee rows containing code, name, designation, location, and status.
 
 **Validation Rules**
 
-- Name, email, and employee code are mandatory.
-- Import files validate columns before insertion.
+- directory search updates rows matching name / employee code.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Data persists in system directories.
-
-**Cross-Module Impact**
-
-Fills the employee-department list dashboard.
-
-**Permission Rules**
-
-HR and Company Admin roles.
+None
 
 **Completion Criteria**
 
@@ -578,43 +2356,285 @@ HR and Company Admin roles.
 
 ---
 
-### DEP-001 — Departments Setup
+### EMP-002 — Manual Employee creation form.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+Manual Employee creation form.
+
+**Trigger**
+
+User clicks 'Add Employee' button.
+
+**Expected Behaviour**
+
+Opens manual addition form drawers containing inputs for details (Name, Code, Contact, Designation).
+
+**Validation Rules**
+
+- Employee Name, email, and employee code are required inputs.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-003 — Form validation rules for manual creation.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+Form validation rules for manual creation.
+
+**Trigger**
+
+User submits manual Employee creation form.
+
+**Expected Behaviour**
+
+Blocks saving and lists validation warnings if mandatory inputs are absent.
+
+**Validation Rules**
+
+- Name, email, and code are non-blank. Email is validated for structure.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-004 — Edit Employee profiles.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+Edit Employee profiles.
+
+**Trigger**
+
+User clicks edit button on Employee details screen.
+
+**Expected Behaviour**
+
+Loads editor form populating fields with existing data.
+
+**Validation Rules**
+
+- Modifications validate standard required fields before updating.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-005 — Delete Employee profile confirmation.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+Delete Employee profile confirmation.
+
+**Trigger**
+
+User triggers Delete Employee action.
+
+**Expected Behaviour**
+
+Opens confirmation overlay modal before purging record.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-006 — View Employee Profile details dashboard.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+View Employee Profile details dashboard.
+
+**Trigger**
+
+User opens Employee details page.
+
+**Expected Behaviour**
+
+Displays personal details, designation, assigned department, and linked contract status.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### EMP-007 — Spreadsheet bulk upload.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees`  
+**Status:** Not Audited  
+**Test ID:** TEST-EMP-01  
+
+**Requirement**
+
+Spreadsheet bulk upload.
+
+**Trigger**
+
+User clicks bulk upload and imports CSV/Excel sheet.
+
+**Expected Behaviour**
+
+Parses rows and inserts employee profiles into directory database.
+
+**Validation Rules**
+
+- Verifies columns structure match fields. Logs invalid rows before inserting.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DEP-001 — Create organizational department.
 
 **Module:** Departments  
 **Role:** Company Admin  
 **Route:** `/departments`  
-**Priority:** Medium  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-DEP-01  
 
 **Requirement**
 
-Allows managing organizational departments (CRUD operations) and assigning employees.
+Create organizational department.
 
 **Trigger**
 
-Admin clicks "Create Department" or modifies assignments.
+Admin clicks 'Create Department' or inputs values.
 
 **Expected Behaviour**
 
-1. Creates department code and details.
-2. Displays employee counts per department.
-3. Allows changing department assignments.
+Adds a new department record containing code, name, and details.
 
 **Validation Rules**
 
-- Department names must be unique.
+- Department name must be unique. Code is required.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Mappings save permanently.
-
-**Cross-Module Impact**
-
-Updates employee profile department references.
-
-**Permission Rules**
-
-Company Admin only.
+None
 
 **Completion Criteria**
 
@@ -630,43 +2650,327 @@ Company Admin only.
 
 ---
 
-### CON-001 — Contracts Operations
+### DEP-002 — Edit or delete department records.
+
+**Module:** Departments  
+**Role:** Company Admin  
+**Route:** `/departments`  
+**Status:** Not Audited  
+**Test ID:** TEST-DEP-01  
+
+**Requirement**
+
+Edit or delete department records.
+
+**Trigger**
+
+Admin selects Edit or Delete on department rows.
+
+**Expected Behaviour**
+
+Updates department details or deletes record.
+
+**Validation Rules**
+
+- Purging department validates whether employees are currently assigned.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DEP-003 — Assign Employee to department.
+
+**Module:** Departments  
+**Role:** Company Admin  
+**Route:** `/departments`  
+**Status:** Not Audited  
+**Test ID:** TEST-DEP-01  
+
+**Requirement**
+
+Assign Employee to department.
+
+**Trigger**
+
+Admin selects Employee and clicks Assign to Department.
+
+**Expected Behaviour**
+
+Binds Employee reference to target department code.
+
+**Validation Rules**
+
+- Employee must be in Active status.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### DEP-004 — View department-wise employees list.
+
+**Module:** Departments  
+**Role:** Company Admin  
+**Route:** `/departments`  
+**Status:** Not Audited  
+**Test ID:** TEST-DEP-01  
+
+**Requirement**
+
+View department-wise employees list.
+
+**Trigger**
+
+Admin clicks department row item details.
+
+**Expected Behaviour**
+
+Displays employees lists currently assigned to selected department.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-001 — Contracts Dashboard summary overview.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts/dashboard`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Contracts Dashboard summary overview.
+
+**Trigger**
+
+User loads /contracts/dashboard screen.
+
+**Expected Behaviour**
+
+Displays summary cards: Total, Active, Expiring Soon, Expired, and Contract Types distributions.
+
+**Validation Rules**
+
+- Summary metrics compile dynamically from active collections.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-002 — Contracts operations listings search.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Contracts operations listings search.
+
+**Trigger**
+
+User loads /contracts list.
+
+**Expected Behaviour**
+
+Renders table listing of contracts with codes, employee names, status, and duration details.
+
+**Validation Rules**
+
+- Search bar filters rows dynamically.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-003 — Select employee for contract creation.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts/create`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Select employee for contract creation.
+
+**Trigger**
+
+User launches contract creator wizard.
+
+**Expected Behaviour**
+
+Prompts user to select employee from active profiles.
+
+**Validation Rules**
+
+- Employee selection is required.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-004 — Create contract form validations.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts/create`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Create contract form validations.
+
+**Trigger**
+
+User inputs details (duration, rate, billing terms) and clicks Create.
+
+**Expected Behaviour**
+
+validates input entries and creates new contract record.
+
+**Validation Rules**
+
+- Contract type, start date, end date, and rate/compensation are required. Start date must be before end date.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-005 — Approve or reject contracts gateways.
 
 **Module:** Contract Management  
 **Role:** Company Admin  
-**Route:** `/contracts`  
-**Priority:** High  
-**Status:** Not Audited
+**Route:** `/contracts/:id`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
 
 **Requirement**
 
-Allows creating rate-based or fixed-deliverable contracts, mapping deliverables, tracking durations, and setting payment configurations.
+Approve or reject contracts gateways.
 
 **Trigger**
 
-User clicks "Create New Contract" or opens dashboard alerts.
+Admin reviews pending contracts on details or approvals page.
 
 **Expected Behaviour**
 
-1. Creator form binds contract details to selected employees.
-2. dashboard displays warning counts for expiring/expired agreements.
-3. Renders full contract lookup details.
+Allows Admin to authorize or decline contract activations.
 
 **Validation Rules**
 
-- Contract duration must have start and end dates.
+- Status must be Pending Approval. Rejections require notes.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Contract configurations save permanently.
-
-**Cross-Module Impact**
-
-Updates active contract counts on dashboard.
-
-**Permission Rules**
-
-Admin roles approve/reject; HR has read-only/draft capabilities.
+APR-001
 
 **Completion Criteria**
 
@@ -682,43 +2986,117 @@ Admin roles approve/reject; HR has read-only/draft capabilities.
 
 ---
 
-### HRM-001 — HR User Administration
+### CON-006 — Contracts renewal alerts.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Contracts renewal alerts.
+
+**Trigger**
+
+System detects active deployments with duration expiry < 30 days.
+
+**Expected Behaviour**
+
+Displays renewal warnings on contracts and dashboard metrics widgets.
+
+**Validation Rules**
+
+- Warnings flag if current date is near end date.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### CON-007 — Search contracts by number.
+
+**Module:** Contract Management  
+**Role:** Company Admin, HR  
+**Route:** `/contracts`  
+**Status:** Not Audited  
+**Test ID:** TEST-CON-01  
+
+**Requirement**
+
+Search contracts by number.
+
+**Trigger**
+
+User inputs contract number pattern into search bar.
+
+**Expected Behaviour**
+
+Updates lists view displaying only matching codes.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### HRM-001 — Create HR and Admin accounts keys.
 
 **Module:** HR Management  
 **Role:** Company Admin  
 **Route:** `/hr-management`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-HRM-01  
 
 **Requirement**
 
-Super Admin directory to create HR accounts, activate/deactivate logs, and assign system permissions.
+Create HR and Admin accounts keys.
 
 **Trigger**
 
-Admin opens HR Management list.
+Admin clicks 'Add User' in HR management dashboard.
 
 **Expected Behaviour**
 
-1. Displays directory of users and status switches.
-2. Admin can create new account keys.
-3. Switching roles applies permission restrictions.
+Loads creation forms drawers (Name, email, initial role configuration).
 
 **Validation Rules**
 
-- Email is validated.
+- Email format validation, username required.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Changes written permanently.
-
-**Cross-Module Impact**
-
-Immediately updates role switch settings.
-
-**Permission Rules**
-
-Company Admin only.
+None
 
 **Completion Criteria**
 
@@ -734,43 +3112,201 @@ Company Admin only.
 
 ---
 
-### ACT-001 — HR Activity History Log
+### HRM-002 — HR user directory list rendering.
+
+**Module:** HR Management  
+**Role:** Company Admin  
+**Route:** `/hr-management`  
+**Status:** Not Audited  
+**Test ID:** TEST-HRM-01  
+
+**Requirement**
+
+HR user directory list rendering.
+
+**Trigger**
+
+Admin loads `/hr-management` screen.
+
+**Expected Behaviour**
+
+Renders user cards/table with name, email, role, and active status switch.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### HRM-003 — Activate or deactivate user accounts.
+
+**Module:** HR Management  
+**Role:** Company Admin  
+**Route:** `/hr-management`  
+**Status:** Not Audited  
+**Test ID:** TEST-HRM-01  
+
+**Requirement**
+
+Activate or deactivate user accounts.
+
+**Trigger**
+
+Admin toggles active status checkbox.
+
+**Expected Behaviour**
+
+Updates account status to Active or Inactive. Inactive accounts are blocked from logging in.
+
+**Validation Rules**
+
+- Admin cannot deactivate their own session.
+
+**Cross-Module Impact / Dependencies**
+
+AUTH-003
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### HRM-004 — Assign HR users roles.
+
+**Module:** HR Management  
+**Role:** Company Admin  
+**Route:** `/hr-management`  
+**Status:** Not Audited  
+**Test ID:** TEST-HRM-01  
+
+**Requirement**
+
+Assign HR users roles.
+
+**Trigger**
+
+Admin selects role (Company Admin, HR) in user edit form.
+
+**Expected Behaviour**
+
+Saves role configuration and applies new permission access constraints immediately.
+
+**Validation Rules**
+
+- Role must be valid type.
+
+**Cross-Module Impact / Dependencies**
+
+ROLE-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### HRM-005 — Filter HR users list.
+
+**Module:** HR Management  
+**Role:** Company Admin  
+**Route:** `/hr-management`  
+**Status:** Not Audited  
+**Test ID:** TEST-HRM-01  
+
+**Requirement**
+
+Filter HR users list.
+
+**Trigger**
+
+Admin clicks role filters on HR Directory.
+
+**Expected Behaviour**
+
+Filters user rows matching selected roles criteria.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ACT-001 — Immutable HR operational activity timeline logs.
 
 **Module:** HR Activity History  
 **Role:** Company Admin  
 **Route:** `/hr-activity-history`  
-**Priority:** Low  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-ACT-01  
 
 **Requirement**
 
-Maintains a comprehensive, filterable list tracking HR onboarding, deployment, and contract events.
+Immutable HR operational activity timeline logs.
 
 **Trigger**
 
-Users perform action events across platform.
+HR user executes onboarding, employee, or contract actions.
 
 **Expected Behaviour**
 
-1. Appends timeline logs.
-2. Timeline grid permits filtering by action types (Onboarding, Contract).
-3. Renders description details and actor names.
+System appends new audit entry to log timeline.
 
 **Validation Rules**
 
-- Event parameters cannot be null.
+- Log parameters (actor ID, date, action description) must be non-null.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Logs are immutable.
-
-**Cross-Module Impact**
-
-Exposes audit details on overview pages.
-
-**Permission Rules**
-
-Company Admin only.
+None
 
 **Completion Criteria**
 
@@ -786,43 +3322,117 @@ Company Admin only.
 
 ---
 
-### PUB-001 — Careers Page
+### ACT-002 — Activity log filters.
+
+**Module:** HR Activity History  
+**Role:** Company Admin  
+**Route:** `/hr-activity-history`  
+**Status:** Not Audited  
+**Test ID:** TEST-ACT-01  
+
+**Requirement**
+
+Activity log filters.
+
+**Trigger**
+
+Admin selects action filter options (Onboarding, Contract, etc.).
+
+**Expected Behaviour**
+
+Filters timeline items matching checked action categories.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### ACT-003 — Track activity by actor.
+
+**Module:** HR Activity History  
+**Role:** Company Admin  
+**Route:** `/hr-activity-history`  
+**Status:** Not Audited  
+**Test ID:** TEST-ACT-01  
+
+**Requirement**
+
+Track activity by actor.
+
+**Trigger**
+
+Admin inputs actor username in log search bar.
+
+**Expected Behaviour**
+
+timeline displays logs executed by target user only.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### PUB-001 — Careers page openings listings.
 
 **Module:** Careers Page  
 **Role:** Public Candidate  
 **Route:** `/jobs`  
-**Priority:** High  
-**Status:** Not Audited
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
 
 **Requirement**
 
-Public portal route for guests to search active job descriptions, read details, and upload resume files.
+Careers page openings listings.
 
 **Trigger**
 
-A visitor opens the `/jobs` careers portal.
+Public guest opens `/jobs` page.
 
 **Expected Behaviour**
 
-1. Lists active openings card.
-2. Clicking apply displays a simple form (Name, Contact Details, Resume attachment).
-3. Submitting saves candidate profile.
+Displays list cards of published jobs with title, location, type, and deadline.
 
 **Validation Rules**
 
-- Name is required. Email or Phone is mandatory.
+- Only jobs with visibility == 'Public' and status == 'Published' are listed.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Candidate files remain stored.
-
-**Cross-Module Impact**
-
-Increments candidate database pool count.
-
-**Permission Rules**
-
-Open to public guests.
+JOB-006
 
 **Completion Criteria**
 
@@ -838,43 +3448,33 @@ Open to public guests.
 
 ---
 
-### OFF-001 — Employee Offboarding
+### PUB-002 — Search & filter openings by location.
 
-**Module:** Employee Management  
-**Role:** HR, Company Admin  
-**Route:** `/employees/offboarding`  
-**Priority:** High  
-**Status:** Not Audited
+**Module:** Careers Page  
+**Role:** Public Candidate  
+**Route:** `/jobs`  
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
 
 **Requirement**
 
-Processes employee exits, clearance checklists, and updates status fields.
+Search & filter openings by location.
 
 **Trigger**
 
-Operations manager initiates offboarding.
+Candidate types queries or selects location filters.
 
 **Expected Behaviour**
 
-1. Initiates offboarding workflow.
-2. Tracks clearance processes.
-3. Completing offboarding marks employee status as exited.
+Filters job card list dynamically matching criteria.
 
 **Validation Rules**
 
-- Exit clearances must be completed.
+- None.
 
-**Persistence Requirement**
+**Cross-Module Impact / Dependencies**
 
-Data remains permanently.
-
-**Cross-Module Impact**
-
-Halts contract calculations.
-
-**Permission Rules**
-
-HR and Admin roles.
+None
 
 **Completion Criteria**
 
@@ -887,3 +3487,384 @@ HR and Admin roles.
 - Success and error states exist
 - Role restrictions work
 - Relevant end-to-end test passes
+
+---
+
+### PUB-003 — View job details description.
+
+**Module:** Careers Page  
+**Role:** Public Candidate  
+**Route:** `/jobs`  
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
+
+**Requirement**
+
+View job details description.
+
+**Trigger**
+
+Candidate clicks View Details or Apply on a job card.
+
+**Expected Behaviour**
+
+Opens job specifications page showing title, description, skills, and qualifications.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### PUB-004 — Apply form validations.
+
+**Module:** Careers Page  
+**Role:** Public Candidate  
+**Route:** `/jobs`  
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
+
+**Requirement**
+
+Apply form validations.
+
+**Trigger**
+
+Candidate submits application form.
+
+**Expected Behaviour**
+
+validates entries and creates candidate and application files.
+
+**Validation Rules**
+
+- Candidate Name and consent checkbox are mandatory. Either Email or Phone is required.
+
+**Cross-Module Impact / Dependencies**
+
+CAN-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### PUB-005 — Attach resume upload file.
+
+**Module:** Careers Page  
+**Role:** Public Candidate  
+**Route:** `/jobs`  
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
+
+**Requirement**
+
+Attach resume upload file.
+
+**Trigger**
+
+Candidate uploads resume attachment file.
+
+**Expected Behaviour**
+
+Checks file extension and binds attachment to application form.
+
+**Validation Rules**
+
+- File must be PDF or DOCX format. Required fields validation rules apply.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### PUB-006 — Display application confirmation panel.
+
+**Module:** Careers Page  
+**Role:** Public Candidate  
+**Route:** `/jobs`  
+**Status:** Not Audited  
+**Test ID:** TEST-PUB-01  
+
+**Requirement**
+
+Display application confirmation panel.
+
+**Trigger**
+
+Candidate clicks Submit Application with valid form details.
+
+**Expected Behaviour**
+
+Submits details, checks duplicate application checks, and renders confirmation screen.
+
+**Validation Rules**
+
+- Candidate email/phone duplicates are validated. Blocks resubmitting same application.
+
+**Cross-Module Impact / Dependencies**
+
+CAN-009
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### OFF-001 — Offboarding cases list rendering.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/offboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-OFF-01  
+
+**Requirement**
+
+Offboarding cases list rendering.
+
+**Trigger**
+
+User loads offboarding dashboard list view.
+
+**Expected Behaviour**
+
+Renders exit rows with names, last deployment, last working day, and clearance statuses.
+
+**Validation Rules**
+
+- None.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### OFF-002 — Initiate Employee Offboardingexit workflow.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/offboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-OFF-01  
+
+**Requirement**
+
+Initiate Employee Offboardingexit workflow.
+
+**Trigger**
+
+HR clicks 'Initiate Offboarding' button.
+
+**Expected Behaviour**
+
+Opens manual offboarding creator drawer prompting exit parameters.
+
+**Validation Rules**
+
+- Employee selection, last working date, exit type, and exit reason are required fields.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### OFF-003 — Exit clearance checklists approvals.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/offboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-OFF-01  
+
+**Requirement**
+
+Exit clearance checklists approvals.
+
+**Trigger**
+
+HR updates clearance checklist checkpoints in offboarding details view.
+
+**Expected Behaviour**
+
+Marks checklist elements (documents closure, client clearance, asset handover) as Approved.
+
+**Validation Rules**
+
+- Rejections require entering reason notes.
+
+**Cross-Module Impact / Dependencies**
+
+None
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### OFF-004 — Mark exit completed.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/offboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-OFF-01  
+
+**Requirement**
+
+Mark exit completed.
+
+**Trigger**
+
+HR clicks 'Complete Offboarding' button after clearances.
+
+**Expected Behaviour**
+
+Transitions case status to Completed and marks Employee status as Exited.
+
+**Validation Rules**
+
+- All mandatory clearances must be marked Approved.
+
+**Cross-Module Impact / Dependencies**
+
+EMP-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
+### OFF-005 — Halt future contract calculations.
+
+**Module:** Employee Management  
+**Role:** HR, Company Admin  
+**Route:** `/employees/offboarding`  
+**Status:** Not Audited  
+**Test ID:** TEST-OFF-01  
+
+**Requirement**
+
+Halt future contract calculations.
+
+**Trigger**
+
+offboarding transitions to status Completed.
+
+**Expected Behaviour**
+
+Halts deployment active status and billing calculations immediately.
+
+**Validation Rules**
+
+- Active billing is locked.
+
+**Cross-Module Impact / Dependencies**
+
+CON-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---
+
