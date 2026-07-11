@@ -1,11 +1,11 @@
 # Known Limitations
 
-This document lists the confirmed limitations, unverified assumptions, and conflicts identified during the setup phase of the SPC Workforce Management Platform.
+This document lists the confirmed limitations, unverified assumptions, and conflicts identified during the code audit of the SPC Workforce Management Platform.
 
 ---
 
 ## Confirmed Limitations
-- **Mock Data Layer**: The system currently runs using in-memory JavaScript lists inside `mockData.ts`. It does not write back to a persistent relational database.
+- **Mock Data Layer**: The system currently runs using in-memory JavaScript lists inside `mockData.ts`. It does not write back to a persistent relational database, causing state edits to reset on page reload.
 - **Frontend-Only Architecture**: There is no active API or web server. Authentication sessions, token validation, and file parses are simulated.
 
 ## Unverified Assumptions
@@ -18,10 +18,10 @@ This document lists the confirmed limitations, unverified assumptions, and confl
 - **State Mutation Persistence**: Candidate stage modifications, employee creation additions, and parsed raw text details reset upon reload.
 
 ## Backend Limitations
-- **Mock Data Layer**: The system currently runs using in-memory JavaScript lists inside `mockData.ts`. It does not write back to a persistent database, so state changes (e.g. stage updates) are reset on browser refresh.
+- In-memory database mutations: Operations changes do not persist in storage.
 
 ## File Upload Limitations
-- **Resume and Document Attachments**: Candidate resumes and onboarding documents are verified through UI form handlers only and do not upload raw data files.
+- **Resume and Document Attachments**: Candidate resumes and onboarding documents are verified through UI form handlers only and do not upload raw data files to any storage container.
 
 ## Email Limitations
 - **Verification and Offer Link Despatches**: Document token email links and offer notifications are mocked.
@@ -30,23 +30,23 @@ This document lists the confirmed limitations, unverified assumptions, and confl
 - **Static Parser Suggestions**: Matches and JD scores are calculated from hardcoded mock lists rather than active LLM endpoints.
 
 ## Security & Access Limitations
-- **No Route Guards**: Route protection gates in `App.tsx` do not perform any authentication checks.
-- **Sidebar Navigation Role Access Gaps**: The navigation sidebar in `Layout.tsx` shows all modules (including Admin-only menus like Users & Roles) to all users indiscriminately.
-- **Hardcoded Session Context**: The active user session in `Layout.tsx` is hardcoded to "Rahul Sharma" (Company Admin) with no role-switching mechanism or dynamic context.
+- **No Route Guards**: Route protection gates in `App.tsx` do not perform any active session validations.
+- **Sidebar Access Gaps**: Sidebar menu links show administrative routes to all roles unconditionally.
+- **Hardcoded Session**: Layout hardcodes Company Admin Rahul Sharma session context with no login/logout flow controls.
 
 ## Buttons Without Functional Handlers (No-op)
-- **Dashboard (`Dashboard.tsx`)**: "Create Client Requirement" button has no event handler.
-- **Job Desk (`JobsList.tsx`, `JobDetail.tsx`)**: "Create from Requirement", "Edit Job", "Preview", and "Unpublish" buttons are present but lack handlers.
-- **Candidates Pool (`CandidatesList.tsx`, `CandidateDetail.tsx`)**: "Filters", "Edit Profile", "View Resume", "Reject", "Schedule Interview", and "Advance Stage" buttons are completely non-functional.
-- **Talent Pool (`TalentPoolList.tsx`)**: "Filters" and "Match to Job" buttons lack functional handlers.
-- **Onboarding Pipeline (`OnboardingList.tsx`)**: "Mark Complete" action button has no handler.
-- **Offboarding Pipeline (`OffboardingList.tsx`)**: "Initiate Offboarding" action button is a no-op.
-- **Offers List (`OffersList.tsx`)**: "Edit Offer", "Review Approval", "View Offer", and "Start Onboarding" buttons are all non-functional.
+- **Dashboard (`Dashboard.tsx`)**: "Create Client Requirement"
+- **Job Desk (`JobsList.tsx`, `JobDetail.tsx`)**: "Create from Requirement", "Edit Job", "Preview", "Unpublish"
+- **Candidates Pool (`CandidatesList.tsx`, `CandidateDetail.tsx`)**: "Filters", "Edit Profile", "View Resume", "Reject", "Schedule Interview", "Advance Stage"
+- **Talent Pool (`TalentPoolList.tsx`)**: "Filters", "Match to Job"
+- **Onboarding Pipeline (`OnboardingList.tsx`)**: "Mark Complete"
+- **Offboarding Pipeline (`OffboardingList.tsx`)**: "Initiate Offboarding"
+- **Offers List (`OffersList.tsx`)**: "Edit Offer", "Review Approval", "View Offer", "Start Onboarding"
 
 ## Forms Without Working Submission
-- **Public Apply Form (`CareersPage.tsx`)**: The careers page apply form validates required fields and displays a simulated timeout success screen, but it does not write the candidate data to the in-memory store or append it to the application pool.
+- **Public Apply Form (`CareersPage.tsx`)**: Form validates fields correctly, but does not append records to the in-memory pool.
 
 ## Data That Is Hardcoded or Disconnected
-- **Dashboard KPIs**: Dashboard metrics are calculated from requirement data, which mismatches the spec requirements for Total HR Users, Active HR Users, Job Openings, and Candidates.
-- **Dashboard Charts**: Trend charts and candidate staging stats are completely absent from the UI.
-- **User Permission Matrix**: `UsersList.tsx` lists roles and modules in a static HTML table rather than pulling dynamic database settings.
+- **Dashboard KPIs**: Stats are computed from requirements, not matching spec.
+- **Dashboard Charts**: Trend charts and candidate staging counts are missing.
+- **User Permission Matrix**: Lists roles statically in HTML instead of dynamic database bindings.
