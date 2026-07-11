@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import { mockOffboardings, mockEmployees, mockDeployments, mockClients } from '../data/mockData';
+import { Search, Filter, LogOut, CheckCircle2 } from 'lucide-react';
+import { cn, formatDate } from '../lib/utils';
+
+export default function OffboardingList() {
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <p className="text-slate-600">Track employees who are leaving the company or finishing client deployments.</p>
+        <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+          Initiate Offboarding
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text" 
+            placeholder="Search offboardings..." 
+            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+          />
+        </div>
+        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          <Filter className="w-4 h-4" />
+          Filters
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+              <tr>
+                <th className="px-6 py-4">Employee</th>
+                <th className="px-6 py-4">Last Deployment</th>
+                <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Last Working Day</th>
+                <th className="px-6 py-4">Clearance Status</th>
+                <th className="px-6 py-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {mockOffboardings.map(off => {
+                const emp = mockEmployees.find(e => e.id === off.employeeId);
+                const dep = mockDeployments.find(d => d.employeeId === off.employeeId); // simplified
+                const client = mockClients.find(c => c.id === dep?.clientId);
+                
+                return (
+                  <tr key={off.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800">{emp?.fullName}</div>
+                      <div className="text-xs text-slate-500 font-mono mt-1">{emp?.employeeCode}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-slate-800 font-medium">{client?.name || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-slate-700">{off.type}</span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-medium text-red-600">
+                      {formatDate(off.lastWorkingDay)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 text-xs font-medium",
+                        off.clearanceStatus === 'Cleared' ? "text-green-600" :
+                        off.clearanceStatus === 'In Progress' ? "text-blue-600" : "text-amber-600"
+                      )}>
+                        {off.clearanceStatus === 'Cleared' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {off.clearanceStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium border",
+                        off.status === 'Completed' ? "bg-slate-100 text-slate-700 border-slate-300" :
+                        "bg-amber-50 text-amber-700 border-amber-200"
+                      )}>
+                        {off.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {mockOffboardings.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                    No active offboardings found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

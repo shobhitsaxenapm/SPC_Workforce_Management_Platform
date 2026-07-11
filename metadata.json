@@ -1,0 +1,8 @@
+{
+  "name": "SPC Workforce Management",
+  "description": "Recruitment Operations module to manage client requirements, jobs, candidates, interviews, and offers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
