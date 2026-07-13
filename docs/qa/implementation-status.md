@@ -2,9 +2,9 @@
 
 ## Project Status
 
-- **Current Phase**: `Interviews page Actions (Feedback, Rescheduling, Status Updates) and Client Requirement Detail page top-level actions (Hold and Edit)`
+- **Current Phase**: `Offers page interactions (View Offer details modal, Start Onboarding workflow folder generation, Mark Accepted/Rejected/Withdrawn transitions, Expiry Extension) and AppContext offers/onboardings synchronization`
 - **Last Updated**: 2026-07-13
-- **Next Recommended Action**: Run full automated build check and push changes to origin remote.
+- **Next Recommended Action**: Perform regression verification and push final commits to origin.
 
 ---
 
