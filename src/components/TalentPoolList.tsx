@@ -1,9 +1,25 @@
+import React, { useState } from 'react';
 import { mockTalentPool, mockCandidates } from '../data/mockData';
-import { Search, Filter, MapPin, Tag } from 'lucide-react';
+import { Search, MapPin, Tag } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function TalentPoolList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ consent: '' });
+
+  const filterFields: FilterField[] = [
+    { key: 'consent', label: 'Consent Status', options: ['Active', 'Expiring Soon', 'Expired', 'Not Recorded'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockTalentPool.filter(entry => {
+    const candidate = mockCandidates.find(c => c.id === entry.candidateId);
+    const matchSearch = !searchTerm || candidate?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || entry.topSkills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchConsent = !filters.consent || entry.consentStatus === filters.consent;
+    return matchSearch && matchConsent;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -16,13 +32,17 @@ export default function TalentPoolList() {
           <input 
             type="text" 
             placeholder="Search talent pool..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ consent: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -40,7 +60,7 @@ export default function TalentPoolList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockTalentPool.map(entry => {
+              {filtered.map(entry => {
                 const candidate = mockCandidates.find(c => c.id === entry.candidateId);
                 
                 return (

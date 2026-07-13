@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { mockOnboardings, mockCandidates, mockJobs, mockClients } from '../data/mockData';
-import { Search, Filter, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function OnboardingList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const filterFields: FilterField[] = [
+    { key: 'status', label: 'Status', options: ['In Progress', 'Completed', 'Delayed', 'Pending'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockOnboardings.filter((onb: any) => {
+    const candidate = mockCandidates.find(c => c.id === onb.candidateId);
+    const matchSearch = !searchTerm || candidate?.fullName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = !filters.status || onb.status === filters.status;
+    return matchSearch && matchStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -31,13 +46,17 @@ export default function OnboardingList() {
           <input 
             type="text" 
             placeholder="Search onboardings by candidate or role..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ status: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -55,7 +74,7 @@ export default function OnboardingList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockOnboardings.map(onb => {
+              {filtered.map((onb: any) => {
                 const candidate = mockCandidates.find(c => c.id === onb.candidateId);
                 const job = mockJobs.find(j => j.id === onb.jobId);
                 const client = mockClients.find(c => c.id === job?.clientId);
@@ -116,7 +135,7 @@ export default function OnboardingList() {
                 );
               })}
               
-              {mockOnboardings.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     No active onboardings found.

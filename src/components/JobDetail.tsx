@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockJobs, mockRequirements, mockClients, mockUsers, mockApplications, mockCandidates } from '../data/mockData';
+import { mockUsers } from '../data/mockData';
 import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage } from '../types';
 import AIInsightCard from './AIInsightCard';
+import { useApp } from '../context/AppContext';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const job = mockJobs.find(j => j.id === id);
+  const { jobs, requirements, clients, applications, candidates, updateApplicationStage } = useApp();
+  const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Pipeline'>('Overview');
   
   if (!job) return <div>Job not found</div>;
 
-  const req = mockRequirements.find(r => r.id === job.requirementId);
-  const client = mockClients.find(c => c.id === job.clientId);
+  const req = requirements.find(r => r.id === job.requirementId);
+  const client = clients.find(c => c.id === job.clientId);
   const recruiter = mockUsers.find(u => u.id === job.assignedRecruiterId);
-  const applications = mockApplications.filter(a => a.jobId === job.id);
+  const jobApplications = applications.filter(a => a.jobId === job.id);
   
   const progress = (job.filled / job.openings) * 100;
 
@@ -26,12 +28,7 @@ export default function JobDetail() {
   ];
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
-    // In a real app this would trigger an API call.
-    // Here we're just triggering a re-render for MVP UX, but since mockData is static we need to mutate it or use local state.
-    const app = mockApplications.find(a => a.id === appId);
-    if (app) app.currentStage = newStage;
-    // Force re-render trick (not ideal for prod, fine for MVP mock)
-    setActiveTab('Pipeline'); 
+    updateApplicationStage(appId, newStage);
   };
 
   return (
@@ -194,7 +191,7 @@ export default function JobDetail() {
       ) : (
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 overflow-x-auto shadow-inner flex gap-4 min-h-[500px]">
           {pipelineStages.filter(stage => ['Sourced', 'Applied', 'Screening', 'Interview Round 1', 'Offer Extended'].includes(stage)).map(stage => {
-            const appsInStage = applications.filter(a => a.currentStage === stage);
+            const appsInStage = jobApplications.filter(a => a.currentStage === stage);
             return (
               <div key={stage} className="w-80 flex-shrink-0 flex flex-col">
                 <div className="flex items-center justify-between mb-3 px-1">
@@ -204,7 +201,7 @@ export default function JobDetail() {
                 
                 <div className="flex-1 space-y-3">
                   {appsInStage.map(app => {
-                    const candidate = mockCandidates.find(c => c.id === app.candidateId);
+                    const candidate = candidates.find(c => c.id === app.candidateId);
                     if (!candidate) return null;
                     return (
                       <div key={app.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">

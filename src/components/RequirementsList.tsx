@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { mockRequirements, mockClients, mockUsers } from '../data/mockData';
-import { Plus, Search, Filter, AlertCircle, X, CheckCircle2 } from 'lucide-react';
+import { mockUsers } from '../data/mockData';
+import { Plus, Search, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { Priority } from '../types';
 import AIInsightCard from './AIInsightCard';
+import { useApp } from '../context/AppContext';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function RequirementsList() {
+  const { requirements, clients, createRequirement } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ clientId: '', status: '', priority: '' });
 
-  // Form State
   const [formData, setFormData] = useState({
     clientId: '',
     roleTitle: '',
+    title: '',
     projectName: '',
     locations: '',
     positionsRequired: 1,
@@ -27,19 +33,60 @@ export default function RequirementsList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!formData.clientId || !formData.roleTitle || formData.positionsRequired < 1 || !formData.targetJoiningDate || !formData.assignedRecruiterId) return;
+    
+    setIsSubmitting(true);
+    createRequirement({
+      clientId: formData.clientId,
+      title: formData.title.trim() || `${formData.roleTitle} Requirement`,
+      roleTitle: formData.roleTitle.trim(),
+      projectName: formData.projectName.trim() || 'General',
+      locations: formData.locations ? formData.locations.split(',').map(l => l.trim()).filter(Boolean) : ['Delhi'],
+      positionsRequired: formData.positionsRequired,
+      employmentType: formData.employmentType,
+      contractDuration: formData.contractDuration || '12 Months',
+      targetJoiningDate: formData.targetJoiningDate,
+      priority: formData.priority,
+      assignedRecruiterId: formData.assignedRecruiterId,
+      notes: formData.notes,
+    });
+    setIsSubmitting(false);
     
     setIsSuccess(true);
     setTimeout(() => {
       setIsSuccess(false);
       setIsModalOpen(false);
       setFormData({
-        clientId: '', roleTitle: '', projectName: '', locations: '', positionsRequired: 1, 
+        clientId: '', roleTitle: '', title: '', projectName: '', locations: '', positionsRequired: 1, 
         employmentType: 'Full-time', contractDuration: '', targetJoiningDate: '', 
         priority: 'Medium', assignedRecruiterId: '', notes: ''
       });
     }, 1500);
   };
+
+  const clientOptions = clients.map(c => ({ value: c.id, label: c.name }));
+  const statusOptions = ['Open', 'In Progress', 'Partially Filled', 'Fulfilled', 'On Hold', 'Closed'].map(s => ({ value: s, label: s }));
+  const priorityOptions = ['Low', 'Medium', 'High', 'Critical'].map(p => ({ value: p, label: p }));
+
+  const filterFields: FilterField[] = [
+    { key: 'clientId', label: 'Client', options: clientOptions },
+    { key: 'status', label: 'Status', options: statusOptions },
+    { key: 'priority', label: 'Priority', options: priorityOptions },
+  ];
+
+  const filteredReqs = requirements.filter(req => {
+    const client = clients.find(c => c.id === req.clientId);
+    const matchSearch = !searchTerm || 
+      req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.roleTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client?.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchClient = !filters.clientId || req.clientId === filters.clientId;
+    const matchStatus = !filters.status || req.status === filters.status;
+    const matchPriority = !filters.priority || req.priority === filters.priority;
+    return matchSearch && matchClient && matchStatus && matchPriority;
+  });
 
   return (
     <div className="space-y-6">
@@ -63,20 +110,23 @@ export default function RequirementsList() {
         onAction={() => {}}
       />
 
-      {/* Filters/Search Row */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
             type="text" 
             placeholder="Search requirements by role, client, or code..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ clientId: '', status: '', priority: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -94,8 +144,8 @@ export default function RequirementsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockRequirements.map(req => {
-                const client = mockClients.find(c => c.id === req.clientId);
+              {filteredReqs.map(req => {
+                const client = clients.find(c => c.id === req.clientId);
                 const recruiter = mockUsers.find(u => u.id === req.assignedRecruiterId);
                 const progress = (req.positionsFilled / req.positionsRequired) * 100;
                 
@@ -167,6 +217,9 @@ export default function RequirementsList() {
                   </tr>
                 );
               })}
+              {filteredReqs.length === 0 && (
+                <tr><td colSpan={7} className="px-6 py-10 text-center text-slate-500">No requirements match the current filters.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -201,7 +254,7 @@ export default function RequirementsList() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Client *</label>
                         <select required value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                           <option value="">Select a client...</option>
-                          {mockClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                       <div>
@@ -209,10 +262,14 @@ export default function RequirementsList() {
                         <input type="text" required value={formData.roleTitle} onChange={e => setFormData({...formData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                       </div>
                       <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Requirement Title</label>
+                        <input type="text" placeholder="Auto-generated if blank" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
                         <input type="text" value={formData.projectName} onChange={e => setFormData({...formData, projectName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                       </div>
-                      <div>
+                      <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1">Locations</label>
                         <input type="text" placeholder="e.g. Mumbai, Delhi" value={formData.locations} onChange={e => setFormData({...formData, locations: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                       </div>
@@ -224,7 +281,7 @@ export default function RequirementsList() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Number of Positions *</label>
-                        <input type="number" min="1" required value={formData.positionsRequired} onChange={e => setFormData({...formData, positionsRequired: parseInt(e.target.value)})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        <input type="number" min="1" required value={formData.positionsRequired} onChange={e => setFormData({...formData, positionsRequired: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
@@ -289,7 +346,8 @@ export default function RequirementsList() {
                 <button 
                   type="submit"
                   form="createReqForm"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
                 >
                   Create Requirement
                 </button>

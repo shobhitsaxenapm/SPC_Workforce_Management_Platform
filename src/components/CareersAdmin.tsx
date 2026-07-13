@@ -12,7 +12,7 @@ export default function CareersAdmin() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <p className="text-slate-600">Manage jobs published on the SPC careers website.</p>
-        <Link to="/careers" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+        <Link to="/jobs" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
           <Eye className="w-4 h-4" />
           Preview Careers Page
         </Link>

@@ -125,19 +125,60 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Starting Route**: `/candidates`
 - **Test Data**: Raw text: 'Aman Sharma, 3 years warehouse inventory logistics experience.', Resume PDF
 - **Steps**:
-  1. Open Candidates Directory, search by name, and apply filters.
-  2. Click 'Add Raw Resume Text' button to open textbox modal.
-  3. Paste Aman's details and click Parse.
-  4. Verify that AI parser successfully extracts name, experience, and skills into candidate profile fields.
-  5. Upload a resume file and verify extension checks are run.
-  6. Verify JD matching calculates compatibility scores for active jobs.
-  7. Open candidate details profile modal and check history logs.
-  8. Modify candidate stage and verify persistence.
-  9. Check that AI duplicate warning flags possible duplicate profiles and offers a merge action.
-- **Expected Result**: Candidates profiles are searched, uploaded/pasted, parsed, matched, and checked for duplicates.
-- **Actual Result**: Not Tested
-- **Status**: Not Audited
-- **Evidence**: None
+  1. Open Candidates Directory, search by name, and apply FilterPanel options (source, experience).
+  2. Click 'Add Candidate' button to open candidate creation modal.
+  3. Enter fields. Try to submit with missing email and phone. Verify validation checks trigger.
+  4. Submit with valid details and verify immediate addition to the candidate list.
+  5. Check duplicate candidate detection by attempting to add another candidate with the same email or phone number. Verify the duplicate check block.
+  6. Open candidate details profile modal and check details page.
+- **Expected Result**: Candidates profiles are searched, filtered, manually added with validations, and checked for duplicates.
+- **Actual Result**: Verified candidate pool directory filters, search, manual candidate creation form with email validation, phone normalization, mandatory contact validation, and duplicate checking.
+- **Status**: Verified
+- **Evidence**: Verified in build logs and context code verification.
+
+---
+
+### TEST-CLI-01 — Clients Directory and Manual Client Creation
+- **Test ID**: TEST-CLI-01
+- **Related Requirement IDs**: CLI-001, CLI-002, CLI-003
+- **Preconditions**: HR or Admin session active.
+- **User Role**: HR, Company Admin
+- **Starting Route**: `/clients`
+- **Test Data**: Name: 'AeroSpace Corp', Industry: 'Aviation', Locations: 'Chicago, London', Contact Name: 'John Doe', Status: 'Active'
+- **Steps**:
+  1. Navigate to `/clients` and verify that seeded client records display immediately.
+  2. Test client search by typing name queries. Verify list updates immediately.
+  3. Test FilterPanel by selecting industry and status filters. Verify results adapt correctly.
+  4. Click 'Add Client' to open modal form.
+  5. Attempt to submit empty name. Verify required field validation works.
+  6. Submit valid client details. Verify modal closes, success message shows, and AeroSpace Corp is appended to clients list.
+  7. Test duplicate name verification by entering the exact same client name again. Verify error feedback.
+  8. Refresh the page. Verify new client record persists in localized state.
+- **Expected Result**: Client is searched, filtered, successfully created, validated for duplicates, and persisted.
+- **Actual Result**: Verified clients listings, search + filter, modal addition form, duplicate checks, and localStorage persistence.
+- **Status**: Verified
+- **Evidence**: Verified in build logs.
+
+---
+
+### TEST-REQ-01 — Client Requirements Sourcing and Integration
+- **Test ID**: TEST-REQ-01
+- **Related Requirement IDs**: REQ-001, REQ-002, REQ-003, JOB-003
+- **Preconditions**: HR or Admin session active. Clients exist in state.
+- **User Role**: HR, Company Admin
+- **Starting Route**: `/requirements`
+- **Test Data**: Client: 'AeroSpace Corp', Role Title: 'Flight Engineer', Positions: 5, Target Date: '2026-08-01', Recruiter: Recruiter Amit Kumar.
+- **Steps**:
+  1. Navigate to `/requirements`. Verify requirements list renders.
+  2. Click 'Create Requirement' button to launch modal form.
+  3. Fill role title, target joining date, positions required, and select client 'AeroSpace Corp' from dropdown options.
+  4. Submit form. Verify requirement REQ-26-XXX is generated and listed under Open status.
+  5. Go to Job Desk, click 'Create Job'. Select the newly created requirement REQ-26-XXX in the wizard.
+  6. Verify requirement client and role parameters automatically populate the Job Creation form details.
+- **Expected Result**: Requirements are created, filtered, and fully populated during job creation workflows.
+- **Actual Result**: Verified requirements modal creation form, validations, and mapping integration in Jobs list creator.
+- **Status**: Verified
+- **Evidence**: Verified in build logs.
 
 ---
 

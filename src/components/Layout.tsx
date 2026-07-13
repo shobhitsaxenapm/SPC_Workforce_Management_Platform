@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Briefcase, 
   Users, 
@@ -23,12 +23,13 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
 
 const navItems = [
   { title: 'Overview', path: '/', icon: Briefcase },
   { title: 'Clients', path: '/clients', icon: Building2 },
   { title: 'Client Requirements', path: '/requirements', icon: ClipboardList },
-  { title: 'Jobs', path: '/jobs', icon: Briefcase },
+  { title: 'Jobs', path: '/job-desk', icon: Briefcase },
   { title: 'Candidates', path: '/candidates', icon: Users },
   { title: 'Interviews', path: '/interviews', icon: CalendarDays },
   { title: 'Offers', path: '/offers', icon: FileText },
@@ -89,6 +90,8 @@ function NavGroup({ title, items }: { title?: string; items: typeof navItems }) 
 }
 
 export default function Layout() {
+  const { currentUser, logout } = useApp();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -100,6 +103,15 @@ export default function Layout() {
     );
     return activeItem?.title || 'SPC Workforce Management';
   };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const initials = currentUser?.name
+    ? currentUser.name.split(' ').map((n: string) => n[0]).join('')
+    : '??';
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] flex">
@@ -119,7 +131,9 @@ export default function Layout() {
           <NavGroup title="Operations" items={operationsItems} />
           <NavGroup title="Intelligence" items={intelligenceItems} />
           <NavGroup title="Website" items={websiteItems} />
-          <NavGroup title="Administration" items={adminItems} />
+          {currentUser?.role === 'Company Admin' && (
+            <NavGroup title="Administration" items={adminItems} />
+          )}
         </div>
       </aside>
 
@@ -148,12 +162,19 @@ export default function Layout() {
             
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
-                RS
+                {initials}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium text-slate-700">Rahul Sharma</span>
-                <span className="text-xs text-slate-500">Company Admin</span>
+                <span className="text-sm font-medium text-slate-700">{currentUser?.name}</span>
+                <span className="text-xs text-slate-500">{currentUser?.role}</span>
               </div>
+              <button 
+                onClick={handleLogout} 
+                className="text-slate-400 hover:text-red-600 transition-colors ml-2" 
+                title="Log Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </header>

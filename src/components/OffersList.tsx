@@ -1,8 +1,24 @@
+import React, { useState } from 'react';
 import { mockOffers, mockCandidates, mockJobs, mockClients } from '../data/mockData';
-import { Search, Filter, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function OffersList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const filterFields: FilterField[] = [
+    { key: 'status', label: 'Status', options: ['Draft', 'Approval Pending', 'Approved', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockOffers.filter(offer => {
+    const candidate = mockCandidates.find(c => c.id === offer.candidateId);
+    const matchSearch = !searchTerm || candidate?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || offer.offeredRole.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = !filters.status || offer.status === filters.status;
+    return matchSearch && matchStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -15,13 +31,17 @@ export default function OffersList() {
           <input 
             type="text" 
             placeholder="Search offers..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ status: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -38,7 +58,7 @@ export default function OffersList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockOffers.map(offer => {
+              {filtered.map(offer => {
                 const candidate = mockCandidates.find(c => c.id === offer.candidateId);
                 const job = mockJobs.find(j => j.id === offer.jobId);
                 const client = mockClients.find(c => c.id === offer.clientId);
