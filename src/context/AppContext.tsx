@@ -20,6 +20,7 @@ interface AppContextType {
     jobId: string
   ) => { success: boolean; error?: string };
   updateApplicationStage: (appId: string, stage: ApplicationStage) => void;
+  updateRequirementStatus: (reqId: string, status: RequirementStatus) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -67,17 +68,51 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
 
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
-    if (localStorage.getItem('spc_candidates') === null) {
-      localStorage.setItem('spc_candidates', JSON.stringify(mockCandidates));
+    let base = safeParse<Candidate[]>('spc_candidates', mockCandidates);
+    const pipelineSeeds: Candidate[] = [
+      { id: 'can_seed_1', code: 'CAN-9001', fullName: 'Rohan Mehta', email: 'rohan.mehta@email.com', phone: '+91 98333 44556', currentLocation: 'Delhi', totalExperience: '1 Year', currentCompany: 'Apex Digitizing', currentRole: 'Data Typist', skills: ['Typing Speed > 40 WPM', 'Excel'], education: 'B.A, Delhi University', currentSalary: '₹2.0 LPA', expectedSalary: '₹2.6 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-08T10:00:00Z' },
+      { id: 'can_seed_2', code: 'CAN-9002', fullName: 'Vikram Malhotra', email: 'vikram.m@email.com', phone: '+91 98444 55667', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'Info Services', currentRole: 'Office Assistant', skills: ['Data Entry', 'Excel'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.8 LPA', noticePeriod: '15 Days', source: 'Referral', duplicateStatus: 'None', createdAt: '2026-07-09T11:00:00Z' },
+      { id: 'can_seed_3', code: 'CAN-9003', fullName: 'Siddharth Sen', email: 'siddharth.sen@email.com', phone: '+91 98555 66778', currentLocation: 'Delhi', totalExperience: 'Fresher', currentCompany: 'N/A', currentRole: 'Graduate', skills: ['Excel', 'Data Typing'], education: 'B.Com, Delhi University', currentSalary: '0', expectedSalary: '₹2.4 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-10T12:00:00Z' },
+      { id: 'can_seed_4', code: 'CAN-9004', fullName: 'Neha Kapoor', email: 'neha.k@email.com', phone: '+91 98666 77889', currentLocation: 'Delhi', totalExperience: '1.5 Years', currentCompany: 'Alpha Med', currentRole: 'Data Entry Operator', skills: ['Typing Speed > 40 WPM', 'Excel', 'Data Validation'], education: '12th Pass', currentSalary: '₹2.1 LPA', expectedSalary: '₹2.5 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-11T13:00:00Z' },
+      { id: 'can_seed_5', code: 'CAN-9005', fullName: 'Aditya Joshi', email: 'aditya.j@email.com', phone: '+91 98777 88990', currentLocation: 'Gurugram', totalExperience: '3 Years', currentCompany: 'Swift Logistics', currentRole: 'Senior Clerk', skills: ['Data Validation', 'Excel'], education: 'Graduate', currentSalary: '₹2.8 LPA', expectedSalary: '₹3.4 LPA', noticePeriod: '30 Days', source: 'Job Portal', duplicateStatus: 'None', createdAt: '2026-07-11T14:00:00Z' },
+      { id: 'can_seed_6', code: 'CAN-9006', fullName: 'Karan Malhotra', email: 'karan.m@email.com', phone: '+91 98888 99001', currentLocation: 'Delhi', totalExperience: '2.5 Years', currentCompany: 'Zeta MedTech', currentRole: 'Data Executive', skills: ['Typing Speed > 40 WPM', 'Data Validation'], education: 'B.A, Delhi University', currentSalary: '₹2.4 LPA', expectedSalary: '₹3.0 LPA', noticePeriod: '15 Days', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-12T09:00:00Z' },
+      { id: 'can_seed_7', code: 'CAN-9007', fullName: 'Pooja Hegde', email: 'pooja.h@email.com', phone: '+91 98999 00112', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'DataSoft', currentRole: 'Data Operator', skills: ['Excel', 'Typing Speed > 40 WPM'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.7 LPA', noticePeriod: 'Immediate', source: 'Referral', duplicateStatus: 'None', createdAt: '2026-07-12T10:00:00Z' }
+    ];
+    let changed = false;
+    pipelineSeeds.forEach(seed => {
+      if (!base.some(c => c.id === seed.id || c.email === seed.email)) {
+        base.push(seed);
+        changed = true;
+      }
+    });
+    if (changed || localStorage.getItem('spc_candidates') === null) {
+      localStorage.setItem('spc_candidates', JSON.stringify(base));
     }
-    return safeParse<Candidate[]>('spc_candidates', mockCandidates);
+    return base;
   });
 
   const [applications, setApplications] = useState<Application[]>(() => {
-    if (localStorage.getItem('spc_applications') === null) {
-      localStorage.setItem('spc_applications', JSON.stringify(mockApplications));
+    let base = safeParse<Application[]>('spc_applications', mockApplications);
+    const appSeeds: Application[] = [
+      { id: 'app_seed_1', candidateId: 'can_seed_1', jobId: 'j1', requirementId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-08T10:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 85, matchStrengths: ['Good typing speed', 'Excel knowledge'], matchGaps: [], lastActivity: '2026-07-08T10:15:00Z' },
+      { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', requirementId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-09T11:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },
+      { id: 'app_seed_3', candidateId: 'can_seed_3', jobId: 'j1', requirementId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-10T12:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 72, matchStrengths: ['Immediate availability'], matchGaps: [], lastActivity: '2026-07-10T12:15:00Z' },
+      { id: 'app_seed_4', candidateId: 'can_seed_4', jobId: 'j1', requirementId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T13:45:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 90, matchStrengths: ['Direct experience matching requirements'], matchGaps: [], lastActivity: '2026-07-11T13:45:00Z' },
+      { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', requirementId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T14:30:00Z', source: 'Job Portal', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
+      { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', requirementId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
+      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', requirementId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
+    ];
+    let changed = false;
+    appSeeds.forEach(seed => {
+      if (!base.some(a => a.id === seed.id || a.candidateId === seed.candidateId)) {
+        base.push(seed);
+        changed = true;
+      }
+    });
+    if (changed || localStorage.getItem('spc_applications') === null) {
+      localStorage.setItem('spc_applications', JSON.stringify(base));
     }
-    return safeParse<Application[]>('spc_applications', mockApplications);
+    return base;
   });
 
   // Sync session changes
@@ -173,6 +208,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       id: 'can_' + Math.random().toString(36).substr(2, 9),
       code: 'CAN-26-' + Math.floor(100 + Math.random() * 900),
       duplicateStatus: 'None',
+      createdAt: new Date().toISOString(),
     };
     persistCandidates([newCandidate, ...candidates]);
     return { success: true };
@@ -276,6 +312,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistApplications(updated);
   };
 
+  const updateRequirementStatus = (reqId: string, status: RequirementStatus) => {
+    const updated = requirements.map(r => {
+      if (r.id === reqId) {
+        return { ...r, status, updatedAt: new Date().toISOString() };
+      }
+      return r;
+    });
+    persistRequirements(updated);
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -293,6 +339,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         createJob,
         submitApplication,
         updateApplicationStage,
+        updateRequirementStatus,
       }}
     >
       {children}

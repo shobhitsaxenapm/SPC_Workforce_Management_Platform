@@ -16,7 +16,10 @@ export default function Login() {
   const handleDemoSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     if (val) {
-      const match = mockUsers.find(u => u.role === val || (val === 'HR' && u.role === 'Recruitment Manager'));
+      const match = mockUsers.find(u => 
+        (val === 'Admin' && u.role === 'Company Admin') || 
+        (val === 'Employee' && u.role === 'Recruiter')
+      );
       if (match) {
         setEmail(match.email);
         setPassword('password123'); // seed mock password
@@ -77,9 +80,8 @@ export default function Login() {
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
             >
               <option value="">-- Choose Role --</option>
-              <option value="Company Admin">Company Admin (Rahul Sharma)</option>
-              <option value="HR">HR / Recruitment Manager (Priya Desai)</option>
-              <option value="Recruiter">Recruiter (Amit Kumar)</option>
+              <option value="Admin">Admin (Rahul Sharma)</option>
+              <option value="Employee">Employee (Amit Kumar)</option>
             </select>
           </div>
 

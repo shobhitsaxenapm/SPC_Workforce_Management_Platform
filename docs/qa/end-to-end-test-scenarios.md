@@ -379,3 +379,34 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Status**: Not Audited
 - **Evidence**: None
 
+---
+
+### TEST-REQ-02 — Client Requirement Workspace and Tabbed Navigation
+- **Test ID**: TEST-REQ-02
+- **Related Requirement IDs**: REQ-001, REQ-002, REQ-003, REQ-004, REQ-005
+- **Preconditions**: Centralized AppContext seeded with client requirement `r1` (Data Entry Operator).
+- **User Role**: HR or Admin
+- **Starting Route**: `/requirements/r1`
+- **Steps**:
+  1. Open `/requirements/r1` in the browser.
+  2. Verify that the layout renders summary details of the requirement (labeled as "Business").
+  3. Verify the tabs section displays: Overview, Candidates, Pipeline, Jobs, Activity.
+  4. Under **Overview**:
+     - Check that the progress bar calculates fulfillment purely based on candidates in the 'Joined' stage.
+     - Confirm KPI counts show correct numbers for each stage (Sourced, Applied, Screening, Interviewing, Offered, Joined, Rejected).
+     - Check the "Attention Required" section for active alerts (unfilled slots, approaching target dates).
+  5. Under **Candidates**:
+     - Search for candidate "Rohan Mehta". Verify only matches display.
+     - Change a candidate's stage using the inline dropdown and verify it updates.
+     - Filter candidates using the Date Range presets (e.g., Last 30 Days) and verify filtering works.
+  6. Under **Pipeline**:
+     - Confirm candidates are displayed as cards under Kanban stages.
+     - Change card stage via dropdown select and verify counters update dynamically.
+  7. Under **Jobs**:
+     - Verify list of linked jobs shows correct opening and Joined counts.
+  8. Click "Put On Hold" at the top of the workspace and verify the status shifts to "On Hold" and persists.
+- **Expected Result**: Requirement Detail page acts as a comprehensive, fully functional management workspace.
+- **Actual Result**: Verified in Browser
+- **Status**: PASSED
+- **Evidence**: None
+

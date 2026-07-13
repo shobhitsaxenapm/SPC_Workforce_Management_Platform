@@ -2,8 +2,8 @@
 
 ## Project Status
 
-- **Current Phase**: `Seeding & Mutator Fixes: Client, Client Requirement, Candidate Creation and Filter Panel integration`
-- **Last Updated**: 2026-07-12
+- **Current Phase**: `Client Requirement detail workspace, Date Range Filters across lists, simplified login role mapping, and Overview CTA modal`
+- **Last Updated**: 2026-07-13
 - **Next Recommended Action**: Execute full regression manual testing on all filters and entity creation forms.
 
 ---
@@ -55,34 +55,33 @@
 ---
 
 ## Files Modified
-- `src/main.tsx` — Wrapped App in AppContextProvider
-- `src/App.tsx` — Added /login, /unauthorized, /jobs routes; wrapped protected routes in RouteGuard; admin-only guards on /users and /settings
-- `src/context/AppContext.tsx` — Added createClient, createRequirement, and createCandidate mutators with persistence and safe seeding
-- `src/components/ClientsList.tsx` — Switched to AppContext, added Add Client modal + validations, search + industry/status FilterPanel
-- `src/components/RequirementsList.tsx` — Switched to AppContext, added Create Requirement modal + validations, search + client/status/priority FilterPanel
-- `src/components/CandidatesList.tsx` — Added Add Candidate drawer form + validations + duplicate checks, search + source/experience FilterPanel
-- `src/components/JobsList.tsx` — Added FilterPanel (status, client, type)
-- `src/components/EmployeesList.tsx` — Added FilterPanel (status)
-- `src/components/InterviewsList.tsx` — Added FilterPanel (status)
-- `src/components/OffersList.tsx` — Added FilterPanel (status)
-- `src/components/TalentPoolList.tsx` — Added FilterPanel (consent)
-- `src/components/OnboardingList.tsx` — Added FilterPanel (status)
-- `src/components/OffboardingList.tsx` — Added FilterPanel (status)
-- `src/components/BillingList.tsx` — Added FilterPanel (status)
-- `src/components/DeploymentsList.tsx` — Added FilterPanel (status)
-- `src/components/Layout.tsx` — Dynamic user profile, role-based sidebar filtering, logout button
-- `src/components/JobDetail.tsx` — Context-driven pipeline, stage change via updateApplicationStage
-- `src/components/CareersPage.tsx` — Context-driven public listings, application form with duplicate prevention, resume metadata upload
-- `src/components/CandidateDetail.tsx` — Updated /jobs links to /job-desk
-- `src/components/RequirementDetail.tsx` — Updated /jobs links to /job-desk
-- `src/components/CareersAdmin.tsx` — Updated /careers link to /jobs
+- `src/types.ts` — Extended Candidate type with optional createdAt property. Added Joined application stage.
+- `src/context/AppContext.tsx` — Added updateRequirementStatus, auto-createdAt for candidates, and safe seed logic for candidate/application pipelines.
+- `src/components/Login.tsx` — Simplified autoselect options to Admin and Employee.
+- `src/components/Layout.tsx` — Mapped internal role strings to Admin and Employee for UI displays.
+- `src/components/Dashboard.tsx` — Connected hiring grid to context requirements and clients, added Create Requirement CTA modal.
+- `src/components/RequirementsList.tsx` — Integrated shared CreateRequirementModal and DateRangeFilter.
+- `src/components/RequirementDetail.tsx` — Built comprehensive multi-tab requirement workspace (Overview, Candidates, Kanban Pipeline, Jobs, Activity).
+- `src/components/ClientDetail.tsx` — Integrated shared CreateRequirementModal and context requirements/applications metrics.
+- `src/components/CandidatesList.tsx` — Integrated DateRangeFilter.
+- `src/components/JobsList.tsx` — Integrated DateRangeFilter.
+- `src/components/EmployeesList.tsx` — Integrated DateRangeFilter.
+- `src/components/DeploymentsList.tsx` — Integrated DateRangeFilter.
+- `src/components/InterviewsList.tsx` — Integrated DateRangeFilter.
+- `src/components/OffersList.tsx` — Integrated DateRangeFilter.
+- `src/components/TalentPoolList.tsx` — Integrated DateRangeFilter.
+- `src/components/OnboardingList.tsx` — Integrated DateRangeFilter.
+- `src/components/OffboardingList.tsx` — Integrated DateRangeFilter.
+- `src/components/BillingList.tsx` — Integrated DateRangeFilter.
+- `src/components/AttendanceList.tsx` — Integrated DateRangeFilter.
 
 ## New Files Created
-- `src/components/FilterPanel.tsx` — Reusable filter dropdown panel component
-- `src/context/AppContext.tsx` — Centralized state provider with localStorage persistence and safe seeding
-- `src/components/Login.tsx` — Demo login with role selector and credential validation
-- `src/components/RouteGuard.tsx` — RBAC route protection component
-- `src/components/Unauthorized.tsx` — Access denied view
+- `src/lib/dateUtils.ts` — Date ranges boundary matching functions.
+- `src/components/DateRangeFilter.tsx` — Reusable Date Range Filter dropdown panel.
+- `src/components/CreateRequirementModal.tsx` — Shared client requirement creation form.
+- `src/components/FilterPanel.tsx` — Reusable filter dropdown panel component.
+- `src/components/RouteGuard.tsx` — RBAC route protection component.
+- `src/components/Unauthorized.tsx` — Access denied view.
 
 ## Tests Executed
 

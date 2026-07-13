@@ -1,5 +1,6 @@
 import { ClientRequirement, Job, Candidate, Application } from '../types';
-import { mockRequirements, mockJobs, mockCandidates, mockApplications, mockClients } from '../data/mockData';
+import { useApp } from '../context/AppContext';
+import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { 
   Building2, 
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
+import CreateRequirementModal from './CreateRequirementModal';
 
 function KpiCard({ title, value, icon: Icon, trend }: { title: string; value: string | number; icon: any; trend?: string }) {
   return (
@@ -36,24 +38,39 @@ function KpiCard({ title, value, icon: Icon, trend }: { title: string; value: st
 }
 
 export default function Dashboard() {
-  const openReqs = mockRequirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled').length;
-  const totalOpenPos = mockRequirements.reduce((acc, r) => acc + (r.positionsRequired - r.positionsFilled), 0);
-  const totalFilled = mockRequirements.reduce((acc, r) => acc + r.positionsFilled, 0);
-  const newApps = mockApplications.filter(a => a.currentStage === 'Applied' || a.currentStage === 'Under Review').length;
+  const { requirements, applications, clients } = useApp();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openReqs = requirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled').length;
+  
+  const calculateFilled = (reqId: string) => {
+    return applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
+  };
+
+  const totalOpenPos = requirements.reduce((acc, r) => {
+    const filled = calculateFilled(r.id);
+    return acc + Math.max(r.positionsRequired - filled, 0);
+  }, 0);
+
+  const totalFilled = requirements.reduce((acc, r) => acc + calculateFilled(r.id), 0);
+  const newApps = applications.filter(a => a.currentStage === 'Applied' || a.currentStage === 'Under Review').length;
 
   return (
     <div className="space-y-6">
       {/* Header section is in layout, we just add the page specific subtitle and CTA here */}
       <div className="flex justify-between items-center">
         <p className="text-slate-600">Track client requirements, hiring progress, and operational blockers.</p>
-        <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+        >
           Create Client Requirement
         </button>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Open Requirements" value={openReqs} icon={Building2} trend="Across 4 Active Clients" />
+        <KpiCard title="Open Requirements" value={openReqs} icon={Building2} trend="Across Active Clients" />
         <KpiCard title="Open Positions" value={totalOpenPos} icon={Briefcase} trend="Needs Sourcing" />
         <KpiCard title="Positions Filled" value={totalFilled} icon={Users} trend="This Month" />
         <KpiCard title="New Applications" value={newApps} icon={Clock} trend="Awaiting Screening" />
@@ -129,12 +146,13 @@ export default function Dashboard() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-800">Hiring Progress (Top Requirements)</h2>
             <div className="bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
-              {mockRequirements.map((req, idx) => {
-                const client = mockClients.find(c => c.id === req.clientId);
-                const progress = (req.positionsFilled / req.positionsRequired) * 100;
+              {requirements.map((req, idx) => {
+                const client = clients.find(c => c.id === req.clientId);
+                const filled = calculateFilled(req.id);
+                const progress = (filled / req.positionsRequired) * 100;
                 
                 return (
-                  <div key={req.id} className={cn("p-4", idx !== mockRequirements.length - 1 && "border-b border-slate-100")}>
+                  <div key={req.id} className={cn("p-4", idx !== requirements.length - 1 && "border-b border-slate-100")}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <Link to={`/requirements/${req.id}`} className="font-medium text-slate-800 hover:text-blue-600">
@@ -143,7 +161,7 @@ export default function Dashboard() {
                         <p className="text-xs text-slate-500 mt-1">Target: {new Date(req.targetJoiningDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-slate-800">{req.positionsFilled}</span>
+                        <span className="text-sm font-semibold text-slate-800">{filled}</span>
                         <span className="text-sm text-slate-500"> / {req.positionsRequired} filled</span>
                       </div>
                     </div>
@@ -187,6 +205,7 @@ export default function Dashboard() {
 
         </div>
       </div>
+      <CreateRequirementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }

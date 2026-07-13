@@ -166,7 +166,7 @@ export default function Layout() {
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-slate-700">{currentUser?.name}</span>
-                <span className="text-xs text-slate-500">{currentUser?.role}</span>
+                <span className="text-xs text-slate-500">{currentUser?.role === 'Company Admin' ? 'Admin' : 'Employee'}</span>
               </div>
               <button 
                 onClick={handleLogout} 

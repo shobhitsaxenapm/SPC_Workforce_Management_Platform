@@ -1,10 +1,38 @@
 import React, { useState } from 'react';
 import { mockAttendances, mockEmployees, mockDeployments, mockClients } from '../data/mockData';
-import { Search, Filter, CalendarDays, Check, Clock } from 'lucide-react';
+import { Search, CalendarDays, Check, Clock, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import AIInsightCard from './AIInsightCard';
+import FilterPanel, { FilterField } from './FilterPanel';
+import DateRangeFilter from './DateRangeFilter';
+import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 
 export default function AttendanceList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const filterFields: FilterField[] = [
+    { key: 'status', label: 'Status', options: ['Draft', 'Submitted', 'Approved', 'Rejected'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockAttendances.filter(att => {
+    const emp = mockEmployees.find(e => e.id === att.employeeId);
+    const dep = mockDeployments.find(d => d.id === att.deploymentId);
+    const client = mockClients.find(c => c.id === dep?.clientId);
+
+    const matchSearch = !searchTerm || 
+      emp?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = !filters.status || att.status === filters.status;
+    const matchDate = isDateInPreset(`${att.month} ${att.year}`, datePreset, customStart, customEnd);
+
+    return matchSearch && matchStatus && matchDate;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -27,19 +55,58 @@ export default function AttendanceList() {
         onAction={() => {}}
       />
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Search timesheets by employee or client..." 
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Search timesheets by employee or client..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+            />
+          </div>
+          <DateRangeFilter
+            preset={datePreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onChange={(preset, start, end) => {
+              setDatePreset(preset);
+              setCustomStart(start);
+              setCustomEnd(end);
+            }}
+          />
+          <FilterPanel
+            fields={filterFields}
+            values={filters}
+            onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+            onClear={() => {
+              setFilters({ status: '' });
+              setDatePreset('All Time');
+              setCustomStart('');
+              setCustomEnd('');
+            }}
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Month: October 2023
-        </button>
+
+        {datePreset !== 'All Time' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Billing Period: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
+              <button 
+                onClick={() => {
+                  setDatePreset('All Time');
+                  setCustomStart('');
+                  setCustomEnd('');
+                }} 
+                className="hover:text-blue-900 focus:outline-none"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -57,7 +124,7 @@ export default function AttendanceList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockAttendances.map(att => {
+              {filtered.map(att => {
                 const emp = mockEmployees.find(e => e.id === att.employeeId);
                 const dep = mockDeployments.find(d => d.id === att.deploymentId);
                 const client = mockClients.find(c => c.id === dep?.clientId);
@@ -112,7 +179,7 @@ export default function AttendanceList() {
                   </tr>
                 );
               })}
-              {mockAttendances.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     No timesheets submitted yet.

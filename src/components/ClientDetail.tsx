@@ -1,14 +1,24 @@
 import { useParams, Link } from 'react-router-dom';
-import { mockClients, mockRequirements } from '../data/mockData';
+import { useApp } from '../context/AppContext';
+import { mockUsers } from '../data/mockData';
 import { Building2, MapPin, Mail, Phone, Plus, Calendar, Briefcase, FileText } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
+import { useState } from 'react';
+import CreateRequirementModal from './CreateRequirementModal';
 
 export default function ClientDetail() {
   const { id } = useParams();
-  const client = mockClients.find(c => c.id === id);
-  const clientReqs = mockRequirements.filter(r => r.clientId === id);
+  const { clients, requirements, applications } = useApp();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const client = clients.find(c => c.id === id);
+  const clientReqs = requirements.filter(r => r.clientId === id);
 
   if (!client) return <div>Client not found</div>;
+
+  const calculateFilled = (reqId: string) => {
+    return applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
+  };
 
   return (
     <div className="space-y-6">
@@ -48,7 +58,10 @@ export default function ClientDetail() {
             <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
               Edit Client
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
               <Plus className="w-4 h-4" />
               Create Requirement
             </button>
@@ -81,11 +94,13 @@ export default function ClientDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <p className="text-xs text-slate-500 mb-1">Active Requirements</p>
-                <p className="text-xl font-semibold text-slate-800">{client.activeRequirementsCount}</p>
+                <p className="text-xl font-semibold text-slate-800">{clientReqs.filter(r => r.status !== 'Closed').length}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <p className="text-xs text-slate-500 mb-1">Open Positions</p>
-                <p className="text-xl font-semibold text-slate-800">{client.openPositionsCount}</p>
+                <p className="text-xl font-semibold text-slate-800">
+                  {clientReqs.reduce((acc, r) => acc + Math.max(r.positionsRequired - calculateFilled(r.id), 0), 0)}
+                </p>
               </div>
             </div>
           </div>
@@ -95,53 +110,57 @@ export default function ClientDetail() {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-semibold text-slate-800">Client Requirements</h3>
+              <h3 className="font-semibold text-slate-800">Business Profile / Client Requirements</h3>
             </div>
             
             <div className="divide-y divide-slate-100">
-              {clientReqs.length > 0 ? clientReqs.map(req => (
-                <div key={req.id} className="p-5 hover:bg-slate-50 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <Link to={`/requirements/${req.id}`} className="font-medium text-slate-800 hover:text-blue-600">
-                        {req.title}
-                      </Link>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                        <span className="font-mono bg-slate-100 px-1.5 rounded">{req.code}</span>
-                        <span>•</span>
-                        <span>{req.roleTitle}</span>
+              {clientReqs.length > 0 ? clientReqs.map(req => {
+                const filled = calculateFilled(req.id);
+                const progress = (filled / req.positionsRequired) * 100;
+                return (
+                  <div key={req.id} className="p-5 hover:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <Link to={`/requirements/${req.id}`} className="font-medium text-slate-800 hover:text-blue-600">
+                          {req.title}
+                        </Link>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                          <span className="font-mono bg-slate-100 px-1.5 rounded">{req.code}</span>
+                          <span>•</span>
+                          <span>{req.roleTitle}</span>
+                        </div>
+                      </div>
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-md text-xs font-medium border",
+                        req.status === 'Open' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        req.status === 'In Progress' ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                        req.status === 'Partially Filled' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        "bg-slate-50 text-slate-700 border-slate-200"
+                      )}>
+                        {req.status}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="w-4 h-4 text-slate-400" />
+                        {filled} / {req.positionsRequired} Joined
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        Target: {formatDate(req.targetJoiningDate)}
                       </div>
                     </div>
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-md text-xs font-medium border",
-                      req.status === 'Open' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                      req.status === 'In Progress' ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-                      req.status === 'Partially Filled' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                      "bg-slate-50 text-slate-700 border-slate-200"
-                    )}>
-                      {req.status}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <Briefcase className="w-4 h-4 text-slate-400" />
-                      {req.positionsFilled} / {req.positionsRequired} Filled
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      Target: {formatDate(req.targetJoiningDate)}
+                    
+                    <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-blue-500 h-1.5 rounded-full" 
+                        style={{ width: `${Math.max(progress, 2)}%` }}
+                      ></div>
                     </div>
                   </div>
-                  
-                  <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                    <div 
-                      className="bg-blue-500 h-1.5 rounded-full" 
-                      style={{ width: `${Math.max((req.positionsFilled / req.positionsRequired) * 100, 2)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )) : (
+                );
+              }) : (
                 <div className="p-8 text-center text-slate-500">
                   <FileText className="w-8 h-8 text-slate-300 mx-auto mb-3" />
                   <p>No requirements found for this client.</p>
@@ -151,6 +170,7 @@ export default function ClientDetail() {
           </div>
         </div>
       </div>
+      <CreateRequirementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultClientId={id} />
     </div>
   );
 }

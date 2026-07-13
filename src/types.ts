@@ -2,7 +2,7 @@ export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type RequirementStatus = 'Draft' | 'Open' | 'In Progress' | 'Partially Filled' | 'Fulfilled' | 'On Hold' | 'Closed';
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
-export type ApplicationStage = 'Sourced' | 'Applied' | 'Under Review' | 'Screening' | 'Interview Round 1' | 'Interview Round 2' | 'Shortlisted' | 'Interview Scheduled' | 'Interview Completed' | 'Selected' | 'Offer Extended' | 'Offer Sent' | 'Offer Accepted' | 'Ready for Onboarding' | 'On Hold' | 'Rejected' | 'Withdrawn' | 'No Show' | 'Offer Declined';
+export type ApplicationStage = 'Sourced' | 'Applied' | 'Under Review' | 'Screening' | 'Interview Round 1' | 'Interview Round 2' | 'Shortlisted' | 'Interview Scheduled' | 'Interview Completed' | 'Selected' | 'Offer Extended' | 'Offer Sent' | 'Offer Accepted' | 'Ready for Onboarding' | 'On Hold' | 'Rejected' | 'Withdrawn' | 'No Show' | 'Offer Declined' | 'Joined';
 export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'No Show';
 export type OfferStatus = 'Draft' | 'Approval Pending' | 'Approved' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired';
 export type OnboardingStatus = 'Documents Requested' | 'Documents Submitted' | 'Verification In Progress' | 'Changes Requested' | 'Approved' | 'Joining Scheduled' | 'Completed';
@@ -90,6 +90,7 @@ export interface Candidate {
   resumeUrl?: string;
   source: string;
   duplicateStatus: 'None' | 'Possible Duplicate' | 'Confirmed Duplicate';
+  createdAt?: string;
 }
 
 export interface Application {

@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { mockOnboardings, mockCandidates, mockJobs, mockClients } from '../data/mockData';
-import { Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
 import FilterPanel, { FilterField } from './FilterPanel';
+import DateRangeFilter from './DateRangeFilter';
+import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 
 export default function OnboardingList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
   const filterFields: FilterField[] = [
     { key: 'status', label: 'Status', options: ['In Progress', 'Completed', 'Delayed', 'Pending'].map(s => ({ value: s, label: s })) },
@@ -18,7 +24,8 @@ export default function OnboardingList() {
     const candidate = mockCandidates.find(c => c.id === onb.candidateId);
     const matchSearch = !searchTerm || candidate?.fullName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = !filters.status || onb.status === filters.status;
-    return matchSearch && matchStatus;
+    const matchDate = isDateInPreset(onb.plannedJoiningDate, datePreset, customStart, customEnd);
+    return matchSearch && matchStatus && matchDate;
   });
 
   return (
@@ -40,23 +47,58 @@ export default function OnboardingList() {
         onAction={() => {}}
       />
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Search onboardings by candidate or role..." 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Search onboardings by candidate or role..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+            />
+          </div>
+          <DateRangeFilter
+            preset={datePreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onChange={(preset, start, end) => {
+              setDatePreset(preset);
+              setCustomStart(start);
+              setCustomEnd(end);
+            }}
+          />
+          <FilterPanel
+            fields={filterFields}
+            values={filters}
+            onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+            onClear={() => {
+              setFilters({ status: '' });
+              setDatePreset('All Time');
+              setCustomStart('');
+              setCustomEnd('');
+            }}
           />
         </div>
-        <FilterPanel
-          fields={filterFields}
-          values={filters}
-          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
-          onClear={() => setFilters({ status: '' })}
-        />
+
+        {datePreset !== 'All Time' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Planned Joining Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
+              <button 
+                onClick={() => {
+                  setDatePreset('All Time');
+                  setCustomStart('');
+                  setCustomEnd('');
+                }} 
+                className="hover:text-blue-900 focus:outline-none"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
