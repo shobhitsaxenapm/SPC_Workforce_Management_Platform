@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementStatus, Interview, InterviewStatus } from '../types';
-import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews } from '../data/mockData';
+import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementStatus, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus } from '../types';
+import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 
 interface AppContextType {
   currentUser: User | null;
@@ -10,6 +10,8 @@ interface AppContextType {
   requirements: ClientRequirement[];
   clients: Client[];
   interviews: Interview[];
+  offers: Offer[];
+  onboardings: Onboarding[];
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
   createClient: (clientData: Omit<Client, 'id'>) => { success: boolean; error?: string };
@@ -26,6 +28,9 @@ interface AppContextType {
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
   rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
   updateInterviewStatus: (interviewId: string, status: InterviewStatus) => void;
+  updateOfferStatus: (offerId: string, status: OfferStatus, metadata?: Partial<Offer>) => void;
+  extendOfferExpiry: (offerId: string, newExpiryDate: string) => void;
+  startOnboardingFromOffer: (offerId: string) => { success: boolean; error?: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -127,6 +132,20 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return safeParse<Interview[]>('spc_interviews', mockInterviews);
   });
 
+  const [offers, setOffers] = useState<Offer[]>(() => {
+    if (localStorage.getItem('spc_offers') === null) {
+      localStorage.setItem('spc_offers', JSON.stringify(mockOffers));
+    }
+    return safeParse<Offer[]>('spc_offers', mockOffers);
+  });
+
+  const [onboardings, setOnboardings] = useState<Onboarding[]>(() => {
+    if (localStorage.getItem('spc_onboardings') === null) {
+      localStorage.setItem('spc_onboardings', JSON.stringify(mockOnboardings));
+    }
+    return safeParse<Onboarding[]>('spc_onboardings', mockOnboardings);
+  });
+
   // Sync session changes
   useEffect(() => {
     if (currentUser) {
@@ -165,6 +184,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const persistInterviews = (newInterviews: Interview[]) => {
     setInterviews(newInterviews);
     localStorage.setItem('spc_interviews', JSON.stringify(newInterviews));
+  };
+
+  const persistOffers = (newOffers: Offer[]) => {
+    setOffers(newOffers);
+    localStorage.setItem('spc_offers', JSON.stringify(newOffers));
+  };
+
+  const persistOnboardings = (newOnboardings: Onboarding[]) => {
+    setOnboardings(newOnboardings);
+    localStorage.setItem('spc_onboardings', JSON.stringify(newOnboardings));
   };
 
   const login = (email: string) => {
@@ -389,6 +418,91 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistInterviews(updated);
   };
 
+  const updateOfferStatus = (offerId: string, status: OfferStatus, metadata?: Partial<Offer>) => {
+    const updated = offers.map(o => {
+      if (o.id === offerId) {
+        const result = { ...o, status, ...metadata };
+        if (status === 'Accepted') {
+          result.acceptedAt = new Date().toISOString();
+        } else if (status === 'Rejected' || status === 'Declined') {
+          result.rejectedAt = new Date().toISOString();
+        } else if (status === 'Withdrawn') {
+          result.withdrawnAt = new Date().toISOString();
+        }
+        return result;
+      }
+      return o;
+    });
+    persistOffers(updated);
+  };
+
+  const extendOfferExpiry = (offerId: string, newExpiryDate: string) => {
+    const updated = offers.map(o => {
+      if (o.id === offerId) {
+        return { 
+          ...o, 
+          expiryDate: newExpiryDate, 
+          extendedAt: new Date().toISOString() 
+        };
+      }
+      return o;
+    });
+    persistOffers(updated);
+  };
+
+  const startOnboardingFromOffer = (offerId: string) => {
+    const targetOffer = offers.find(o => o.id === offerId);
+    if (!targetOffer) {
+      return { success: false, error: 'Offer not found.' };
+    }
+
+    const duplicate = onboardings.some(onb => onb.candidateId === targetOffer.candidateId && onb.offerId === offerId);
+    if (duplicate) {
+      return { success: false, error: 'Onboarding has already been started for this candidate.' };
+    }
+
+    const job = jobs.find(j => j.id === targetOffer.jobId);
+    const requirementId = job ? job.requirementId : '';
+    const recruiterId = job ? job.assignedRecruiterId : 'u3';
+
+    const newOnboarding: Onboarding = {
+      id: `onb_${Date.now()}`,
+      candidateId: targetOffer.candidateId,
+      offerId: targetOffer.id,
+      clientId: targetOffer.clientId,
+      requirementId: requirementId,
+      jobId: targetOffer.jobId,
+      role: targetOffer.offeredRole,
+      proposedJoiningDate: targetOffer.proposedJoiningDate,
+      plannedJoiningDate: targetOffer.proposedJoiningDate,
+      assignedHrId: recruiterId,
+      status: 'Documents Requested',
+      documentsStatus: 'Pending',
+      backgroundCheckStatus: 'Pending',
+      documents: [
+        { name: 'PAN Card', submitted: false, approved: false },
+        { name: 'Aadhaar Card', submitted: false, approved: false },
+        { name: 'Cancelled Cheque', submitted: false, approved: false }
+      ]
+    };
+
+    const updatedOffers = offers.map(o => {
+      if (o.id === offerId) {
+        return {
+          ...o,
+          status: 'Accepted' as const,
+          onboardingStarted: true,
+          onboardingId: newOnboarding.id
+        };
+      }
+      return o;
+    });
+
+    persistOffers(updatedOffers);
+    persistOnboardings([newOnboarding, ...onboardings]);
+    return { success: true };
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -399,6 +513,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         requirements,
         clients,
         interviews,
+        offers,
+        onboardings,
         login,
         logout,
         createClient,
@@ -412,6 +528,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         submitInterviewFeedback,
         rescheduleInterview,
         updateInterviewStatus,
+        updateOfferStatus,
+        extendOfferExpiry,
+        startOnboardingFromOffer,
       }}
     >
       {children}

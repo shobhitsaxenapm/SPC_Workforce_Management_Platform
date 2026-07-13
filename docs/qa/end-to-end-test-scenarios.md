@@ -410,3 +410,33 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Status**: PASSED
 - **Evidence**: None
 
+---
+
+### TEST-OFR-01 — Offers Management Workspace and Onboarding Hand-off
+- **Test ID**: TEST-OFR-01
+- **Related Requirement IDs**: OFR-001, OFR-002, OFR-003, OFR-004, OFR-005, OFR-006
+- **Preconditions**: Centralized AppContext initialized with mock offers (`off1` in Accepted state, `off2` in Sent state).
+- **User Role**: HR or Admin
+- **Starting Route**: `/offers`
+- **Steps**:
+  1. Open `/offers` in the browser.
+  2. Search for "Riya Sharma" and verify the list filters correctly. Verify searching "₹2.4 LPA" displays Warehouse Associate.
+  3. Filter by "Status" = "Sent" and verify only Aman Verma's offer remains. Check the Expiry risk indicator.
+  4. Click "View Offer" on Aman Verma's row:
+     - Verify details (Client, compensation, proposed joining date, expiry date) render.
+     - Click "Extend Expiry" and input a future date. Confirm and verify expiry date changes immediately in table list.
+     - Click "Reject Offer", type a reason, confirm, and verify status changes to Declined/Rejected with rejection reason logged.
+  5. Go to Riya Sharma's row (Accepted state):
+     - Click "Start Onboarding".
+     - Verify candidate name, role, client, and joining date in confirmation popup.
+     - Click "Confirm & Create Folder". Verify success toast notification pops up.
+     - Verify that the Start Onboarding button is replaced by "View Onboarding" link.
+     - Try starting onboarding again or verify it is gated to prevent duplicate folders.
+  6. Click "View Onboarding" or navigate to the "/onboarding" page:
+     - Verify Riya Sharma's onboarding record is displayed with Documents Requested status.
+     - Refresh the page and confirm the onboarding record remains.
+- **Expected Result**: Offers are fully manageable through status transitions, extensions, and automated onboarding handover.
+- **Actual Result**: Verified in Browser
+- **Status**: PASSED
+- **Evidence**: None
+

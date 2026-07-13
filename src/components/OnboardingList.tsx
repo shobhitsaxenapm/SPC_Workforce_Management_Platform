@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockOnboardings, mockCandidates, mockJobs, mockClients } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 import { Search, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -9,6 +9,7 @@ import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 
 export default function OnboardingList() {
+  const { onboardings, candidates, jobs, clients } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
 
@@ -17,11 +18,11 @@ export default function OnboardingList() {
   const [customEnd, setCustomEnd] = useState('');
 
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Status', options: ['In Progress', 'Completed', 'Delayed', 'Pending'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Status', options: ['Documents Requested', 'Documents Submitted', 'Verification In Progress', 'Changes Requested', 'Approved', 'Joining Scheduled', 'Completed', 'In Progress', 'Delayed', 'Pending'].map(s => ({ value: s, label: s })) },
   ];
 
-  const filtered = mockOnboardings.filter((onb: any) => {
-    const candidate = mockCandidates.find(c => c.id === onb.candidateId);
+  const filtered = onboardings.filter((onb: any) => {
+    const candidate = candidates.find(c => c.id === onb.candidateId);
     const matchSearch = !searchTerm || candidate?.fullName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = !filters.status || onb.status === filters.status;
     const matchDate = isDateInPreset(onb.plannedJoiningDate, datePreset, customStart, customEnd);
@@ -117,9 +118,9 @@ export default function OnboardingList() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((onb: any) => {
-                const candidate = mockCandidates.find(c => c.id === onb.candidateId);
-                const job = mockJobs.find(j => j.id === onb.jobId);
-                const client = mockClients.find(c => c.id === job?.clientId);
+                const candidate = candidates.find(c => c.id === onb.candidateId);
+                const job = jobs.find(j => j.id === onb.jobId);
+                const client = clients.find(c => c.id === job?.clientId);
                 
                 return (
                   <tr key={onb.id} className="hover:bg-slate-50 transition-colors group">
