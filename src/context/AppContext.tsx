@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementStatus } from '../types';
-import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients } from '../data/mockData';
+import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementStatus, Interview, InterviewStatus } from '../types';
+import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews } from '../data/mockData';
 
 interface AppContextType {
   currentUser: User | null;
@@ -9,6 +9,7 @@ interface AppContextType {
   applications: Application[];
   requirements: ClientRequirement[];
   clients: Client[];
+  interviews: Interview[];
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
   createClient: (clientData: Omit<Client, 'id'>) => { success: boolean; error?: string };
@@ -21,6 +22,10 @@ interface AppContextType {
   ) => { success: boolean; error?: string };
   updateApplicationStage: (appId: string, stage: ApplicationStage) => void;
   updateRequirementStatus: (reqId: string, status: RequirementStatus) => void;
+  updateRequirement: (reqId: string, updates: Partial<ClientRequirement>) => void;
+  submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
+  rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
+  updateInterviewStatus: (interviewId: string, status: InterviewStatus) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -115,6 +120,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return base;
   });
 
+  const [interviews, setInterviews] = useState<Interview[]>(() => {
+    if (localStorage.getItem('spc_interviews') === null) {
+      localStorage.setItem('spc_interviews', JSON.stringify(mockInterviews));
+    }
+    return safeParse<Interview[]>('spc_interviews', mockInterviews);
+  });
+
   // Sync session changes
   useEffect(() => {
     if (currentUser) {
@@ -148,6 +160,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const persistApplications = (newApplications: Application[]) => {
     setApplications(newApplications);
     localStorage.setItem('spc_applications', JSON.stringify(newApplications));
+  };
+
+  const persistInterviews = (newInterviews: Interview[]) => {
+    setInterviews(newInterviews);
+    localStorage.setItem('spc_interviews', JSON.stringify(newInterviews));
   };
 
   const login = (email: string) => {
@@ -322,6 +339,56 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistRequirements(updated);
   };
 
+  const updateRequirement = (reqId: string, updates: Partial<ClientRequirement>) => {
+    const updated = requirements.map(r => {
+      if (r.id === reqId) {
+        return { ...r, ...updates, updatedAt: new Date().toISOString() };
+      }
+      return r;
+    });
+    persistRequirements(updated);
+  };
+
+  const submitInterviewFeedback = (interviewId: string, feedbackData: Partial<Interview>) => {
+    const updated = interviews.map(i => {
+      if (i.id === interviewId) {
+        return { 
+          ...i, 
+          ...feedbackData, 
+          feedbackStatus: 'Submitted' as const,
+          status: 'Completed' as const
+        };
+      }
+      return i;
+    });
+    persistInterviews(updated);
+  };
+
+  const rescheduleInterview = (interviewId: string, updatedSchedule: Partial<Interview>) => {
+    const updated = interviews.map(i => {
+      if (i.id === interviewId) {
+        return { 
+          ...i, 
+          ...updatedSchedule, 
+          status: 'Scheduled' as const,
+          rescheduledAt: new Date().toISOString()
+        };
+      }
+      return i;
+    });
+    persistInterviews(updated);
+  };
+
+  const updateInterviewStatus = (interviewId: string, status: InterviewStatus) => {
+    const updated = interviews.map(i => {
+      if (i.id === interviewId) {
+        return { ...i, status };
+      }
+      return i;
+    });
+    persistInterviews(updated);
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -331,6 +398,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         applications,
         requirements,
         clients,
+        interviews,
         login,
         logout,
         createClient,
@@ -340,6 +408,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         submitApplication,
         updateApplicationStage,
         updateRequirementStatus,
+        updateRequirement,
+        submitInterviewFeedback,
+        rescheduleInterview,
+        updateInterviewStatus,
       }}
     >
       {children}

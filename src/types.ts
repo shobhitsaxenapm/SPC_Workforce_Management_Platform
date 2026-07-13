@@ -126,6 +126,11 @@ export interface Interview {
   overallRating?: number;
   feedbackNotes?: string;
   recommendation?: 'Hire' | 'Hold' | 'Reject';
+  overallResult?: 'Strong Hire' | 'Hire' | 'Hold' | 'Reject';
+  strengths?: string;
+  concerns?: string;
+  rescheduleReason?: string;
+  rescheduledAt?: string;
 }
 
 export interface Offer {

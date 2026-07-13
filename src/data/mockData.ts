@@ -598,7 +598,13 @@ export const mockInterviews: Interview[] = [
     interviewerName: 'Dr. Alok Gupta',
     mode: 'In-person',
     status: 'Completed',
-    feedbackStatus: 'Submitted'
+    feedbackStatus: 'Submitted',
+    overallRating: 4,
+    feedbackNotes: 'Strong communication skills and high typing speed.',
+    recommendation: 'Hire',
+    overallResult: 'Hire',
+    strengths: 'Fast typing, clear communication, polite.',
+    concerns: 'None.'
   }
 ];
 

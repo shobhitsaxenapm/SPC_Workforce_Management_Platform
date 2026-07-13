@@ -27,6 +27,7 @@ import { JobVisibility, ApplicationStage, Priority, RequirementStatus } from '..
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import FilterPanel, { FilterField } from './FilterPanel';
+import CreateRequirementModal from './CreateRequirementModal';
 
 export default function RequirementDetail() {
   const { id } = useParams();
@@ -48,6 +49,13 @@ export default function RequirementDetail() {
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isHoldConfirmOpen, setIsHoldConfirmOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // Job Form State
   const [jobFormData, setJobFormData] = useState({
@@ -173,26 +181,11 @@ export default function RequirementDetail() {
     }, 1500);
   };
 
-  const handleEditRequirement = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In prototype, we can update context state directly
-    req.title = editFormData.title.trim();
-    req.roleTitle = editFormData.roleTitle.trim();
-    req.projectName = editFormData.projectName.trim();
-    req.positionsRequired = editFormData.positionsRequired;
-    req.employmentType = editFormData.employmentType;
-    req.contractDuration = editFormData.contractDuration;
-    req.targetJoiningDate = editFormData.targetJoiningDate;
-    req.priority = editFormData.priority;
-    req.notes = editFormData.notes;
-
-    localStorage.setItem('spc_requirements', JSON.stringify(requirements));
-    setIsEditOpen(false);
-  };
-
   const toggleHold = () => {
-    const nextStatus: RequirementStatus = req.status === 'On Hold' ? 'Open' : 'On Hold';
+    const nextStatus: RequirementStatus = req.status === 'On Hold' ? 'In Progress' : 'On Hold';
     updateRequirementStatus(req.id, nextStatus);
+    triggerToast(nextStatus === 'On Hold' ? 'Requirement has been put on hold.' : 'Requirement has been resumed.');
+    setIsHoldConfirmOpen(false);
   };
 
   // Candidates Tab Filters
@@ -282,6 +275,14 @@ export default function RequirementDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 animate-slide-in text-sm font-medium animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-green-400" />
+          {toast.message}
+        </div>
+      )}
+
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3 text-sm">
@@ -293,10 +294,10 @@ export default function RequirementDetail() {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={toggleHold}
+            onClick={() => setIsHoldConfirmOpen(true)}
             className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
           >
-            {req.status === 'On Hold' ? 'Activate' : 'Put On Hold'}
+            {req.status === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
           </button>
           <button 
             onClick={() => setIsEditOpen(true)}
@@ -874,84 +875,50 @@ export default function RequirementDetail() {
         </div>
       )}
 
-      {/* EDIT REQUIREMENT MODAL */}
-      {isEditOpen && (
+      {/* EDIT REQUIREMENT MODAL (REUSING SHARED COMPONENT) */}
+      <CreateRequirementModal
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          triggerToast('Requirement updated successfully!');
+        }}
+        requirementIdToEdit={req.id}
+      />
+
+      {/* HOLD CONFIRMATION MODAL */}
+      {isHoldConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-bold text-slate-800">Edit Client Requirement</h2>
-              <button onClick={() => setIsEditOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">
+                {req.status === 'On Hold' ? 'Resume Client Requirement' : 'Put Requirement On Hold'}
+              </h3>
             </div>
-            
-            <div className="p-6 overflow-y-auto">
-              <form id="editReqForm" onSubmit={handleEditRequirement} className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Basic Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Business *</label>
-                      <input type="text" required value={editFormData.title} onChange={e => setEditFormData({...editFormData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Role Title *</label>
-                      <input type="text" required value={editFormData.roleTitle} onChange={e => setEditFormData({...editFormData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                      <input type="text" value={editFormData.projectName} onChange={e => setEditFormData({...editFormData, projectName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Number of Positions *</label>
-                      <input type="number" min="1" required value={editFormData.positionsRequired} onChange={e => setEditFormData({...editFormData, positionsRequired: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-2">
-                  <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Engagement</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
-                      <select value={editFormData.employmentType} onChange={e => setEditFormData({...editFormData, employmentType: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                        <option value="Full-time">Full-time</option>
-                        <option value="Contract">Contract</option>
-                        <option value="Part-time">Part-time</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Contract Duration</label>
-                      <input type="text" value={editFormData.contractDuration} onChange={e => setEditFormData({...editFormData, contractDuration: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Target Date</label>
-                      <input type="date" value={editFormData.targetJoiningDate} onChange={e => setEditFormData({...editFormData, targetJoiningDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                  <textarea rows={3} value={editFormData.notes} onChange={e => setEditFormData({...editFormData, notes: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"></textarea>
-                </div>
-              </form>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10">
+            <p className="text-slate-600 text-sm mb-6">
+              {req.status === 'On Hold' 
+                ? 'Are you sure you want to resume this client requirement? The status will revert to In Progress and recruitment activities will resume.'
+                : 'Are you sure you want to put this client requirement on hold? This will update its status immediately.'}
+            </p>
+            <div className="flex justify-end gap-3">
               <button 
-                type="button"
-                onClick={() => setIsEditOpen(false)}
+                type="button" 
+                onClick={() => setIsHoldConfirmOpen(false)}
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
-                type="submit"
-                form="editReqForm"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                type="button" 
+                onClick={toggleHold}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors",
+                  req.status === 'On Hold' ? "bg-blue-600 hover:bg-blue-700" : "bg-amber-600 hover:bg-amber-700"
+                )}
               >
-                Save Changes
+                {req.status === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
               </button>
             </div>
           </div>
