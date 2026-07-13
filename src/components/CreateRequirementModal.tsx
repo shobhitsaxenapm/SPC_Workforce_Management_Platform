@@ -8,10 +8,11 @@ interface CreateRequirementModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultClientId?: string;
+  requirementIdToEdit?: string;
 }
 
-export default function CreateRequirementModal({ isOpen, onClose, defaultClientId }: CreateRequirementModalProps) {
-  const { clients, createRequirement } = useApp();
+export default function CreateRequirementModal({ isOpen, onClose, defaultClientId, requirementIdToEdit }: CreateRequirementModalProps) {
+  const { clients, requirements, createRequirement, updateRequirement } = useApp();
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -30,6 +31,43 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
     assignedRecruiterId: '',
     notes: ''
   });
+
+  React.useEffect(() => {
+    if (isOpen && requirementIdToEdit) {
+      const req = requirements.find(r => r.id === requirementIdToEdit);
+      if (req) {
+        setFormData({
+          clientId: req.clientId,
+          roleTitle: req.roleTitle,
+          title: req.title,
+          projectName: req.projectName,
+          locations: req.locations.join(', '),
+          positionsRequired: req.positionsRequired,
+          employmentType: req.employmentType,
+          contractDuration: req.contractDuration || '',
+          targetJoiningDate: req.targetJoiningDate,
+          priority: req.priority,
+          assignedRecruiterId: req.assignedRecruiterId,
+          notes: req.notes || ''
+        });
+      }
+    } else if (isOpen) {
+      setFormData({
+        clientId: defaultClientId || '',
+        roleTitle: '',
+        title: '',
+        projectName: '',
+        locations: '',
+        positionsRequired: 1,
+        employmentType: 'Full-time',
+        contractDuration: '',
+        targetJoiningDate: '',
+        priority: 'Medium',
+        assignedRecruiterId: '',
+        notes: ''
+      });
+    }
+  }, [isOpen, requirementIdToEdit, requirements, defaultClientId]);
 
   if (!isOpen) return null;
 
@@ -64,7 +102,7 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
     }
 
     setIsSubmitting(true);
-    createRequirement({
+    const dataPayload = {
       clientId: formData.clientId,
       title: formData.title.trim(),
       roleTitle: formData.roleTitle.trim(),
@@ -77,19 +115,19 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
       priority: formData.priority,
       assignedRecruiterId: formData.assignedRecruiterId,
       notes: formData.notes,
-    });
+    };
+
+    if (requirementIdToEdit) {
+      updateRequirement(requirementIdToEdit, dataPayload);
+    } else {
+      createRequirement(dataPayload);
+    }
     setIsSubmitting(false);
     
     setIsSuccess(true);
     setTimeout(() => {
       setIsSuccess(false);
       onClose();
-      // Clear form state
-      setFormData({
-        clientId: defaultClientId || '', roleTitle: '', title: '', projectName: '', locations: '', positionsRequired: 1, 
-        employmentType: 'Full-time', contractDuration: '', targetJoiningDate: '', 
-        priority: 'Medium', assignedRecruiterId: '', notes: ''
-      });
     }, 1500);
   };
 
@@ -102,7 +140,9 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold text-slate-800">Create Client Requirement</h2>
+          <h2 className="text-lg font-bold text-slate-800">
+            {requirementIdToEdit ? 'Edit Client Requirement' : 'Create Client Requirement'}
+          </h2>
           <button onClick={handleClose} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -114,8 +154,12 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Requirement Created</h3>
-              <p className="text-slate-500">The client requirement has been created and is now Open.</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                {requirementIdToEdit ? 'Requirement Updated' : 'Requirement Created'}
+              </h3>
+              <p className="text-slate-500">
+                {requirementIdToEdit ? 'The client requirement has been updated.' : 'The client requirement has been created and is now Open.'}
+              </p>
             </div>
           ) : (
             <form id="sharedCreateReqForm" onSubmit={handleSubmit} className="space-y-6">
@@ -130,26 +174,26 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Client *</label>
-                    <select required value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <select required value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                       <option value="">Select a client...</option>
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Role Title *</label>
-                    <input type="text" required value={formData.roleTitle} onChange={e => setFormData({...formData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" required value={formData.roleTitle} onChange={e => setFormData({...formData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Business *</label>
-                    <input type="text" placeholder="Enter Business identifier" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" placeholder="Enter Business identifier" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                    <input type="text" value={formData.projectName} onChange={e => setFormData({...formData, projectName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" value={formData.projectName} onChange={e => setFormData({...formData, projectName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Locations</label>
-                    <input type="text" placeholder="e.g. Mumbai, Delhi" value={formData.locations} onChange={e => setFormData({...formData, locations: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" placeholder="e.g. Mumbai, Delhi" value={formData.locations} onChange={e => setFormData({...formData, locations: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                 </div>
               </div>
@@ -159,11 +203,11 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Number of Positions *</label>
-                    <input type="number" min="1" required value={formData.positionsRequired} onChange={e => setFormData({...formData, positionsRequired: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="number" min="1" required value={formData.positionsRequired} onChange={e => setFormData({...formData, positionsRequired: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
-                    <select value={formData.employmentType} onChange={e => setFormData({...formData, employmentType: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <select value={formData.employmentType} onChange={e => setFormData({...formData, employmentType: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                       <option value="Full-time">Full-time</option>
                       <option value="Contract">Contract</option>
                       <option value="Part-time">Part-time</option>
@@ -171,7 +215,7 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Contract Duration</label>
-                    <input type="text" placeholder="e.g. 6 Months" value={formData.contractDuration} onChange={e => setFormData({...formData, contractDuration: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" placeholder="e.g. 6 Months" value={formData.contractDuration} onChange={e => setFormData({...formData, contractDuration: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                 </div>
               </div>
@@ -181,11 +225,11 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Target Joining Date *</label>
-                    <input type="date" required value={formData.targetJoiningDate} onChange={e => setFormData({...formData, targetJoiningDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="date" required value={formData.targetJoiningDate} onChange={e => setFormData({...formData, targetJoiningDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
-                    <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value as Priority})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value as Priority})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                       <option value="Low">Low</option>
                       <option value="Medium">Medium</option>
                       <option value="High">High</option>
@@ -194,7 +238,7 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Recruiter *</label>
-                    <select required value={formData.assignedRecruiterId} onChange={e => setFormData({...formData, assignedRecruiterId: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <select required value={formData.assignedRecruiterId} onChange={e => setFormData({...formData, assignedRecruiterId: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                       <option value="">Select a recruiter...</option>
                       {mockUsers.filter(u => u.role === 'Recruiter' || u.role === 'Recruitment Manager').map(u => (
                         <option key={u.id} value={u.id}>{u.name}</option>
@@ -206,7 +250,7 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea rows={3} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"></textarea>
+                <textarea rows={3} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"></textarea>
               </div>
             </form>
           )}
@@ -227,7 +271,7 @@ export default function CreateRequirementModal({ isOpen, onClose, defaultClientI
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
             >
-              Create Requirement
+              {requirementIdToEdit ? 'Save Changes' : 'Create Requirement'}
             </button>
           )}
         </div>
