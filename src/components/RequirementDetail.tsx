@@ -146,7 +146,7 @@ export default function RequirementDetail() {
                 <div key={job.id} className="p-5 hover:bg-slate-50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div>
-                      <Link to={`/jobs/${job.id}`} className="font-medium text-slate-800 hover:text-blue-600 block mb-1">
+                      <Link to={`/job-desk/${job.id}`} className="font-medium text-slate-800 hover:text-blue-600 block mb-1">
                         {job.title}
                       </Link>
                       <div className="flex items-center gap-3 text-xs text-slate-500">

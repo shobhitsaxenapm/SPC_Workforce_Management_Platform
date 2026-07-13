@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
 import { mockDeployments, mockEmployees, mockClients } from '../data/mockData';
-import { Search, Filter, MapPin, Calendar, Clock } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function DeploymentsList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const filterFields: FilterField[] = [
+    { key: 'status', label: 'Status', options: ['Active', 'Completed', 'Terminated'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockDeployments.filter((dep: any) => {
+    const emp = mockEmployees.find((e: any) => e.id === dep.employeeId);
+    const client = mockClients.find((c: any) => c.id === dep.clientId);
+    const matchSearch = !searchTerm || 
+      emp?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      dep.projectName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = !filters.status || dep.status === filters.status;
+    return matchSearch && matchStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -33,13 +52,17 @@ export default function DeploymentsList() {
           <input 
             type="text" 
             placeholder="Search deployments by employee, client, or project..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ status: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -56,9 +79,9 @@ export default function DeploymentsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockDeployments.map(dep => {
-                const emp = mockEmployees.find(e => e.id === dep.employeeId);
-                const client = mockClients.find(c => c.id === dep.clientId);
+              {filtered.map((dep: any) => {
+                const emp = mockEmployees.find((e: any) => e.id === dep.employeeId);
+                const client = mockClients.find((c: any) => c.id === dep.clientId);
                 
                 return (
                   <tr key={dep.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
@@ -99,7 +122,7 @@ export default function DeploymentsList() {
                   </tr>
                 );
               })}
-              {mockDeployments.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     No active deployments found.

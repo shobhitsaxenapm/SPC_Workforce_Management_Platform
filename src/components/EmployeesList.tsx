@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
 import { mockEmployees } from '../data/mockData';
-import { Search, Filter, UserCircle, Briefcase, Mail, Phone } from 'lucide-react';
+import { Search, UserCircle, Briefcase, Mail, Phone } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function EmployeesList() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+
+  const filterFields: FilterField[] = [
+    { key: 'status', label: 'Status', options: ['Active', 'Benched', 'Notice Period', 'Exited'].map(s => ({ value: s, label: s })) },
+  ];
+
+  const filtered = mockEmployees.filter((emp: any) => {
+    const matchSearch = !searchTerm || emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = !filters.status || emp.status === filters.status;
+    return matchSearch && matchStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -17,13 +31,17 @@ export default function EmployeesList() {
           <input 
             type="text" 
             placeholder="Search employees by name, emp code..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ status: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -39,7 +57,7 @@ export default function EmployeesList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockEmployees.map(emp => (
+              {filtered.map((emp: any) => (
                 <tr key={emp.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -78,7 +96,7 @@ export default function EmployeesList() {
                   </td>
                 </tr>
               ))}
-              {mockEmployees.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                     No employees found. Complete an onboarding to add employees.

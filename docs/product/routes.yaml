@@ -1,0 +1,246 @@
+routes:
+  - path: "/login"
+    module: "Authentication"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: true
+    page: "LoginLanding"
+    requirement_ids:
+      - "AUTH-001"
+
+  - path: "/login/spc-management"
+    module: "Authentication"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: true
+    page: "SPCManagementLogin"
+    requirement_ids:
+      - "AUTH-001"
+
+  - path: "/dashboard"
+    module: "Dashboard"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Dashboard Overview"
+    requirement_ids:
+      - "NAV-001"
+      - "DASH-001"
+
+  - path: "/candidates"
+    module: "Candidates"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Candidate Database"
+    requirement_ids:
+      - "CAN-001"
+
+  - path: "/approvals/pending"
+    module: "Pending Approvals"
+    roles:
+      - "company_admin"
+    public: false
+    page: "Approvals Review"
+    requirement_ids:
+      - "APR-001"
+
+  - path: "/departments"
+    module: "Departments"
+    roles:
+      - "company_admin"
+    public: false
+    page: "Departments Administration"
+    requirement_ids:
+      - "DEP-001"
+
+  - path: "/hr-management"
+    module: "HR Management"
+    roles:
+      - "company_admin"
+    public: false
+    page: "HR Directory"
+    requirement_ids:
+      - "HRM-001"
+
+  - path: "/hr-activity-history"
+    module: "HR Activity History"
+    roles:
+      - "company_admin"
+    public: false
+    page: "Activity Logs Timeline"
+    requirement_ids:
+      - "ACT-001"
+
+  - path: "/contracts/dashboard"
+    module: "Contract Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Contracts Dashboard"
+    requirement_ids:
+      - "CON-001"
+
+  - path: "/contracts"
+    module: "Contract Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "All Contracts"
+    requirement_ids:
+      - "CON-001"
+
+  - path: "/contracts/create"
+    module: "Contract Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Create Contract"
+    requirement_ids:
+      - "CON-001"
+
+  - path: "/contracts/:id"
+    module: "Contract Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Contract Details"
+    requirement_ids:
+      - "CON-001"
+
+  - path: "/employees"
+    module: "Employee Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "All Employees"
+    requirement_ids:
+      - "EMP-001"
+
+  - path: "/employees/add"
+    module: "Employee Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Add Employee Form"
+    requirement_ids:
+      - "EMP-001"
+
+  - path: "/employees/bulk-upload"
+    module: "Employee Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Bulk Upload Page"
+    requirement_ids:
+      - "EMP-001"
+
+  - path: "/employees/onboarding"
+    module: "Employee Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Onboarding Cases"
+    requirement_ids:
+      - "ONB-001"
+      - "DOC-001"
+
+  - path: "/employees/offboarding"
+    module: "Employee Management"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Offboarding Pipeline"
+    requirement_ids:
+      - "OFF-001"
+
+  - path: "/job-desk"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Job Postings"
+    requirement_ids:
+      - "JOB-001"
+
+  - path: "/job-desk/:jobId/applicants"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Job Applicants"
+    requirement_ids:
+      - "APP-001"
+
+  - path: "/employee/hr/candidate-pool"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Candidate Pool Directory"
+    requirement_ids:
+      - "CAN-001"
+
+  - path: "/employee/hr/resume-parser"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Resume Parser"
+    requirement_ids:
+      - "CAN-001"
+
+  - path: "/employee/hr/resume-search"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Resume Search Panel"
+    requirement_ids:
+      - "CAN-001"
+
+  - path: "/employee/hr/document-verification"
+    module: "Job Desk"
+    roles:
+      - "company_admin"
+      - "hr"
+    public: false
+    page: "Document Verification"
+    requirement_ids:
+      - "DOC-001"
+
+  - path: "/jobs"
+    module: "Public Module"
+    roles:
+      - "public_candidate"
+    public: true
+    page: "Careers Listings Page"
+    requirement_ids:
+      - "PUB-001"
+
+  - path: "/public/upload-documents/:token"
+    module: "Public Module"
+    roles:
+      - "public_candidate"
+    public: true
+    page: "Secure Upload Portal"
+    requirement_ids:
+      - "DOC-001"

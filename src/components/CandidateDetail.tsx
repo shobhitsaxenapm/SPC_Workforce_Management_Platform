@@ -132,7 +132,7 @@ export default function CandidateDetail() {
                 <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Link to={`/jobs/${job?.id}`} className="font-semibold text-slate-800 hover:text-blue-600 text-lg">
+                      <Link to={`/job-desk/${job?.id}`} className="font-semibold text-slate-800 hover:text-blue-600 text-lg">
                         {job?.title}
                       </Link>
                       <span className="text-slate-400">•</span>

@@ -17,6 +17,9 @@ import UsersList from './components/UsersList';
 import CareersAdmin from './components/CareersAdmin';
 import CareersPage from './components/CareersPage';
 import Reports from './components/Reports';
+import Login from './components/Login';
+import Unauthorized from './components/Unauthorized';
+import RouteGuard from './components/RouteGuard';
 
 // Operations
 import OnboardingList from './components/OnboardingList';
@@ -29,8 +32,11 @@ import OffboardingList from './components/OffboardingList';
 export default function App() {
   return (
     <Routes>
-      <Route path="/careers" element={<CareersPage />} />
-      <Route path="/" element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/jobs" element={<CareersPage />} />
+      
+      <Route path="/" element={<RouteGuard><Layout /></RouteGuard>}>
         <Route index element={<Dashboard />} />
         
         <Route path="clients" element={<ClientsList />} />
@@ -39,8 +45,8 @@ export default function App() {
         <Route path="requirements" element={<RequirementsList />} />
         <Route path="requirements/:id" element={<RequirementDetail />} />
         
-        <Route path="jobs" element={<JobsList />} />
-        <Route path="jobs/:id" element={<JobDetail />} />
+        <Route path="job-desk" element={<JobsList />} />
+        <Route path="job-desk/:id" element={<JobDetail />} />
         
         <Route path="candidates" element={<CandidatesList />} />
         <Route path="candidates/:id" element={<CandidateDetail />} />
@@ -60,8 +66,17 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="careers-page" element={<CareersAdmin />} />
         
-        <Route path="users" element={<UsersList />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="users" element={
+          <RouteGuard allowedRoles={['Company Admin']}>
+            <UsersList />
+          </RouteGuard>
+        } />
+        
+        <Route path="settings" element={
+          <RouteGuard allowedRoles={['Company Admin']}>
+            <Settings />
+          </RouteGuard>
+        } />
       </Route>
     </Routes>
   );

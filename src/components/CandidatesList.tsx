@@ -1,13 +1,88 @@
-import { mockCandidates, mockApplications, mockJobs, mockUsers } from '../data/mockData';
-import { Search, Filter, AlertTriangle, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, AlertTriangle, Plus, X, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
+import FilterPanel, { FilterField } from './FilterPanel';
 
 export default function CandidatesList() {
+  const { candidates, applications, jobs, createCandidate } = useApp();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ source: '', experience: '' });
+
+  const [formData, setFormData] = useState({
+    fullName: '', email: '', phone: '', currentLocation: '',
+    totalExperience: '', currentCompany: '', currentRole: '',
+    skills: '', education: '', currentSalary: '', expectedSalary: '',
+    noticePeriod: '', resumeUrl: '', source: 'Manual Entry',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setErrorMsg(null);
+    if (!formData.fullName.trim()) { setErrorMsg('Full name is required.'); return; }
+    if (!formData.email.trim() && !formData.phone.trim()) { setErrorMsg('Please provide at least email or phone.'); return; }
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { setErrorMsg('Please enter a valid email address.'); return; }
+
+    setIsSubmitting(true);
+    const result = createCandidate({
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      currentLocation: formData.currentLocation.trim(),
+      totalExperience: formData.totalExperience || 'Fresher',
+      currentCompany: formData.currentCompany.trim() || 'N/A',
+      currentRole: formData.currentRole.trim(),
+      skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
+      education: formData.education.trim() || 'Graduate',
+      currentSalary: formData.currentSalary || '0',
+      expectedSalary: formData.expectedSalary || '0',
+      noticePeriod: formData.noticePeriod || 'Immediate',
+      resumeUrl: formData.resumeUrl || undefined,
+      source: formData.source,
+    });
+    setIsSubmitting(false);
+    if (!result.success) { setErrorMsg(result.error || 'Failed.'); return; }
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+      setIsModalOpen(false);
+      setFormData({ fullName: '', email: '', phone: '', currentLocation: '', totalExperience: '', currentCompany: '', currentRole: '', skills: '', education: '', currentSalary: '', expectedSalary: '', noticePeriod: '', resumeUrl: '', source: 'Manual Entry' });
+    }, 1500);
+  };
+
+  const sources = [...new Set(candidates.map(c => c.source).filter(Boolean))] as string[];
+  const experiences = [...new Set(candidates.map(c => c.totalExperience).filter(Boolean))] as string[];
+
+  const filterFields: FilterField[] = [
+    { key: 'source', label: 'Source', options: sources.map(s => ({ value: s, label: s })) },
+    { key: 'experience', label: 'Experience', options: experiences.map(e => ({ value: e, label: e })) },
+  ];
+
+  const filteredCandidates = candidates.filter(c => {
+    const matchSearch = !searchTerm ||
+      c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSource = !filters.source || c.source === filters.source;
+    const matchExp = !filters.experience || c.totalExperience === filters.experience;
+    return matchSearch && matchSource && matchExp;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <p className="text-slate-600">View candidate profiles and their applications across client jobs.</p>
+        <button onClick={() => { setIsModalOpen(true); setErrorMsg(null); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+          <Plus className="w-4 h-4" />
+          Add Candidate
+        </button>
       </div>
 
       <div className="flex items-center gap-3">
@@ -16,13 +91,17 @@ export default function CandidatesList() {
           <input 
             type="text" 
             placeholder="Search by name, skills, location..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filters
-        </button>
+        <FilterPanel
+          fields={filterFields}
+          values={filters}
+          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+          onClear={() => setFilters({ source: '', experience: '' })}
+        />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -39,9 +118,9 @@ export default function CandidatesList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockCandidates.map(candidate => {
-                const activeApp = mockApplications.find(a => a.candidateId === candidate.id);
-                const activeJob = activeApp ? mockJobs.find(j => j.id === activeApp.jobId) : null;
+              {filteredCandidates.map(candidate => {
+                const activeApp = applications.find(a => a.candidateId === candidate.id);
+                const activeJob = activeApp ? jobs.find(j => j.id === activeApp.jobId) : null;
                 
                 return (
                   <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
@@ -99,10 +178,154 @@ export default function CandidatesList() {
                   </tr>
                 );
               })}
+              {filteredCandidates.length === 0 && (
+                <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No candidates match the current filters.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-lg font-bold text-slate-800">Add Candidate</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {isSuccess ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">Candidate Added</h3>
+                  <p className="text-slate-500 text-sm">The candidate has been added to the pool.</p>
+                </div>
+              ) : (
+                <form id="createCandidateForm" onSubmit={handleSubmit} className="space-y-6">
+                  {errorMsg && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{errorMsg}</div>
+                  )}
+
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Personal Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                        <input type="text" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                        <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Location</label>
+                        <input type="text" value={formData.currentLocation} onChange={e => setFormData({...formData, currentLocation: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500">At least one of email or phone is required.</p>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Professional Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Total Experience</label>
+                        <select value={formData.totalExperience} onChange={e => setFormData({...formData, totalExperience: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                          <option value="">Select...</option>
+                          <option value="Fresher">Fresher</option>
+                          <option value="1-3 Years">1-3 Years</option>
+                          <option value="3-5 Years">3-5 Years</option>
+                          <option value="5+ Years">5+ Years</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Company</label>
+                        <input type="text" value={formData.currentCompany} onChange={e => setFormData({...formData, currentCompany: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Role</label>
+                        <input type="text" value={formData.currentRole} onChange={e => setFormData({...formData, currentRole: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Education</label>
+                        <input type="text" placeholder="e.g. B.Tech, MBA" value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Skills (comma-separated)</label>
+                        <input type="text" placeholder="e.g. Excel, Data Entry, Typing" value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Compensation & Availability</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Salary (LPA)</label>
+                        <input type="text" placeholder="e.g. 3.5" value={formData.currentSalary} onChange={e => setFormData({...formData, currentSalary: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Expected Salary (LPA)</label>
+                        <input type="text" placeholder="e.g. 4.5" value={formData.expectedSalary} onChange={e => setFormData({...formData, expectedSalary: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Notice Period</label>
+                        <select value={formData.noticePeriod} onChange={e => setFormData({...formData, noticePeriod: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                          <option value="">Select...</option>
+                          <option value="Immediate">Immediate</option>
+                          <option value="15 Days">15 Days</option>
+                          <option value="30 Days">30 Days</option>
+                          <option value="60 Days">60 Days</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Source & Resume</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
+                        <select value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                          <option value="Manual Entry">Manual Entry</option>
+                          <option value="Referral">Referral</option>
+                          <option value="Job Portal">Job Portal</option>
+                          <option value="Careers Portal">Careers Portal</option>
+                          <option value="LinkedIn">LinkedIn</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Resume Filename</label>
+                        <input type="text" placeholder="e.g. resume_john.pdf" value={formData.resumeUrl} onChange={e => setFormData({...formData, resumeUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              {!isSuccess && (
+                <button type="submit" form="createCandidateForm" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors">
+                  Add Candidate
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
