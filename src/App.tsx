@@ -11,7 +11,6 @@ import CandidatesList from './components/CandidatesList';
 import CandidateDetail from './components/CandidateDetail';
 import InterviewsList from './components/InterviewsList';
 import OffersList from './components/OffersList';
-import TalentPoolList from './components/TalentPoolList';
 import Settings from './components/Settings';
 import UsersList from './components/UsersList';
 import CareersAdmin from './components/CareersAdmin';
@@ -53,7 +52,6 @@ export default function App() {
         
         <Route path="interviews" element={<InterviewsList />} />
         <Route path="offers" element={<OffersList />} />
-        <Route path="talent-pool" element={<TalentPoolList />} />
         
         {/* Operations */}
         <Route path="onboarding" element={<OnboardingList />} />

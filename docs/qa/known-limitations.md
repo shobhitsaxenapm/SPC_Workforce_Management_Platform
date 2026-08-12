@@ -38,7 +38,6 @@ This document lists the confirmed limitations, unverified assumptions, and confl
 - **Dashboard (`Dashboard.tsx`)**: "Create Client Requirement"
 - **Job Desk (`JobsList.tsx`, `JobDetail.tsx`)**: "Create from Requirement", "Edit Job", "Preview", "Unpublish"
 - **Candidates Pool (`CandidatesList.tsx`, `CandidateDetail.tsx`)**: "Filters", "Edit Profile", "View Resume", "Reject", "Schedule Interview", "Advance Stage"
-- **Talent Pool (`TalentPoolList.tsx`)**: "Filters", "Match to Job"
 - **Onboarding Pipeline (`OnboardingList.tsx`)**: "Mark Complete"
 - **Offboarding Pipeline (`OffboardingList.tsx`)**: "Initiate Offboarding"
 - **Offers List (`OffersList.tsx`)**: "Edit Offer", "Review Approval", "View Offer", "Start Onboarding"

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { mockUsers } from '../data/mockData';
-import { Plus, Search, AlertCircle, X } from 'lucide-react';
+import { Plus, Search, AlertCircle, X, Trash2, AlertTriangle } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
@@ -9,10 +9,12 @@ import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import CreateRequirementModal from './CreateRequirementModal';
+import { ClientRequirement } from '../types';
 
 export default function RequirementsList() {
-  const { requirements, clients, applications } = useApp();
+  const { requirements, clients, applications, deleteRequirement } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [requirementToDelete, setRequirementToDelete] = useState<ClientRequirement | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ clientId: '', status: '', priority: '' });
   
@@ -136,6 +138,7 @@ export default function RequirementsList() {
                 <th className="px-6 py-4">Priority</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Recruiter</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -210,11 +213,24 @@ export default function RequirementsList() {
                         <span className="text-slate-700">{recruiter?.name}</span>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRequirementToDelete(req);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
+                        title="Delete Requirement"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {filteredReqs.length === 0 && (
-                <tr><td colSpan={7} className="px-6 py-10 text-center text-slate-500">No requirements match the current filters.</td></tr>
+                <tr><td colSpan={8} className="px-6 py-10 text-center text-slate-500">No requirements match the current filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -222,6 +238,42 @@ export default function RequirementsList() {
       </div>
 
       <CreateRequirementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {requirementToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Delete Client Requirement</h3>
+            </div>
+            <p className="text-slate-600 text-sm mb-6">
+              Are you sure you want to delete requirement <strong>{requirementToDelete.title} ({requirementToDelete.code})</strong>? This action is permanent and cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                type="button" 
+                onClick={() => setRequirementToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  deleteRequirement(requirementToDelete.id);
+                  setRequirementToDelete(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
