@@ -15,6 +15,8 @@ interface AppContextType {
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
   createClient: (clientData: Omit<Client, 'id'>) => { success: boolean; error?: string };
+  deleteClient: (clientId: string) => void;
+  deleteRequirement: (reqId: string) => void;
   createRequirement: (reqData: Omit<ClientRequirement, 'id' | 'code' | 'positionsFilled' | 'status' | 'createdAt' | 'updatedAt'>) => void;
   createCandidate: (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => { success: boolean; error?: string };
   createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled'>, requirementId?: string) => void;
@@ -221,6 +223,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
     persistClients([newClient, ...clients]);
     return { success: true };
+  };
+
+  const deleteClient = (clientId: string) => {
+    const updatedClients = clients.filter(c => c.id !== clientId);
+    persistClients(updatedClients);
+  };
+
+  const deleteRequirement = (reqId: string) => {
+    const updatedReqs = requirements.filter(r => r.id !== reqId);
+    persistRequirements(updatedReqs);
   };
 
   const createRequirement = (reqData: Omit<ClientRequirement, 'id' | 'code' | 'positionsFilled' | 'status' | 'createdAt' | 'updatedAt'>) => {
@@ -518,6 +530,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         login,
         logout,
         createClient,
+        deleteClient,
+        deleteRequirement,
         createRequirement,
         createCandidate,
         createJob,

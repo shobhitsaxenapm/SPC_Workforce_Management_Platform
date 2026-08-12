@@ -33,7 +33,6 @@ const navItems = [
   { title: 'Candidates', path: '/candidates', icon: Users },
   { title: 'Interviews', path: '/interviews', icon: CalendarDays },
   { title: 'Offers', path: '/offers', icon: FileText },
-  { title: 'Talent Pool', path: '/talent-pool', icon: Star },
 ];
 
 const operationsItems = [
