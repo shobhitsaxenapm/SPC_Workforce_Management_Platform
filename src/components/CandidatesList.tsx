@@ -6,10 +6,17 @@ import { useApp } from '../context/AppContext';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
+import SmartCandidateUpload from './SmartCandidateUpload';
+import CandidateFormModal from './CandidateFormModal';
+import { FileText, UserPlus, FileCheck } from 'lucide-react';
 
 export default function CandidatesList() {
   const { candidates, applications, jobs, createCandidate } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showCreationMethodModal, setShowCreationMethodModal] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -86,7 +93,7 @@ export default function CandidatesList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <p className="text-slate-600">View candidate profiles and their applications across client jobs.</p>
-        <button onClick={() => { setIsModalOpen(true); setErrorMsg(null); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+        <button onClick={() => setShowCreationMethodModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
           <Plus className="w-4 h-4" />
           Add Candidate
         </button>
@@ -170,6 +177,7 @@ export default function CandidatesList() {
                       <Link to={`/candidates/${candidate.id}`} className="block">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{candidate.fullName}</p>
+                          {candidate.resumeUrl && <FileCheck className="w-3.5 h-3.5 text-blue-500" title="Resume Attached" />}
                           {candidate.duplicateStatus !== 'None' && (
                             <AlertTriangle className="w-4 h-4 text-amber-500" title={candidate.duplicateStatus} />
                           )}
@@ -232,7 +240,7 @@ export default function CandidatesList() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-bold text-slate-800">Add Candidate</h2>
+              <h2 className="text-lg font-bold text-slate-800">Add Candidate (Legacy Manual)</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -367,6 +375,89 @@ export default function CandidatesList() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Creation Method Selection Modal */}
+      {showCreationMethodModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-800">Add Candidate</h2>
+              <button onClick={() => setShowCreationMethodModal(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 flex gap-4">
+              <button 
+                onClick={() => {
+                  setShowCreationMethodModal(false);
+                  setShowUpload(true);
+                }}
+                className="flex-1 flex flex-col items-center gap-3 p-6 border-2 border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center group"
+              >
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">Upload Resume</h3>
+                  <p className="text-xs text-slate-500 mt-1">Extract details from PDF or DOCX automatically</p>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setShowCreationMethodModal(false);
+                  setIsModalOpen(true);
+                  setErrorMsg(null);
+                }}
+                className="flex-1 flex flex-col items-center gap-3 p-6 border-2 border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center group"
+              >
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">Add Manually</h3>
+                  <p className="text-xs text-slate-500 mt-1">Enter candidate details manually in a form</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Smart Upload Modal */}
+      {showUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-4xl max-h-[95vh] flex flex-col bg-slate-50 rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+            <button 
+              onClick={() => setShowUpload(false)} 
+              className="absolute top-4 right-4 z-10 p-2 bg-white text-slate-400 hover:text-slate-600 rounded-full shadow-sm hover:shadow border border-slate-200 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex-1 overflow-y-auto flex items-center justify-center p-8">
+              <SmartCandidateUpload 
+                onExtractionSuccess={(data, meta) => {
+                  setExtractedData({...data, resumeUrl: meta.originalFilename});
+                  setShowUpload(false);
+                  setShowReviewForm(true);
+                }}
+                onCancel={() => setShowUpload(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Review Form Modal */}
+      {showReviewForm && extractedData && (
+        <CandidateFormModal 
+          isOpen={showReviewForm}
+          onClose={() => setShowReviewForm(false)}
+          initialData={extractedData}
+          isEditMode={false}
+        />
       )}
     </div>
   );

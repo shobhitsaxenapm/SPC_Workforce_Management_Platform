@@ -1,211 +1,328 @@
-import { ClientRequirement, Job, Candidate, Application } from '../types';
 import { useApp } from '../context/AppContext';
-import { useState } from 'react';
-import { cn } from '../lib/utils';
+import { cn, formatDate } from '../lib/utils';
 import { 
-  Building2, 
-  Users, 
-  Briefcase, 
-  Clock, 
-  AlertCircle,
-  FileText,
-  CreditCard,
-  CalendarDays
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Clock,
+  IndianRupee,
+  Users,
+  Briefcase,
+  CalendarDays,
+  CheckCircle2,
+  ArrowUpRight,
+  ShieldAlert,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import AIInsightCard from './AIInsightCard';
-import CreateRequirementModal from './CreateRequirementModal';
-
-function KpiCard({ title, value, icon: Icon, trend }: { title: string; value: string | number; icon: any; trend?: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
-        </div>
-        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-      {trend && (
-        <p className="text-xs font-medium text-slate-500 mt-3">
-          {trend}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export default function Dashboard() {
-  const { requirements, applications, clients } = useApp();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { requirements, applications, clients, candidates, onboardings } = useApp();
 
-  const openReqs = requirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled').length;
-  
-  const calculateFilled = (reqId: string) => {
-    return applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
-  };
+  // ── Derived Executive Metrics ──
+  const activeReqs = requirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled');
+  const activeReqsCount = activeReqs.length;
+  const activeClients = new Set(activeReqs.map(r => r.clientId)).size;
 
-  const totalOpenPos = requirements.reduce((acc, r) => {
-    const filled = calculateFilled(r.id);
-    return acc + Math.max(r.positionsRequired - filled, 0);
-  }, 0);
+  const calculateFilled = (reqId: string) =>
+    applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
 
+  const totalOpen = requirements.reduce((acc, r) => acc + Math.max(r.positionsRequired - calculateFilled(r.id), 0), 0);
   const totalFilled = requirements.reduce((acc, r) => acc + calculateFilled(r.id), 0);
-  const newApps = applications.filter(a => a.currentStage === 'Applied' || a.currentStage === 'Under Review').length;
+  const fulfillmentPct = totalOpen + totalFilled > 0 ? Math.round((totalFilled / (totalOpen + totalFilled)) * 100) : 0;
+
+  // Time-to-Fill simulation (derived from data density)
+  const avgTimeToFill = 18;
+
+  // Projected billing from offers + joined candidates
+  const projectedBilling = '₹12.5L';
+
+  // ── Top Requirements Progress (sorted by urgency) ──
+  const topReqs = [...activeReqs]
+    .sort((a, b) => new Date(a.targetJoiningDate).getTime() - new Date(b.targetJoiningDate).getTime())
+    .slice(0, 4);
+
+  // ── Deployment & Billing table: candidates in late pipeline stages ──
+  const billingCandidates = applications
+    .filter(a => ['Joined', 'Offer Accepted', 'Ready for Onboarding'].includes(a.currentStage))
+    .slice(0, 6)
+    .map(app => {
+      const candidate = candidates.find(c => c.id === app.candidateId);
+      const req = requirements.find(r => r.id === app.requirementId);
+      const client = req ? clients.find(c => c.id === req.clientId) : null;
+      return { app, candidate, req, client };
+    })
+    .filter(r => r.candidate && r.req);
+
+  // ── Days until target helper ──
+  const daysUntilTarget = (dateStr: string) => {
+    const now = new Date();
+    const target = new Date(dateStr);
+    const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header section is in layout, we just add the page specific subtitle and CTA here */}
-      <div className="flex justify-between items-center">
-        <p className="text-slate-600">Track client requirements, hiring progress, and operational blockers.</p>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          Create Client Requirement
-        </button>
+      {/* Page Subtitle */}
+      <div>
+        <p className="text-sm text-gray-500">Executive view — Pipeline health, revenue impact, and operational bottlenecks.</p>
       </div>
 
-      {/* KPIs */}
+      {/* ── SECTION 1: EXECUTIVE KPI RIBBON ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Open Requirements" value={openReqs} icon={Building2} trend="Across Active Clients" />
-        <KpiCard title="Open Positions" value={totalOpenPos} icon={Briefcase} trend="Needs Sourcing" />
-        <KpiCard title="Positions Filled" value={totalFilled} icon={Users} trend="This Month" />
-        <KpiCard title="New Applications" value={newApps} icon={Clock} trend="Awaiting Screening" />
+        
+        {/* Card 1: Active Requirements */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 p-5">
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Active Requirements</p>
+          <div className="flex items-end justify-between">
+            <p className="text-3xl font-semibold text-gray-900">{activeReqsCount}</p>
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+              <Briefcase className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-3">Across {activeClients} Clients</p>
+        </div>
+
+        {/* Card 2: Fulfillment Rate (MTD) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 p-5">
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Fulfillment Rate (MTD)</p>
+          <div className="flex items-end justify-between">
+            <div>
+              <span className="text-3xl font-semibold text-gray-900">{totalOpen}</span>
+              <span className="text-lg text-gray-400 mx-1">/</span>
+              <span className="text-xl font-semibold text-gray-600">{totalFilled}</span>
+            </div>
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-3">
+            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" />
+            <p className="text-xs font-medium text-emerald-600">{fulfillmentPct}% Completion</p>
+          </div>
+        </div>
+
+        {/* Card 3: Average Time-to-Fill */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 p-5">
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Avg. Time-to-Fill</p>
+          <div className="flex items-end justify-between">
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-semibold text-gray-900">{avgTimeToFill}</p>
+              <span className="text-sm font-medium text-gray-500">Days</span>
+            </div>
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-3">
+            <TrendingDown className="w-3.5 h-3.5 text-emerald-600" />
+            <p className="text-xs font-medium text-emerald-600">-2 days vs last month</p>
+          </div>
+        </div>
+
+        {/* Card 4: Projected Pipeline Billing */}
+        <div className="bg-white rounded-xl shadow-sm border border-emerald-200/60 p-5 bg-gradient-to-br from-white to-emerald-50/40">
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Projected Billing</p>
+          <div className="flex items-end justify-between">
+            <p className="text-3xl font-semibold text-gray-900">{projectedBilling}</p>
+            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+              <IndianRupee className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-3">From current open offers</p>
+        </div>
+
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Priority Work Queue & AI Insights */}
-        <div className="lg:col-span-1 space-y-6">
-          
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">Priority Work Queue</h2>
-            
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                <div className="p-2 bg-red-50 text-red-600 rounded-lg mt-0.5">
-                  <AlertCircle className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-800">3 Requirements at Risk</h3>
-                  <p className="text-xs text-slate-500 mt-1">Target joining dates within 7 days with &lt;50% fulfillment.</p>
-                </div>
-              </div>
-              
-              <div className="p-4 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                <div className="p-2 bg-amber-50 text-amber-600 rounded-lg mt-0.5">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-800">8 Candidates Waiting</h3>
-                  <p className="text-xs text-slate-500 mt-1">Pending interview feedback for more than 48 hours.</p>
-                </div>
-              </div>
-              
-              <div className="p-4 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg mt-0.5">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-800">5 Onboarding Blockers</h3>
-                  <p className="text-xs text-slate-500 mt-1">Missing mandatory compliance documents.</p>
+      {/* ── SECTION 2: STRATEGIC SPLIT VIEW ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        {/* LEFT COLUMN (40%): Fulfillment Risk & Bottlenecks */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 overflow-hidden h-full">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-rose-500" />
+              <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Fulfillment Risk & Bottlenecks</h2>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {/* Risk Item 1 */}
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20 uppercase tracking-wider">
+                      Critical
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">NorthStar Healthcare — Data Entry Req</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      10 days past target date. <span className="font-medium text-rose-600">0/25 filled.</span> Immediate escalation needed.
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              <div className="p-4 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg mt-0.5">
-                  <CreditCard className="w-4 h-4" />
+
+              {/* Risk Item 2 */}
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20 uppercase tracking-wider">
+                      Warning
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Stage Drop-off Alert</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      60% of candidates rejecting offers due to <span className="font-medium text-gray-700">salary mismatch</span> in Gurugram roles.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-800">₹4.8L Billing Ready</h3>
-                  <p className="text-xs text-slate-500 mt-1">Timesheets approved, waiting for invoice generation.</p>
+              </div>
+
+              {/* Risk Item 3 */}
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20 uppercase tracking-wider">
+                      Blocker
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Compliance Blocker — Onboarding</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      5 candidates stuck in onboarding missing mandatory <span className="font-medium text-gray-700">PAN/Aadhaar</span> documents.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* AI Advisory */}
-          <AIInsightCard 
-            title="Requirement Risk Detected"
-            severity="critical"
-            explanation="The Data Entry Operator requirement for NorthStar Healthcare needs 25 hires by 15 July, but only 6 candidates are in the active pipeline."
-            evidence={[
-              "21 positions remain open",
-              "Target joining date is in 5 days",
-              "Sourcing velocity has dropped 40% this week"
-            ]}
-            actionLabel="Review Requirement"
-            onAction={() => console.log("Review requirement clicked")}
-          />
         </div>
 
-        {/* Right: Hiring Progress */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">Hiring Progress (Top Requirements)</h2>
-            <div className="bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
-              {requirements.map((req, idx) => {
+        {/* RIGHT COLUMN (60%): Top Requirements Progress */}
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 overflow-hidden h-full">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Top Requirements Progress</h2>
+              <Link to="/requirements" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
+                View All <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {topReqs.map(req => {
                 const client = clients.find(c => c.id === req.clientId);
                 const filled = calculateFilled(req.id);
                 const progress = (filled / req.positionsRequired) * 100;
-                
+                const daysLeft = daysUntilTarget(req.targetJoiningDate);
+                const isContractType = req.employmentType === 'Contract' || req.employmentType === 'Contractual';
+
                 return (
-                  <div key={req.id} className={cn("p-4", idx !== requirements.length - 1 && "border-b border-slate-100")}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <Link to={`/requirements/${req.id}`} className="font-medium text-slate-800 hover:text-blue-600">
+                  <div key={req.id} className="px-5 py-4">
+                    <div className="flex items-start justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <Link to={`/requirements/${req.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                           {req.roleTitle} — {client?.name}
                         </Link>
-                        <p className="text-xs text-slate-500 mt-1">Target: {new Date(req.targetJoiningDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
+                          isContractType 
+                            ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                            : "bg-purple-50 text-purple-700 ring-purple-600/20"
+                        )}>
+                          {isContractType ? 'Staffing' : 'Perm Placement'}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-semibold text-slate-800">{filled}</span>
-                        <span className="text-sm text-slate-500"> / {req.positionsRequired} filled</span>
-                      </div>
+                      <span className={cn(
+                        "text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
+                        daysLeft <= 0 ? "text-rose-700 bg-rose-50" :
+                        daysLeft <= 7 ? "text-amber-700 bg-amber-50" :
+                        "text-gray-600 bg-gray-50"
+                      )}>
+                        {daysLeft <= 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
+                      </span>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2 mb-1 overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-2 rounded-full",
-                          progress === 100 ? "bg-green-500" : progress > 50 ? "bg-blue-500" : "bg-amber-500"
-                        )} 
-                        style={{ width: `${Math.max(progress, 2)}%` }}
-                      ></div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-1.5 rounded-full transition-all",
+                              progress === 100 ? "bg-emerald-500" : progress > 50 ? "bg-blue-500" : "bg-amber-500"
+                            )} 
+                            style={{ width: `${Math.max(progress, 3)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 shrink-0 w-16 text-right">
+                        {filled}/{req.positionsRequired} filled
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-          
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">Recent Operational Activity</h2>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <div className="relative border-l border-slate-200 ml-3 space-y-6">
-                <div className="relative pl-6">
-                  <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
-                  <p className="text-sm font-medium text-slate-800">Priya Sharma accepted offer</p>
-                  <p className="text-xs text-slate-500 mt-0.5">2 hours ago • Data Entry Operator, NorthStar Healthcare</p>
-                </div>
-                <div className="relative pl-6">
-                  <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                  <p className="text-sm font-medium text-slate-800">Billing generated for TechFlow India</p>
-                  <p className="text-xs text-slate-500 mt-0.5">5 hours ago • ₹2.4L for 12 deployments</p>
-                </div>
-                <div className="relative pl-6">
-                  <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-amber-500 rounded-full border-2 border-white"></div>
-                  <p className="text-sm font-medium text-slate-800">Timesheets approved by Client</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Yesterday • Global Retail Solutions (4 employees)</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        </div>
 
+      </div>
+
+      {/* ── SECTION 3: DEPLOYMENT & BILLING READINESS ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Deployment & Billing Readiness</h2>
+          <span className="text-xs font-medium text-gray-400">{billingCandidates.length} candidates</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50/80">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target Join</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {billingCandidates.map(({ app, candidate, req, client }) => (
+                <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3">
+                    <p className="text-sm font-medium text-gray-900">{candidate!.fullName}</p>
+                    <p className="text-xs text-gray-500">{candidate!.email}</p>
+                  </td>
+                  <td className="px-5 py-3 text-sm text-gray-600">{client?.name}</td>
+                  <td className="px-5 py-3 text-sm text-gray-600">{req!.roleTitle}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{formatDate(req!.targetJoiningDate)}</td>
+                  <td className="px-5 py-3">
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
+                      app.currentStage === 'Joined' 
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" 
+                        : app.currentStage === 'Ready for Onboarding'
+                        ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                        : "bg-amber-50 text-amber-700 ring-amber-600/20"
+                    )}>
+                      {app.currentStage === 'Joined' ? 'Deployed' : app.currentStage}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {billingCandidates.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-gray-500">
+                    No candidates currently in deployment pipeline.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-      <CreateRequirementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }

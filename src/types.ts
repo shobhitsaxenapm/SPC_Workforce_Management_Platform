@@ -1,5 +1,6 @@
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
-export type RequirementStatus = 'Draft' | 'Open' | 'In Progress' | 'Partially Filled' | 'Fulfilled' | 'On Hold' | 'Closed';
+export type RequirementLifecycleStatus = 'Draft' | 'Open' | 'On Hold' | 'Closed' | 'Cancelled';
+export type RequirementFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 'Sourced' | 'Applied' | 'Under Review' | 'Screening' | 'Interview Round 1' | 'Interview Round 2' | 'Shortlisted' | 'Interview Scheduled' | 'Interview Completed' | 'Selected' | 'Offer Extended' | 'Offer Sent' | 'Offer Accepted' | 'Ready for Onboarding' | 'On Hold' | 'Rejected' | 'Withdrawn' | 'No Show' | 'Offer Declined' | 'Joined';
@@ -11,11 +12,20 @@ export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';
 export type AttendanceStatus = 'Draft' | 'Submitted' | 'Client Approved' | 'Rejected' | 'Locked for Billing';
 export type BillingStatus = 'Draft' | 'Pending Approval' | 'Approved' | 'Invoice Ready' | 'Sent' | 'Paid' | 'Disputed';
 export type OffboardingStatus = 'Initiated' | 'Client Clearance Pending' | 'Final Attendance Pending' | 'Final Settlement Pending' | 'Completed' | 'Cancelled';
+export type PrimaryIndustry = 
+  | 'BFSI' | 'BPO_KPO_ITES' | 'CONSULTING_PROFESSIONAL_SERVICES' 
+  | 'CONSTRUCTION_REAL_ESTATE' | 'EDUCATION_TRAINING' | 'ENERGY_UTILITIES' 
+  | 'FMCG_CONSUMER_GOODS' | 'GOVERNMENT_PUBLIC_SECTOR' | 'HEALTHCARE_LIFE_SCIENCES' 
+  | 'HOSPITALITY_TRAVEL_TOURISM' | 'INFORMATION_TECHNOLOGY_SOFTWARE' 
+  | 'LOGISTICS_TRANSPORTATION_WAREHOUSING' | 'MANUFACTURING_ENGINEERING' 
+  | 'MEDIA_ADVERTISING_ENTERTAINMENT' | 'RETAIL_ECOMMERCE' | 'TELECOMMUNICATIONS' 
+  | 'OTHER';
 
 export interface Client {
   id: string;
   name: string;
-  industry: string;
+  industry: PrimaryIndustry;
+  industryOtherText?: string;
   status: 'Active' | 'Inactive';
   primaryContactName: string;
   primaryContactEmail: string;
@@ -41,10 +51,89 @@ export interface ClientRequirement {
   targetJoiningDate: string;
   priority: Priority;
   assignedRecruiterId: string;
-  status: RequirementStatus;
+  lifecycleStatus: RequirementLifecycleStatus;
+  version: number;
+  revisions?: RequirementRevision[];
   createdAt: string;
   updatedAt: string;
   notes?: string;
+  sourceMetadata?: RequirementSourceMetadata;
+}
+
+export interface RequirementRevision {
+  id: string;
+  requirementId: string;
+  version: number;
+  changedFields: string[];
+  previousValues: Record<string, any>;
+  newValues: Record<string, any>;
+  changedBy: string;
+  changedAt: string;
+  reason: string;
+  impactSnapshot?: {
+    linkedJobsCount?: number;
+    pipelineCount?: number;
+    filledCount?: number;
+    offersCount?: number;
+  };
+}
+
+export interface RequirementSourceMetadata {
+  originalFilename: string;
+  mimeType: string;
+  size: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  extractionStatus: 'Success' | 'Partial' | 'Failed';
+  parserVersion: string;
+}
+
+export interface ExtractedRequirementData {
+  clientName?: string;
+  businessUnit?: string;
+  projectName?: string;
+  roleTitle?: string;
+  positionsRequired?: number;
+  locations?: string[];
+  employmentType?: string;
+  contractDuration?: string;
+  targetJoiningDate?: string;
+  priority?: string;
+  requiredSkills?: string[];
+  preferredSkills?: string[];
+  experience?: string;
+  qualifications?: string[];
+  assignedRecruiter?: string;
+  notes?: string;
+}
+
+export interface JobSourceMetadata {
+  originalFilename: string;
+  mimeType: string;
+  size: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  extractionStatus: 'Success' | 'Partial' | 'Failed';
+  parserVersion: string;
+}
+
+export interface ExtractedJobData {
+  title?: string;
+  summary?: string;
+  responsibilities?: string[];
+  requiredSkills?: string[];
+  preferredSkills?: string[];
+  experienceRange?: string;
+  qualifications?: string[];
+  location?: string;
+  workArrangement?: string;
+  employmentType?: string;
+  openings?: number;
+  salaryInformation?: string;
+  contractDuration?: string;
+  applicationDeadline?: string;
+  targetJoiningDate?: string;
+  linkedClientRequirement?: string;
 }
 
 export interface Job {
@@ -70,6 +159,22 @@ export interface Job {
   visibility: JobVisibility;
   status: JobStatus;
   publishedAt?: string;
+  sourceMetadata?: JobSourceMetadata;
+}
+
+export interface EmploymentEntry {
+  company: string;
+  role: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  responsibilities?: string[];
+}
+
+export interface EducationEntry {
+  qualification: string;
+  institution: string;
+  completionYear?: string;
 }
 
 export interface Candidate {
@@ -91,6 +196,15 @@ export interface Candidate {
   source: string;
   duplicateStatus: 'None' | 'Possible Duplicate' | 'Confirmed Duplicate';
   createdAt?: string;
+  professionalSummary?: string;
+  employmentHistory?: EmploymentEntry[];
+  educationEntries?: EducationEntry[];
+  languages?: string[];
+  preferredLocation?: string;
+  willingToRelocate?: 'Yes' | 'No' | '';
+  availableFrom?: string;
+  recruiterNotes?: string;
+  createdMethod?: string;
 }
 
 export interface Application {
@@ -107,6 +221,33 @@ export interface Application {
   matchGaps?: string[];
   rejectionReason?: string;
   lastActivity: string;
+}
+export interface MatchScoreBreakdown {
+  skills: number;
+  experience: number;
+  location: number;
+  education: number;
+  availability: number;
+  employmentType: number;
+}
+
+export interface JobMatch {
+  candidateId: string;
+  score: number;
+  breakdown: MatchScoreBreakdown;
+  missingRequirements: string[];
+  mismatchReasons: string[];
+  matchStrengths: string[];
+  dismissed: boolean;
+}
+
+export interface JobMatchRun {
+  id: string;
+  jobId: string;
+  timestamp: string;
+  engineVersion: string;
+  stale: boolean;
+  matches: JobMatch[];
 }
 
 export interface Interview {
@@ -260,7 +401,7 @@ export interface TalentPoolEntry {
 export interface User {
   id: string;
   name: string;
-  role: 'Company Admin' | 'Recruitment Manager' | 'Recruiter' | 'Interviewer';
+  role: 'ADMIN' | 'MANAGER' | 'RECRUITER';
   email: string;
   avatarUrl?: string;
 }

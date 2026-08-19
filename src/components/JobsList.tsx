@@ -7,6 +7,9 @@ import { Job, JobVisibility, JobStatus } from '../types';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
+import SmartJobUpload from './SmartJobUpload';
+import SmartJobReview from './SmartJobReview';
+import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
   const { jobs, requirements, clients, createJob } = useApp();
@@ -19,6 +22,13 @@ export default function JobsList() {
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+
+  // Smart Job State
+  const [creationMode, setCreationMode] = useState<'manual' | 'smart' | null>(null);
+  const [smartJobStep, setSmartJobStep] = useState<'upload' | 'review'>('upload');
+  const [extractedData, setExtractedData] = useState<ExtractedJobData | null>(null);
+  const [sourceText, setSourceText] = useState('');
+  const [sourceMetadata, setSourceMetadata] = useState<JobSourceMetadata | null>(null);
 
   // Form State
   const [selectedReqId, setSelectedReqId] = useState('none');
@@ -116,6 +126,7 @@ export default function JobsList() {
     setTimeout(() => {
       setIsSuccess(false);
       setIsModalOpen(false);
+      setCreationMode(null);
       // Reset form
       setSelectedReqId('none');
       setFormData({
@@ -134,6 +145,15 @@ export default function JobsList() {
         visibility: 'Public',
       });
     }, 1500);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCreationMode(null);
+    setSmartJobStep('upload');
+    setExtractedData(null);
+    setSourceText('');
+    setSourceMetadata(null);
   };
 
   const clientOptions = ([...new Set(jobs.map(j => j.clientId))] as string[]).map(cid => {
@@ -311,14 +331,95 @@ export default function JobsList() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          
+          {!creationMode && (
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden p-8">
+              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Create Job Opening</h2>
+                  <p className="text-slate-500 text-sm mt-1">Choose how you want to create this job.</p>
+                </div>
+                <button onClick={handleCloseModal} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div 
+                  onClick={() => setCreationMode('manual')}
+                  className="border-2 border-slate-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50/50 transition-all cursor-pointer group flex flex-col items-center text-center"
+                >
+                  <div className="w-12 h-12 bg-slate-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-4 text-slate-500 group-hover:text-blue-600 transition-colors">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 text-lg mb-2">Create Manually</h3>
+                  <p className="text-sm text-slate-500">Fill out the standard form manually or from a linked requirement.</p>
+                </div>
+
+                <div 
+                  onClick={() => setCreationMode('smart')}
+                  className="border-2 border-slate-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50/50 transition-all cursor-pointer group flex flex-col items-center text-center relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">NEW - AI</div>
+                  <div className="w-12 h-12 bg-slate-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-4 text-slate-500 group-hover:text-blue-600 transition-colors">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 text-lg mb-2">Upload Document</h3>
+                  <p className="text-sm text-slate-500">Upload a JD (PDF, DOCX) and let AI extract the details for you.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {creationMode === 'smart' && smartJobStep === 'upload' && (
+            <div className="relative w-full max-w-3xl">
+              <button onClick={handleCloseModal} className="absolute right-4 top-4 p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors z-10">
+                <X className="w-5 h-5" />
+              </button>
+              <SmartJobUpload 
+                onCancel={handleCloseModal}
+                onExtractionSuccess={(data, text, meta) => {
+                  setExtractedData(data);
+                  setSourceText(text);
+                  setSourceMetadata({...meta, extractionStatus: 'Success', uploadedBy: 'System', uploadedAt: new Date().toISOString(), parserVersion: 'gemini-1.5-flash'});
+                  setSmartJobStep('review');
+                }} 
+              />
+            </div>
+          )}
+
+          {creationMode === 'smart' && smartJobStep === 'review' && extractedData && sourceMetadata && (
+             <div className="relative w-full max-w-7xl h-[90vh]">
+               <SmartJobReview 
+                 extractedData={extractedData}
+                 sourceText={sourceText}
+                 metadata={sourceMetadata}
+                 onDiscard={handleCloseModal}
+                 onSaveAsDraft={() => {
+                    setIsSuccess(true);
+                    setTimeout(() => {
+                      setIsSuccess(false);
+                      handleCloseModal();
+                    }, 1500);
+                 }}
+               />
+               {isSuccess && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-20 rounded-xl">
+                    <div className="text-center">
+                      <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-slate-800">Draft Saved!</h3>
+                    </div>
+                  </div>
+                )}
+             </div>
+          )}
+
+          {creationMode === 'manual' && (
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-lg font-bold text-slate-800">Create Job Opening</h2>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
-              >
+              <button onClick={handleCloseModal} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -543,7 +644,7 @@ export default function JobsList() {
                   <div className="flex gap-3">
                     <button 
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={handleCloseModal}
                       className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
                     >
                       Cancel
@@ -560,7 +661,7 @@ export default function JobsList() {
               ) : (
                 <div className="w-full flex justify-end">
                    <button 
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={handleCloseModal}
                       className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                     >
                       Close
@@ -569,6 +670,7 @@ export default function JobsList() {
               )}
             </div>
           </div>
+          )}
         </div>
       )}
     </div>

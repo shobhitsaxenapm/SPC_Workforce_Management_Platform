@@ -1,17 +1,16 @@
 import { Client, ClientRequirement, Job, Candidate, Application, Interview, Offer, TalentPoolEntry, User } from '../types';
 
 export const mockUsers: User[] = [
-  { id: 'u1', name: 'Rahul Sharma', role: 'Company Admin', email: 'rahul.s@spc.com' },
-  { id: 'u2', name: 'Priya Desai', role: 'Recruitment Manager', email: 'priya.d@spc.com' },
-  { id: 'u3', name: 'Amit Kumar', role: 'Recruiter', email: 'amit.k@spc.com' },
-  { id: 'u4', name: 'Sneha Patel', role: 'Interviewer', email: 'sneha.p@spc.com' },
+  { id: 'u1', name: 'Rahul Sharma', role: 'ADMIN', email: 'rahul.s@spc.com' },
+  { id: 'u2', name: 'Priya Desai', role: 'MANAGER', email: 'priya.d@spc.com' },
+  { id: 'u3', name: 'Amit Kumar', role: 'RECRUITER', email: 'amit.k@spc.com' },
 ];
 
 export const mockClients: Client[] = [
   {
     id: 'c1',
     name: 'NorthStar Healthcare Services',
-    industry: 'Healthcare',
+    industry: 'HEALTHCARE_LIFE_SCIENCES',
     status: 'Active',
     primaryContactName: 'Dr. Alok Gupta',
     primaryContactEmail: 'alok.g@northstar.com',
@@ -24,7 +23,7 @@ export const mockClients: Client[] = [
   {
     id: 'c2',
     name: 'UrbanEdge Logistics',
-    industry: 'Logistics & Supply Chain',
+    industry: 'LOGISTICS_TRANSPORTATION_WAREHOUSING',
     status: 'Active',
     primaryContactName: 'Vikram Singh',
     primaryContactEmail: 'vikram.s@urbanedge.in',
@@ -37,7 +36,8 @@ export const mockClients: Client[] = [
   {
     id: 'c3',
     name: 'GreenField Development Foundation',
-    industry: 'NGO / Non-Profit',
+    industry: 'OTHER',
+    industryOtherText: 'NGO / Non-Profit',
     status: 'Active',
     primaryContactName: 'Sunita Menon',
     primaryContactEmail: 'sunita.m@greenfield.org',
@@ -50,7 +50,7 @@ export const mockClients: Client[] = [
   {
     id: 'c4',
     name: 'MetroCare Diagnostics',
-    industry: 'Healthcare',
+    industry: 'HEALTHCARE_LIFE_SCIENCES',
     status: 'Active',
     primaryContactName: 'Rajeev Reddy',
     primaryContactEmail: 'rajeev.r@metrocare.com',
@@ -78,7 +78,9 @@ export const mockRequirements: ClientRequirement[] = [
     targetJoiningDate: '2026-07-15T00:00:00Z',
     priority: 'Critical',
     assignedRecruiterId: 'u3',
-    status: 'In Progress',
+    lifecycleStatus: 'Open',
+    version: 1,
+    revisions: [],
     createdAt: '2026-06-15T09:00:00Z',
     updatedAt: '2026-07-09T15:30:00Z'
   },
@@ -97,7 +99,9 @@ export const mockRequirements: ClientRequirement[] = [
     targetJoiningDate: '2026-07-20T00:00:00Z',
     priority: 'High',
     assignedRecruiterId: 'u3',
-    status: 'Partially Filled',
+    lifecycleStatus: 'Open',
+    version: 1,
+    revisions: [],
     createdAt: '2026-06-20T10:00:00Z',
     updatedAt: '2026-07-10T09:30:00Z'
   },
@@ -116,7 +120,9 @@ export const mockRequirements: ClientRequirement[] = [
     targetJoiningDate: '2026-08-01T00:00:00Z',
     priority: 'Medium',
     assignedRecruiterId: 'u2',
-    status: 'Open',
+    lifecycleStatus: 'Open',
+    version: 1,
+    revisions: [],
     createdAt: '2026-07-01T11:00:00Z',
     updatedAt: '2026-07-08T12:00:00Z'
   },
@@ -135,7 +141,9 @@ export const mockRequirements: ClientRequirement[] = [
     targetJoiningDate: '2026-07-25T00:00:00Z',
     priority: 'High',
     assignedRecruiterId: 'u3',
-    status: 'Open',
+    lifecycleStatus: 'Open',
+    version: 1,
+    revisions: [],
     createdAt: '2026-07-05T14:00:00Z',
     updatedAt: '2026-07-05T14:00:00Z'
   }

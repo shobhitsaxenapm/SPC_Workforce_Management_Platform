@@ -3868,3 +3868,45 @@ CON-001
 
 ---
 
+### CREQ-001 — Client Requirement editing impact review.
+
+**Module:** Client Requirements  
+**Role:** HR, Company Admin  
+**Route:** `/requirements`  
+**Status:** Not Audited  
+**Test ID:** TEST-CREQ-01  
+
+**Requirement**
+
+Impact-aware editing for Client Requirements.
+
+**Trigger**
+
+User saves material changes to a Client Requirement (Client, Title, Role, Dates, Headcount).
+
+**Expected Behaviour**
+
+Intercepts save if downstream data exists (Jobs, Pipelines). Shows Impact Review dialog prompting for a required audit reason. Upon confirmation, records an audit revision in the database and applies the changes.
+
+**Validation Rules**
+
+- Material changes include: clientId, roleTitle, title, locations, positionsRequired, employmentType, contractDuration, targetJoiningDate.
+- `positionsRequired` cannot be reduced below the number of already filled positions.
+
+**Cross-Module Impact / Dependencies**
+
+JOB-001, CAN-001
+
+**Completion Criteria**
+
+- The action is clickable
+- The expected page or modal opens
+- Validation works
+- Data is created or updated
+- Dependent modules update
+- Data survives refresh
+- Success and error states exist
+- Role restrictions work
+- Relevant end-to-end test passes
+
+---

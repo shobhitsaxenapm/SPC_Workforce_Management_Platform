@@ -4,12 +4,17 @@ import { mockUsers } from '../data/mockData';
 import { Building2, MapPin, Mail, Phone, Plus, Calendar, Briefcase, FileText } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { useState } from 'react';
-import CreateRequirementModal from './CreateRequirementModal';
+import ClientRequirementFormModal from './ClientRequirementFormModal';
+import ClientFormModal from './ClientFormModal';
+import { INDUSTRY_OPTIONS } from '../lib/constants';
 
 export default function ClientDetail() {
   const { id } = useParams();
-  const { clients, requirements, applications } = useApp();
+  const { clients, requirements, applications, currentUser } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  const canEdit = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER';
 
   const client = clients.find(c => c.id === id);
   const clientReqs = requirements.filter(r => r.clientId === id);
@@ -39,7 +44,14 @@ export default function ClientDetail() {
                   {client.status}
                 </span>
               </div>
-              <p className="text-slate-500 mt-1">{client.industry}</p>
+              <div className="flex flex-col gap-1 mt-1">
+                <p className="text-slate-500">
+                  {client.industry === 'OTHER' && client.industryOtherText
+                    ? client.industryOtherText
+                    : INDUSTRY_OPTIONS.find(o => o.value === client.industry)?.label || client.industry}
+                </p>
+                <p className="text-xs text-slate-400 italic">Status is automatically determined by attached requirements.</p>
+              </div>
               
               <div className="flex flex-wrap items-center gap-6 mt-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -55,9 +67,14 @@ export default function ClientDetail() {
           </div>
           
           <div className="flex gap-3 w-full md:w-auto">
-            <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-              Edit Client
-            </button>
+            {canEdit && (
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Edit Client
+              </button>
+            )}
             <button 
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -75,17 +92,39 @@ export default function ClientDetail() {
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-4">Primary Contact</h3>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-slate-800">{client.primaryContactName}</p>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <a href={`mailto:${client.primaryContactEmail}`} className="hover:text-blue-600">{client.primaryContactEmail}</a>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <a href={`tel:${client.primaryContactPhone}`} className="hover:text-blue-600">{client.primaryContactPhone}</a>
-              </div>
+              {client.primaryContactName || client.primaryContactEmail || client.primaryContactPhone ? (
+                <>
+                  {client.primaryContactName && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{client.primaryContactName}</p>
+                    </div>
+                  )}
+                  {client.primaryContactEmail && (
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <Mail className="w-4 h-4 text-slate-400" />
+                      <a href={`mailto:${client.primaryContactEmail}`} className="hover:text-blue-600">{client.primaryContactEmail}</a>
+                    </div>
+                  )}
+                  {client.primaryContactPhone && (
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <Phone className="w-4 h-4 text-slate-400" />
+                      <a href={`tel:${client.primaryContactPhone}`} className="hover:text-blue-600">{client.primaryContactPhone}</a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <p className="text-sm font-medium text-slate-500 italic mb-2">No primary contact</p>
+                  {canEdit && (
+                    <button 
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-block"
+                    >
+                      + Add contact
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -170,7 +209,14 @@ export default function ClientDetail() {
           </div>
         </div>
       </div>
-      <CreateRequirementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultClientId={id} />
+      <ClientRequirementFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultClientId={id} />
+      {isEditModalOpen && (
+        <ClientFormModal 
+          mode="edit"
+          initialClient={client}
+          onClose={() => setIsEditModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

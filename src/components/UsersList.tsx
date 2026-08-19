@@ -4,35 +4,30 @@ import { cn } from '../lib/utils';
 
 const roles = [
   {
-    name: 'Company Admin',
+    name: 'Admin',
     desc: 'Can see and manage everything.',
-    users: mockUsers.filter(u => u.role === 'Company Admin').length
+    users: mockUsers.filter(u => u.role === 'ADMIN').length
   },
   {
-    name: 'Recruitment Manager',
+    name: 'Manager',
     desc: 'Manages recruitment operations, creates requirements and jobs.',
-    users: mockUsers.filter(u => u.role === 'Recruitment Manager').length
+    users: mockUsers.filter(u => u.role === 'MANAGER').length
   },
   {
     name: 'Recruiter',
     desc: 'Daily operational user. Works on assigned requirements, creates jobs.',
-    users: mockUsers.filter(u => u.role === 'Recruiter').length
-  },
-  {
-    name: 'Interviewer',
-    desc: 'Limited access. Submits feedback for assigned interviews.',
-    users: mockUsers.filter(u => u.role === 'Interviewer').length
+    users: mockUsers.filter(u => u.role === 'RECRUITER').length
   }
 ];
 
 const permissions = [
-  { module: 'Clients', admin: 'Full', manager: 'Full', recruiter: 'View only', interviewer: 'No access' },
-  { module: 'Client Requirements', admin: 'Full', manager: 'Full', recruiter: 'Assigned only', interviewer: 'No access' },
-  { module: 'Jobs', admin: 'Full', manager: 'Full', recruiter: 'Assigned only', interviewer: 'View only' },
-  { module: 'Candidates', admin: 'Full', manager: 'Full', recruiter: 'Assigned only', interviewer: 'View only' },
-  { module: 'Interviews', admin: 'Full', manager: 'Full', recruiter: 'Assigned only', interviewer: 'Assigned only' },
-  { module: 'Offers', admin: 'Full', manager: 'Full', recruiter: 'Assigned only', interviewer: 'No access' },
-  { module: 'Administration', admin: 'Full', manager: 'No access', recruiter: 'No access', interviewer: 'No access' },
+  { module: 'Clients', admin: 'Full', manager: 'Full', recruiter: 'View only' },
+  { module: 'Client Requirements', admin: 'Full', manager: 'Full', recruiter: 'Assigned only' },
+  { module: 'Jobs', admin: 'Full', manager: 'Full', recruiter: 'Assigned only' },
+  { module: 'Candidates', admin: 'Full', manager: 'Full', recruiter: 'Assigned only' },
+  { module: 'Interviews', admin: 'Full', manager: 'Full', recruiter: 'Assigned only' },
+  { module: 'Offers', admin: 'Full', manager: 'Full', recruiter: 'Assigned only' },
+  { module: 'Administration', admin: 'Full', manager: 'No access', recruiter: 'No access' },
 ];
 
 export default function UsersList() {
@@ -65,17 +60,16 @@ export default function UsersList() {
             <thead className="bg-white border-b border-slate-200 text-slate-600 font-medium">
               <tr>
                 <th className="px-6 py-4">Module</th>
-                <th className="px-6 py-4">Company Admin</th>
-                <th className="px-6 py-4">Recruitment Manager</th>
+                <th className="px-6 py-4">Admin</th>
+                <th className="px-6 py-4">Manager</th>
                 <th className="px-6 py-4">Recruiter</th>
-                <th className="px-6 py-4">Interviewer</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {permissions.map((p, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium text-slate-800">{p.module}</td>
-                  {[p.admin, p.manager, p.recruiter, p.interviewer].map((perm, idx) => (
+                  {[p.admin, p.manager, p.recruiter].map((perm, idx) => (
                     <td key={idx} className="px-6 py-4">
                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border",

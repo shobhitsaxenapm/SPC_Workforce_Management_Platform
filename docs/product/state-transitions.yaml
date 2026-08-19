@@ -112,3 +112,31 @@ transitions:
         to: ["Expiring Soon", "Expired"]
       - from: "Expiring Soon"
         to: ["Expired", "Active"]
+
+  requirement_lifecycle_status:
+    states:
+      - "Draft"
+      - "Open"
+      - "On Hold"
+      - "Closed"
+      - "Cancelled"
+    allowed:
+      - from: "Draft"
+        to: ["Open", "Cancelled"]
+      - from: "Open"
+        to: ["On Hold", "Closed", "Cancelled"]
+      - from: "On Hold"
+        to: ["Open", "Cancelled"]
+
+  requirement_fulfilment_status:
+    states:
+      - "Unfilled"
+      - "Partially Filled"
+      - "Fulfilled"
+    allowed:
+      - from: "Unfilled"
+        to: ["Partially Filled", "Fulfilled"]
+      - from: "Partially Filled"
+        to: ["Fulfilled", "Unfilled"]
+      - from: "Fulfilled"
+        to: ["Partially Filled", "Unfilled"]

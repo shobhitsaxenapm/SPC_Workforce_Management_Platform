@@ -130,7 +130,7 @@ export default function Layout() {
           <NavGroup title="Operations" items={operationsItems} />
           <NavGroup title="Intelligence" items={intelligenceItems} />
           <NavGroup title="Website" items={websiteItems} />
-          {currentUser?.role === 'Company Admin' && (
+          {currentUser?.role === 'ADMIN' && (
             <NavGroup title="Administration" items={adminItems} />
           )}
         </div>
@@ -165,7 +165,9 @@ export default function Layout() {
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-slate-700">{currentUser?.name}</span>
-                <span className="text-xs text-slate-500">{currentUser?.role === 'Company Admin' ? 'Admin' : 'Employee'}</span>
+                <span className="text-xs text-slate-500">
+                  {currentUser?.role === 'ADMIN' ? 'Admin' : currentUser?.role === 'MANAGER' ? 'Manager' : 'Recruiter'}
+                </span>
               </div>
               <button 
                 onClick={handleLogout} 

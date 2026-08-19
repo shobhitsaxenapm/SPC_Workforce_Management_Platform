@@ -1,0 +1,60 @@
+Client Name: Nexa Global Financial
+Business Unit: Digital Transformation Division
+Project Name: Project Phoenix (Core Banking Migration)
+
+This document contains multiple requirements for the upcoming quarter. Please process all roles accordingly.
+
+==================================================
+ROLE 1: Lead Cloud Solutions Architect
+==================================================
+Positions Required: 2
+Location: Bangalore, India
+Employment Type: Full-time
+Priority: Critical
+Target Joining Date: 2026-10-01
+Contract Duration: Permanent
+
+Notes: Needs immediate deployment to oversee the AWS migration strategy.
+
+Required Skills:
+- AWS Cloud Architecture
+- Kubernetes
+- Terraform
+- Microservices Design
+
+Preferred Skills:
+- FinOps
+- Azure (Basic Knowledge)
+
+Experience: 8-10 Years
+Qualifications: 
+- B.Tech/M.Tech in CS
+- AWS Certified Solutions Architect Professional
+
+
+==================================================
+ROLE 2: Database Reliability Engineer (DBRE)
+==================================================
+Positions Required: 4
+Location: Remote (India)
+Employment Type: Contract
+Contract Duration: 12 Months
+Priority: High
+Target Joining Date: 2026-09-15
+
+Notes: Looking for candidates who have experience handling high-throughput transactional databases.
+
+Required Skills:
+- PostgreSQL
+- Performance Tuning
+- Database Replication
+- Linux Administration
+
+Preferred Skills:
+- Python scripting
+- Prometheus/Grafana
+
+Experience: 4-7 Years
+Qualifications: 
+- B.E. in IT or equivalent
+- Oracle or Postgres DBA certification is a plus
