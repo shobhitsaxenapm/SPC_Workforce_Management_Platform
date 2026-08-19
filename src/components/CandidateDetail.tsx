@@ -220,9 +220,13 @@ export default function CandidateDetail() {
             <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
               Edit Profile
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+            <button 
+              className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-2", candidate.resumeUrl ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-400 cursor-not-allowed")}
+              disabled={!candidate.resumeUrl}
+              title={!candidate.resumeUrl ? "No resume uploaded" : "View Resume"}
+            >
               <FileText className="w-4 h-4" />
-              View Resume
+              {candidate.resumeUrl ? "View Resume" : "No Resume"}
             </button>
           </div>
         </div>

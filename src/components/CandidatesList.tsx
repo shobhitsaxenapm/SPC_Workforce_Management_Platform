@@ -31,7 +31,7 @@ export default function CandidatesList() {
     fullName: '', email: '', phone: '', currentLocation: '',
     totalExperience: '', currentCompany: '', currentRole: '',
     skills: '', education: '', currentSalary: '', expectedSalary: '',
-    noticePeriod: '', resumeUrl: '', source: 'Manual Entry',
+    noticePeriod: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,8 +56,8 @@ export default function CandidatesList() {
       currentSalary: formData.currentSalary || '0',
       expectedSalary: formData.expectedSalary || '0',
       noticePeriod: formData.noticePeriod || 'Immediate',
-      resumeUrl: formData.resumeUrl || undefined,
-      source: formData.source,
+      resumeUrl: undefined,
+      source: 'Manual Entry',
     });
     setIsSubmitting(false);
     if (!result.success) { setErrorMsg(result.error || 'Failed.'); return; }
@@ -65,7 +65,7 @@ export default function CandidatesList() {
     setTimeout(() => {
       setIsSuccess(false);
       setIsModalOpen(false);
-      setFormData({ fullName: '', email: '', phone: '', currentLocation: '', totalExperience: '', currentCompany: '', currentRole: '', skills: '', education: '', currentSalary: '', expectedSalary: '', noticePeriod: '', resumeUrl: '', source: 'Manual Entry' });
+      setFormData({ fullName: '', email: '', phone: '', currentLocation: '', totalExperience: '', currentCompany: '', currentRole: '', skills: '', education: '', currentSalary: '', expectedSalary: '', noticePeriod: '' });
     }, 1500);
   };
 
@@ -336,26 +336,6 @@ export default function CandidatesList() {
                           <option value="30 Days">30 Days</option>
                           <option value="60 Days">60 Days</option>
                         </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Source & Resume</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
-                        <select value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-                          <option value="Manual Entry">Manual Entry</option>
-                          <option value="Referral">Referral</option>
-                          <option value="Job Portal">Job Portal</option>
-                          <option value="Careers Portal">Careers Portal</option>
-                          <option value="LinkedIn">LinkedIn</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Resume Filename</label>
-                        <input type="text" placeholder="e.g. resume_john.pdf" value={formData.resumeUrl} onChange={e => setFormData({...formData, resumeUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                       </div>
                     </div>
                   </div>
