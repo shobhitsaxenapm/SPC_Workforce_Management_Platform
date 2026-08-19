@@ -69,10 +69,47 @@ export default function SmartJobUpload({ onExtractionSuccess, onCancel }: SmartJ
         body: formData,
       });
 
-      const json = await res.json();
+      let json;
+      try {
+        json = await res.json();
+      } catch (parseError) {
+        // Fallback for Vercel static deployment where the API doesn't exist and returns a 404 HTML page
+        console.warn('API returned non-JSON response (likely a 404 on Vercel). Falling back to mock data.');
+        json = { ok: false, error: 'Static Vercel environment' };
+      }
       
-      if (!res.ok) {
-        throw new Error(json.error || 'Failed to process document.');
+      if (!res.ok || json.error) {
+        // Fallback to static mock data for the prototype
+        console.warn('Using static mock fallback for Job Extraction due to:', json.error || 'API Error');
+        
+        // Simulate processing delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const mockParsedData = {
+          title: "Senior React Developer (Mock Fallback)",
+          summary: "This is a static mock response because the backend API is not available on Vercel.",
+          responsibilities: ["Develop scalable frontend applications", "Collaborate with backend teams"],
+          requiredSkills: ["React", "TypeScript", "Tailwind CSS"],
+          preferredSkills: ["Node.js", "GraphQL"],
+          experienceRange: "5-7 Years",
+          qualifications: ["Bachelor's Degree in Computer Science"],
+          location: "Remote",
+          workArrangement: "Remote",
+          employmentType: "Full-time",
+          openings: 2,
+          salaryInformation: "$120k - $150k",
+          contractDuration: "Permanent",
+          applicationDeadline: "2026-12-31",
+          targetJoiningDate: "2026-10-01",
+          linkedClientRequirement: "None"
+        };
+        
+        onExtractionSuccess(
+          mockParsedData, 
+          "Simulated extracted text content from uploaded document.",
+          { originalFilename: file.name, mimeType: file.type, size: file.size }
+        );
+        return;
       }
 
       onExtractionSuccess(json.data, json.sourceText, json.metadata);

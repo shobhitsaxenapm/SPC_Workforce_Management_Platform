@@ -71,10 +71,67 @@ export default function SmartRequirementUpload({ onExtractionSuccess, onCancel }
         body: formData,
       });
 
-      const json = await res.json();
+      let json;
+      try {
+        json = await res.json();
+      } catch (parseError) {
+        // Fallback for Vercel static deployment where the API doesn't exist and returns a 404 HTML page
+        console.warn('API returned non-JSON response (likely a 404 on Vercel). Falling back to mock data.');
+        json = { ok: false, error: 'Static Vercel environment' };
+      }
       
-      if (!res.ok) {
-        throw new Error(json.error || 'Failed to process document.');
+      if (!res.ok || json.error) {
+        // Fallback to static mock data for the prototype
+        console.warn('Using static mock fallback for Requirement Extraction due to:', json.error || 'API Error');
+        
+        // Simulate processing delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const mockParsedData = [
+          {
+            clientName: "Nexa Global Financial (Mock)",
+            businessUnit: "Digital Transformation",
+            projectName: "Project Phoenix",
+            roleTitle: "Lead Cloud Solutions Architect",
+            positionsRequired: 2,
+            locations: ["Bangalore", "India"],
+            employmentType: "Full-time",
+            contractDuration: "Permanent",
+            targetJoiningDate: "2026-10-01",
+            priority: "Critical",
+            requiredSkills: ["AWS Cloud Architecture", "Kubernetes", "Terraform", "Microservices Design"],
+            preferredSkills: ["FinOps", "Azure"],
+            experience: "8-10 Years",
+            qualifications: ["B.Tech/M.Tech in CS", "AWS Certified Solutions Architect Professional"],
+            assignedRecruiter: "",
+            notes: "Needs immediate deployment to oversee the AWS migration strategy."
+          },
+          {
+            clientName: "Nexa Global Financial (Mock)",
+            businessUnit: "Digital Transformation",
+            projectName: "Project Phoenix",
+            roleTitle: "Database Reliability Engineer (DBRE)",
+            positionsRequired: 4,
+            locations: ["Remote", "India"],
+            employmentType: "Contract",
+            contractDuration: "12 Months",
+            targetJoiningDate: "2026-09-15",
+            priority: "High",
+            requiredSkills: ["PostgreSQL", "Performance Tuning", "Database Replication", "Linux Administration"],
+            preferredSkills: ["Python scripting", "Prometheus/Grafana"],
+            experience: "4-7 Years",
+            qualifications: ["B.E. in IT or equivalent", "Oracle or Postgres DBA certification is a plus"],
+            assignedRecruiter: "",
+            notes: "Looking for candidates who have experience handling high-throughput transactional databases."
+          }
+        ];
+        
+        onExtractionSuccess(
+          mockParsedData, 
+          "Simulated extracted text content from uploaded client requirement document.",
+          { originalFilename: file.name, mimeType: file.type, size: file.size }
+        );
+        return;
       }
 
       onExtractionSuccess(json.data, json.sourceText, json.metadata);
