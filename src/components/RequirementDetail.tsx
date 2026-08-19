@@ -20,14 +20,19 @@ import {
   UserCheck,
   Search,
   Filter,
-  Trash2
+  Trash2,
+  MoreVertical,
+  Ban
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { JobVisibility, ApplicationStage, Priority, RequirementStatus } from '../types';
+import { JobVisibility, ApplicationStage, Priority, RequirementLifecycleStatus } from '../types';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import FilterPanel, { FilterField } from './FilterPanel';
-import CreateRequirementModal from './CreateRequirementModal';
+import ClientRequirementFormModal from './ClientRequirementFormModal';
+import SmartJobUpload from './SmartJobUpload';
+import SmartJobReview from './SmartJobReview';
+import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function RequirementDetail() {
   const { id } = useParams();
@@ -39,7 +44,8 @@ export default function RequirementDetail() {
     applications, 
     createJob, 
     updateApplicationStage,
-    updateRequirementStatus
+    updateRequirementLifecycle,
+    deleteRequirement
   } = useApp();
 
   const req = requirements.find(r => r.id === id);
@@ -55,6 +61,24 @@ export default function RequirementDetail() {
   const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const [openActionMenu, setOpenActionMenu] = useState(false);
+
+  // Smart Job State
+  const [creationMode, setCreationMode] = useState<'manual' | 'smart' | null>(null);
+  const [smartJobStep, setSmartJobStep] = useState<'upload' | 'review'>('upload');
+  const [extractedData, setExtractedData] = useState<ExtractedJobData | null>(null);
+  const [sourceText, setSourceText] = useState('');
+  const [sourceMetadata, setSourceMetadata] = useState<JobSourceMetadata | null>(null);
+
+  const handleCloseCreateJobModal = () => {
+    setIsCreateJobOpen(false);
+    setCreationMode(null);
+    setSmartJobStep('upload');
+    setExtractedData(null);
+    setSourceText('');
+    setSourceMetadata(null);
   };
 
   // Job Form State
@@ -107,6 +131,7 @@ export default function RequirementDetail() {
   const filledCount = reqApps.filter(a => a.currentStage === 'Joined').length;
   const remainingCount = Math.max(req.positionsRequired - filledCount, 0);
   const progress = (filledCount / req.positionsRequired) * 100;
+  const isReadonly = req.lifecycleStatus === 'Closed' || req.lifecycleStatus === 'Cancelled';
 
   // Overview Counts
   const sourcedCount = reqApps.filter(a => a.currentStage === 'Sourced').length;
@@ -174,6 +199,7 @@ export default function RequirementDetail() {
     setTimeout(() => {
       setIsSuccess(false);
       setIsCreateJobOpen(false);
+      setCreationMode(null);
       setJobFormData({
         title: req.roleTitle, location: req.locations[0], openings: Math.max(req.positionsRequired - filledCount, 1),
         experienceRange: '', requiredSkills: '', preferredSkills: '', summary: '', applicationDeadline: '', visibility: 'Public'
@@ -182,8 +208,8 @@ export default function RequirementDetail() {
   };
 
   const toggleHold = () => {
-    const nextStatus: RequirementStatus = req.status === 'On Hold' ? 'In Progress' : 'On Hold';
-    updateRequirementStatus(req.id, nextStatus);
+    const nextStatus: RequirementLifecycleStatus = req.lifecycleStatus === 'On Hold' ? 'Open' : 'On Hold';
+    updateRequirementLifecycle(req.id, nextStatus);
     triggerToast(nextStatus === 'On Hold' ? 'Requirement has been put on hold.' : 'Requirement has been resumed.');
     setIsHoldConfirmOpen(false);
   };
@@ -222,6 +248,17 @@ export default function RequirementDetail() {
   const rawTimeline: { id: string; type: string; details: string; date: string; candidate?: string; job?: string }[] = [
     { id: 'act_1', type: 'Requirement Created', details: `Client Requirement for ${req.roleTitle} was successfully created.`, date: req.createdAt }
   ];
+
+  if (req.revisions) {
+    req.revisions.forEach((rev, idx) => {
+      rawTimeline.push({
+        id: `rev_${idx}`,
+        type: 'Requirement Amended',
+        details: `Amendment: ${rev.reason}`,
+        date: rev.timestamp
+      });
+    });
+  }
 
   reqJobs.forEach(job => {
     rawTimeline.push({
@@ -284,7 +321,7 @@ export default function RequirementDetail() {
       )}
 
       {/* Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm" onClick={() => setOpenActionMenu(false)}>
         <div className="flex items-center gap-3 text-sm">
           <Link to="/clients" className="text-slate-500 hover:text-slate-800">Clients</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -292,26 +329,57 @@ export default function RequirementDetail() {
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="font-medium text-slate-800 font-mono">{req.code}</span>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsHoldConfirmOpen(true)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            {req.status === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
-          </button>
-          <button 
-            onClick={() => setIsEditOpen(true)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            Edit
-          </button>
-          <button 
-            onClick={() => setIsCreateJobOpen(true)} 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Create Job
-          </button>
+        <div className="flex gap-2 relative" onClick={e => e.stopPropagation()}>
+          {!isReadonly && (
+            <>
+              <button 
+                onClick={() => setIsHoldConfirmOpen(true)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                {req.lifecycleStatus === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
+              </button>
+              <button 
+                onClick={() => setIsEditOpen(true)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Edit
+              </button>
+              <button 
+                onClick={() => setIsCreateJobOpen(true)} 
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Create Job
+              </button>
+            </>
+          )}
+          <div className="relative">
+             <button
+                onClick={() => setOpenActionMenu(!openActionMenu)}
+                className="p-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm bg-white"
+             >
+                <MoreVertical className="w-5 h-5" />
+             </button>
+             {openActionMenu && (
+               <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 text-left">
+                  {req.lifecycleStatus !== 'Cancelled' && req.lifecycleStatus !== 'Closed' && (
+                     <button
+                        onClick={() => { setOpenActionMenu(false); updateRequirementLifecycle(req.id, 'Cancelled'); }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                     >
+                        <Ban className="w-4 h-4" /> Cancel
+                     </button>
+                  )}
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  <button
+                     onClick={() => { setOpenActionMenu(false); deleteRequirement(req.id); window.location.href = '/requirements'; }}
+                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                     <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+               </div>
+             )}
+          </div>
         </div>
       </div>
 
@@ -325,12 +393,13 @@ export default function RequirementDetail() {
           </div>
           <span className={cn(
             "px-3 py-1 rounded-full text-sm font-medium border",
-            req.status === 'Open' ? "bg-blue-50 text-blue-700 border-blue-200" :
-            req.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
-            req.status === 'In Progress' ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-            "bg-slate-50 text-slate-700 border-slate-200"
+            req.lifecycleStatus === 'Open' ? "bg-blue-50 text-blue-700 border-blue-200" :
+            req.lifecycleStatus === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
+            req.lifecycleStatus === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
+            req.lifecycleStatus === 'Closed' ? "bg-green-50 text-green-700 border-green-200" :
+            "bg-red-50 text-red-700 border-red-200"
           )}>
-            {req.status}
+            {req.lifecycleStatus}
           </span>
         </div>
 
@@ -734,6 +803,7 @@ export default function RequirementDetail() {
             >
               <option value="">All Action Types</option>
               <option value="Requirement Created">Requirement Created</option>
+              <option value="Requirement Amended">Requirement Amended</option>
               <option value="Job Created">Job Created</option>
               <option value="Candidate Applied">Candidate Applied</option>
               <option value="Stage Transition">Stage Transition</option>
@@ -771,10 +841,94 @@ export default function RequirementDetail() {
       {/* CREATE JOB MODAL */}
       {isCreateJobOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          
+          {!creationMode && (
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden p-8">
+              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Create Job from Requirement</h2>
+                  <p className="text-slate-500 text-sm mt-1">Choose how you want to create this job.</p>
+                </div>
+                <button onClick={handleCloseCreateJobModal} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div 
+                  onClick={() => setCreationMode('manual')}
+                  className="border-2 border-slate-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50/50 transition-all cursor-pointer group flex flex-col items-center text-center"
+                >
+                  <div className="w-12 h-12 bg-slate-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-4 text-slate-500 group-hover:text-blue-600 transition-colors">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 text-lg mb-2">Create Manually</h3>
+                  <p className="text-sm text-slate-500">Fill out the standard form manually for this requirement.</p>
+                </div>
+
+                <div 
+                  onClick={() => setCreationMode('smart')}
+                  className="border-2 border-slate-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50/50 transition-all cursor-pointer group flex flex-col items-center text-center relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">NEW - AI</div>
+                  <div className="w-12 h-12 bg-slate-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-4 text-slate-500 group-hover:text-blue-600 transition-colors">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 text-lg mb-2">Upload Document</h3>
+                  <p className="text-sm text-slate-500">Upload a JD (PDF, DOCX) to auto-extract details.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {creationMode === 'smart' && smartJobStep === 'upload' && (
+            <div className="relative w-full max-w-3xl">
+              <button onClick={handleCloseCreateJobModal} className="absolute right-4 top-4 p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors z-10">
+                <X className="w-5 h-5" />
+              </button>
+              <SmartJobUpload 
+                onCancel={handleCloseCreateJobModal}
+                onExtractionSuccess={(data, text, meta) => {
+                  setExtractedData({...data, linkedClientRequirement: req.id});
+                  setSourceText(text);
+                  setSourceMetadata({...meta, extractionStatus: 'Success', uploadedBy: 'System', uploadedAt: new Date().toISOString(), parserVersion: 'gemini-1.5-flash'});
+                  setSmartJobStep('review');
+                }} 
+              />
+            </div>
+          )}
+
+          {creationMode === 'smart' && smartJobStep === 'review' && extractedData && sourceMetadata && (
+             <div className="relative w-full max-w-7xl h-[90vh]">
+               <SmartJobReview 
+                 extractedData={extractedData}
+                 sourceText={sourceText}
+                 metadata={sourceMetadata}
+                 onDiscard={handleCloseCreateJobModal}
+                 onSaveAsDraft={() => {
+                    setIsSuccess(true);
+                    setTimeout(() => {
+                      setIsSuccess(false);
+                      handleCloseCreateJobModal();
+                    }, 1500);
+                 }}
+               />
+               {isSuccess && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-20 rounded-xl">
+                    <div className="text-center">
+                      <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-slate-800">Draft Saved!</h3>
+                    </div>
+                  </div>
+                )}
+             </div>
+          )}
+
+          {creationMode === 'manual' && (
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-lg font-bold text-slate-800">Create Job from Requirement</h2>
-              <button onClick={() => setIsCreateJobOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
+              <button onClick={handleCloseCreateJobModal} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -856,7 +1010,7 @@ export default function RequirementDetail() {
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10">
               <button 
                 type="button"
-                onClick={() => setIsCreateJobOpen(false)}
+                onClick={handleCloseCreateJobModal}
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Cancel
@@ -872,15 +1026,16 @@ export default function RequirementDetail() {
               )}
             </div>
           </div>
+          )}
         </div>
       )}
 
       {/* EDIT REQUIREMENT MODAL (REUSING SHARED COMPONENT) */}
-      <CreateRequirementModal
+      <ClientRequirementFormModal
         isOpen={isEditOpen}
         onClose={() => {
           setIsEditOpen(false);
-          triggerToast('Requirement updated successfully!');
+          // Only trigger if a change was actually saved... could be passed down, but for now it's ok.
         }}
         requirementIdToEdit={req.id}
       />
@@ -894,12 +1049,12 @@ export default function RequirementDetail() {
                 <AlertCircle className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-slate-800">
-                {req.status === 'On Hold' ? 'Resume Client Requirement' : 'Put Requirement On Hold'}
+                {req.lifecycleStatus === 'On Hold' ? 'Resume Client Requirement' : 'Put Requirement On Hold'}
               </h3>
             </div>
             <p className="text-slate-600 text-sm mb-6">
-              {req.status === 'On Hold' 
-                ? 'Are you sure you want to resume this client requirement? The status will revert to In Progress and recruitment activities will resume.'
+              {req.lifecycleStatus === 'On Hold' 
+                ? 'Are you sure you want to resume this client requirement? The status will revert to Open and recruitment activities will resume.'
                 : 'Are you sure you want to put this client requirement on hold? This will update its status immediately.'}
             </p>
             <div className="flex justify-end gap-3">
@@ -915,10 +1070,10 @@ export default function RequirementDetail() {
                 onClick={toggleHold}
                 className={cn(
                   "px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors",
-                  req.status === 'On Hold' ? "bg-blue-600 hover:bg-blue-700" : "bg-amber-600 hover:bg-amber-700"
+                  req.lifecycleStatus === 'On Hold' ? "bg-blue-600 hover:bg-blue-700" : "bg-amber-600 hover:bg-amber-700"
                 )}
               >
-                {req.status === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
+                {req.lifecycleStatus === 'On Hold' ? 'Resume Requirement' : 'Put On Hold'}
               </button>
             </div>
           </div>

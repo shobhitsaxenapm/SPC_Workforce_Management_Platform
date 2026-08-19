@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage } from '../types';
-import AIInsightCard from './AIInsightCard';
 import { useApp } from '../context/AppContext';
+import JobMatchesTab from './JobMatchesTab';
+import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
+import JobFormModal from './JobFormModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, requirements, clients, applications, candidates, updateApplicationStage } = useApp();
+  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus } = useApp();
   const job = jobs.find(j => j.id === id);
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Pipeline'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   if (!job) return <div>Job not found</div>;
 
@@ -21,6 +26,12 @@ export default function JobDetail() {
   const jobApplications = applications.filter(a => a.jobId === job.id);
   
   const progress = (job.filled / job.openings) * 100;
+
+  const currentMatchRun = matchRuns.find(r => r.jobId === job.id);
+  const activeMatches = currentMatchRun?.matches.filter(m => !m.dismissed) || [];
+  
+  const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
+  const canAction = canRunMatching;
 
   const canonicalStages = ['Sourced', 'Applied', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Joined', 'Rejected', 'Other'] as const;
   
@@ -67,6 +78,14 @@ export default function JobDetail() {
     updateApplicationStage(appId, newStage);
   };
 
+  const handleRefreshMatches = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      runJobMatching(job.id);
+      setIsRefreshing(false);
+    }, 1000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Bar */}
@@ -79,43 +98,60 @@ export default function JobDetail() {
           <span className="font-medium text-slate-800 font-mono">{job.code}</span>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+          >
             Edit Job
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-            <Eye className="w-4 h-4" />
-            Preview
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-            Unpublish
-          </button>
+          
+          {job.status === 'Published' ? (
+            <button 
+              onClick={() => updateJobStatus(job.id, 'Draft')}
+              className="px-4 py-2 bg-white border border-slate-300 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+            >
+              Unpublish
+            </button>
+          ) : (
+            <button 
+              onClick={() => updateJobStatus(job.id, 'Published')}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Publish
+            </button>
+          )}
         </div>
       </div>
 
-      <AIInsightCard 
-        title="Talent Pool Resurfacing Suggestion"
-        severity="info"
-        explanation="There are 5 candidates in your talent pool who were previous runners-up for similar roles and have an 85%+ match for this job."
-        actionLabel="View Matched Candidates"
-        onAction={() => {}}
-      />
 
-      <div className="flex border-b border-slate-200">
+      <div className="flex border-b border-gray-200">
         <button 
           onClick={() => setActiveTab('Overview')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Overview' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700")}
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Overview' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
           Job Overview
         </button>
         <button 
-          onClick={() => setActiveTab('Pipeline')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Pipeline' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700")}
+          onClick={() => setActiveTab('Matches')} 
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Matches' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          Candidate Pipeline ({jobApplications.length})
+          Matches ({activeMatches.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('Pipeline')} 
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Pipeline' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+        >
+          Pipeline ({jobApplications.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('Activity')} 
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Activity' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+        >
+          Activity
         </button>
       </div>
 
-      {activeTab === 'Overview' ? (
+      {activeTab === 'Overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -161,6 +197,74 @@ export default function JobDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Top Candidate Matches Preview */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-800">Top Candidate Matches</h3>
+                <button onClick={() => setActiveTab('Matches')} className="text-sm font-medium text-blue-600 hover:text-blue-700">View all matches</button>
+              </div>
+              
+              {!currentMatchRun ? (
+                <div className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  Matching engine has not been run for this job yet.
+                </div>
+              ) : activeMatches.length === 0 ? (
+                <div className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  No active matches found.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeMatches.slice(0, 3).map(match => {
+                    const candidate = candidates.find(c => c.id === match.candidateId);
+                    if (!candidate) return null;
+                    const inPipeline = applications.some(a => a.jobId === job.id && a.candidateId === match.candidateId);
+                    return (
+                      <div key={match.candidateId} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 hover:bg-gray-50 rounded-xl border border-gray-100 gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                            {candidate.fullName.charAt(0)}
+                          </div>
+                          <div className="flex flex-col">
+                            <button onClick={() => setSelectedProfileId(candidate.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-left text-sm">{candidate.fullName}</button>
+                            <span className="text-xs text-gray-500 mt-0.5">{candidate.currentRole} • {candidate.currentLocation}</span>
+                            <span className="text-xs text-gray-500 mt-0.5">Exp: {candidate.totalExperience} • Avail: {candidate.noticePeriod}</span>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {match.matchStrengths.slice(0, 3).map((s, i) => (
+                                <span key={i} className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                            Score <span className={cn("px-2 py-0.5 rounded-full font-bold", match.score >= 85 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700")}>{match.score}%</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button onClick={() => setSelectedProfileId(candidate.id)} className="text-xs font-medium text-slate-600 hover:text-blue-600 px-2 py-1">
+                              View Profile
+                            </button>
+                            {inPipeline ? (
+                              <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg border border-gray-200">In Pipeline</span>
+                            ) : canAction ? (
+                              <button 
+                                onClick={() => addMatchToPipeline(job.id, candidate.id)}
+                                className="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                Add to Pipeline
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="lg:col-span-1 space-y-6">
@@ -182,18 +286,43 @@ export default function JobDetail() {
               
               <div className="mt-6 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Applicants</span>
-                  <span className="font-medium text-slate-800">{jobApplications.length}</span>
+                  <span className="text-gray-500">Applicants</span>
+                  <span className="font-medium text-gray-800">{jobApplications.filter(a => a.source !== 'Internal Match').length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">In Pipeline</span>
-                  <span className="font-medium text-slate-800">
+                  <span className="text-gray-500">Active Pipeline</span>
+                  <span className="font-medium text-gray-800">
                     {jobApplications.filter(a => a.currentStage !== 'Rejected' && a.currentStage !== 'Withdrawn' && a.currentStage !== 'Offer Declined').length}
                   </span>
                 </div>
-                <button onClick={() => setActiveTab('Pipeline')} className="w-full mt-2 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  View Applicants
-                </button>
+                <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                  <span className="text-gray-500">Database Matches</span>
+                  <span className="font-medium text-gray-800">{activeMatches.length}</span>
+                </div>
+                <div className="flex justify-between text-xs pb-2">
+                  <span className="text-gray-400">Last Match Run</span>
+                  <span className="text-gray-500">{currentMatchRun ? formatDate(currentMatchRun.timestamp) : 'Never'}</span>
+                </div>
+                
+                {canRunMatching && (
+                  <button 
+                    onClick={handleRefreshMatches}
+                    disabled={isRefreshing}
+                    className="w-full mt-2 py-2 flex items-center justify-center gap-2 bg-white border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isRefreshing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        Refreshing matches...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        Refresh Matches
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -224,8 +353,12 @@ export default function JobDetail() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px]">
+      )}
+      
+      {activeTab === 'Matches' && <JobMatchesTab job={job} />}
+
+      {activeTab === 'Pipeline' && (
+        <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px]">
           {canonicalStages.map(stage => {
             const appsInStage = groupedApps[stage] || [];
             if (stage === 'Other' && appsInStage.length === 0) return null;
@@ -285,6 +418,25 @@ export default function JobDetail() {
           })}
         </div>
       )}
+
+      {activeTab === 'Activity' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+          Activity log coming soon.
+        </div>
+      )}
+
+      <CandidateMatchProfileDrawer 
+        isOpen={!!selectedProfileId}
+        onClose={() => setSelectedProfileId(null)}
+        candidate={candidates.find(c => c.id === selectedProfileId) || null}
+        match={currentMatchRun?.matches.find(m => m.candidateId === selectedProfileId) || null}
+      />
+
+      <JobFormModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        job={job}
+      />
     </div>
   );
 }

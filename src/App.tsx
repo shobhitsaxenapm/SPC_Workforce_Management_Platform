@@ -65,13 +65,13 @@ export default function App() {
         <Route path="careers-page" element={<CareersAdmin />} />
         
         <Route path="users" element={
-          <RouteGuard allowedRoles={['Company Admin']}>
+          <RouteGuard allowedRoles={['ADMIN']}>
             <UsersList />
           </RouteGuard>
         } />
         
         <Route path="settings" element={
-          <RouteGuard allowedRoles={['Company Admin']}>
+          <RouteGuard allowedRoles={['ADMIN']}>
             <Settings />
           </RouteGuard>
         } />

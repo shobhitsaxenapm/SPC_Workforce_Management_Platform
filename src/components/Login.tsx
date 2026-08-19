@@ -17,8 +17,9 @@ export default function Login() {
     const val = e.target.value;
     if (val) {
       const match = mockUsers.find(u => 
-        (val === 'Admin' && u.role === 'Company Admin') || 
-        (val === 'Employee' && u.role === 'Recruiter')
+        (val === 'Admin' && u.role === 'ADMIN') || 
+        (val === 'Manager' && u.role === 'MANAGER') ||
+        (val === 'Recruiter' && u.role === 'RECRUITER')
       );
       if (match) {
         setEmail(match.email);
@@ -81,7 +82,8 @@ export default function Login() {
             >
               <option value="">-- Choose Role --</option>
               <option value="Admin">Admin (Rahul Sharma)</option>
-              <option value="Employee">Employee (Amit Kumar)</option>
+              <option value="Manager">Manager (Priya Desai)</option>
+              <option value="Recruiter">Recruiter (Amit Kumar)</option>
             </select>
           </div>
 

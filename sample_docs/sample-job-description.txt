@@ -1,0 +1,37 @@
+Job Title: Senior React Developer
+Company/Client: AlphaTech Solutions (Internal Team)
+Location: Remote (India)
+Employment Type: Full-time
+Openings: 3
+Experience Range: 4-6 Years
+Target Joining Date: 2026-09-15
+Application Deadline: 2026-08-31
+
+Summary:
+We are looking for an experienced Senior React Developer to join our core product team. You will be responsible for architecting and building high-performance web applications using modern frontend technologies.
+
+Responsibilities:
+- Design and implement scalable frontend architectures.
+- Collaborate with cross-functional teams to define, design, and ship new features.
+- Ensure the technical feasibility of UI/UX designs.
+- Optimize applications for maximum speed and scalability.
+- Mentor junior developers and conduct code reviews.
+
+Required Skills:
+- React.js
+- TypeScript
+- Tailwind CSS
+- State Management (Redux/Zustand)
+- RESTful APIs
+
+Preferred Skills:
+- Next.js
+- Node.js (Basic understanding)
+- GraphQL
+- CI/CD pipelines
+
+Qualifications:
+- Bachelor's degree in Computer Science or a related field.
+- Proven experience building complex single-page applications.
+
+Salary Information: Competitive market rate based on experience.
