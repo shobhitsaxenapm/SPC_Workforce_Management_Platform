@@ -194,6 +194,7 @@ export interface Candidate {
   noticePeriod: string;
   resumeUrl?: string;
   source: string;
+  linkedInUrl?: string;
   duplicateStatus: 'None' | 'Possible Duplicate' | 'Confirmed Duplicate';
   createdAt?: string;
   professionalSummary?: string;
@@ -260,9 +261,11 @@ export interface Interview {
   scheduledAt: string;
   durationMinutes: number;
   interviewerName: string;
-  mode: 'Phone' | 'Video' | 'In-person';
+  mode: 'Phone' | 'Video' | 'In-person' | 'Manual Link';
   status: InterviewStatus;
-  feedbackStatus: 'Pending' | 'Submitted';
+  feedbackStatus: 'Not Started' | 'Pending' | 'Submitted';
+  timezone?: string;
+  provider?: 'Google Meet' | 'Microsoft Teams' | 'Zoom' | 'None';
   meetingLink?: string;
   overallRating?: number;
   feedbackNotes?: string;
@@ -272,6 +275,10 @@ export interface Interview {
   concerns?: string;
   rescheduleReason?: string;
   rescheduledAt?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  candidateInstructions?: string;
+  internalNotes?: string;
 }
 
 export interface Offer {

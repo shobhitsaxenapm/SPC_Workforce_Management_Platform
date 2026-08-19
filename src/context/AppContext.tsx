@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementStatus, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun } from '../types';
+import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementLifecycleStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
@@ -35,7 +35,9 @@ interface AppContextType {
   updateRequirementLifecycle: (reqId: string, status: RequirementLifecycleStatus, reason?: string) => { success: boolean; error?: string };
   updateRequirement: (reqId: string, updates: Partial<ClientRequirement>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
+  scheduleInterview: (interviewDetails: Omit<Interview, 'id' | 'status' | 'feedbackStatus'>) => { success: boolean; error?: string };
   rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
+  cancelInterview: (interviewId: string, reason: string) => void;
   updateInterviewStatus: (interviewId: string, status: InterviewStatus) => void;
   updateOfferStatus: (offerId: string, status: OfferStatus, metadata?: Partial<Offer>) => void;
   extendOfferExpiry: (offerId: string, newExpiryDate: string) => void;
@@ -713,12 +715,44 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const updateInterviewStatus = (interviewId: string, status: InterviewStatus) => {
-    const updated = interviews.map(i => {
-      if (i.id === interviewId) {
-        return { ...i, status };
-      }
-      return i;
-    });
+    const updated = interviews.map(i => i.id === interviewId ? { ...i, status } : i);
+    persistInterviews(updated);
+  };
+
+  const scheduleInterview = (interviewDetails: Omit<Interview, 'id' | 'status' | 'feedbackStatus'>) => {
+    const existing = interviews.find(
+      i => i.applicationId === interviewDetails.applicationId && 
+           i.interviewType === interviewDetails.interviewType && 
+           i.status === 'Scheduled'
+    );
+    if (existing) {
+      return { success: false, error: 'An active interview of this type is already scheduled for this application.' };
+    }
+
+    const newInterview: Interview = {
+      ...interviewDetails,
+      id: `iv${Date.now()}`,
+      status: 'Scheduled',
+      feedbackStatus: 'Not Started',
+    };
+
+    persistInterviews([...interviews, newInterview]);
+    
+    // Automatically update the application stage to "Interview Scheduled"
+    if (newInterview.applicationId) {
+      updateApplicationStage(newInterview.applicationId, 'Interview Scheduled');
+    }
+
+    return { success: true };
+  };
+
+  const cancelInterview = (interviewId: string, reason: string) => {
+    const updated = interviews.map(i => i.id === interviewId ? { 
+      ...i, 
+      status: 'Cancelled' as InterviewStatus,
+      cancellationReason: reason,
+      cancelledAt: new Date().toISOString()
+    } : i);
     persistInterviews(updated);
   };
 
@@ -929,7 +963,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateRequirementLifecycle,
         updateRequirement,
         submitInterviewFeedback,
+        scheduleInterview,
         rescheduleInterview,
+        cancelInterview,
         updateInterviewStatus,
         updateOfferStatus,
         extendOfferExpiry,

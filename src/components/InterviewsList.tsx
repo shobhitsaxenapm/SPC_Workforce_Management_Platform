@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Search, Video, Users, Phone, X, Calendar, Clock, 
-  MapPin, User, Check, AlertCircle, Edit, Star, Sparkles, Eye, History
+  MapPin, User, Check, AlertCircle, Edit, Star, Eye, History, Plus, MoreHorizontal
 } from 'lucide-react';
 import { cn, formatDateTime, formatDate } from '../lib/utils';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import { Interview, InterviewStatus } from '../types';
+import ScheduleInterviewModal from './ScheduleInterviewModal';
+
+type SummaryTab = 'Upcoming' | 'Today' | 'Feedback Pending' | 'Overdue' | 'Completed' | 'Cancelled' | 'All Interviews';
 
 export default function InterviewsList() {
   const { 
@@ -18,7 +21,8 @@ export default function InterviewsList() {
     clients, 
     submitInterviewFeedback, 
     rescheduleInterview, 
-    updateInterviewStatus 
+    updateInterviewStatus,
+    cancelInterview
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,22 +30,23 @@ export default function InterviewsList() {
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [activeTab, setActiveTab] = useState<SummaryTab>('Upcoming');
+
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Toast / notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   // Modals state
-  const [activeModal, setActiveModal] = useState<'feedback' | 'view_feedback' | 'reschedule' | 'view_detail' | null>(null);
+  const [activeModal, setActiveModal] = useState<'feedback' | 'view_feedback' | 'reschedule' | 'view_detail' | 'cancel' | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
 
   // Form states
-  // Feedback form
   const [feedbackForm, setFeedbackForm] = useState({
     overallResult: '' as 'Strong Hire' | 'Hire' | 'Hold' | 'Reject' | '',
     overallRating: 3,
@@ -52,26 +57,64 @@ export default function InterviewsList() {
   });
   const [feedbackError, setFeedbackError] = useState('');
 
-  // Reschedule form
   const [rescheduleForm, setRescheduleForm] = useState({
     date: '',
     time: '',
     durationMinutes: 45,
     interviewerName: '',
-    mode: 'Video' as 'Phone' | 'Video' | 'In-person',
+    mode: 'Video' as 'Phone' | 'Video' | 'In-person' | 'Manual Link',
     meetingLink: '',
     rescheduleReason: ''
   });
   const [rescheduleError, setRescheduleError] = useState('');
 
+  const [cancelReason, setCancelReason] = useState('');
+
   const uniqueTypes = Array.from(new Set(interviews.map(i => i.interviewType))).filter(Boolean) as string[];
   const filterFields: FilterField[] = [
     { key: 'status', label: 'Status', options: ['Scheduled', 'Completed', 'Cancelled', 'No Show'].map(s => ({ value: s, label: s })) },
     { key: 'interviewType', label: 'Type', options: uniqueTypes.map(t => ({ value: t, label: t })) },
-    { key: 'mode', label: 'Mode', options: ['Phone', 'Video', 'In-person'].map(m => ({ value: m, label: m })) },
+    { key: 'mode', label: 'Mode', options: ['Phone', 'Video', 'In-person', 'Manual Link'].map(m => ({ value: m, label: m })) },
   ];
 
-  const filtered = interviews.filter(iv => {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  // Map over interviews to derive precise status properties for UI
+  const enrichedInterviews = useMemo(() => {
+    return interviews.map(iv => {
+      const start = new Date(iv.scheduledAt);
+      const end = new Date(start.getTime() + iv.durationMinutes * 60000);
+      let derivedStatus = iv.status;
+      let isOverdue = false;
+
+      if (iv.status === 'Scheduled' && end < now) {
+        isOverdue = true;
+      }
+
+      return {
+        ...iv,
+        start,
+        end,
+        isOverdue,
+        derivedDisplayStatus: isOverdue ? 'Overdue' : iv.status
+      };
+    });
+  }, [interviews, now]);
+
+  const summaryCounts = useMemo(() => {
+    return {
+      'Upcoming': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now).length,
+      'Today': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && !iv.isOverdue && iv.scheduledAt.startsWith(todayStr)).length,
+      'Feedback Pending': enrichedInterviews.filter(iv => iv.status === 'Completed' && iv.feedbackStatus !== 'Submitted').length,
+      'Overdue': enrichedInterviews.filter(iv => iv.isOverdue).length,
+      'Completed': enrichedInterviews.filter(iv => iv.status === 'Completed').length,
+      'Cancelled': enrichedInterviews.filter(iv => iv.status === 'Cancelled').length,
+      'All Interviews': enrichedInterviews.length,
+    };
+  }, [enrichedInterviews, now, todayStr]);
+
+  const filtered = enrichedInterviews.filter(iv => {
     const candidate = candidates.find(c => c.id === iv.candidateId);
     const job = jobs.find(j => j.id === iv.jobId);
     const client = clients.find(c => c.id === iv.clientId);
@@ -81,20 +124,30 @@ export default function InterviewsList() {
       job?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       iv.interviewerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      iv.interviewType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      iv.status.toLowerCase().includes(searchTerm.toLowerCase());
+      iv.interviewType.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchStatus = !filters.status || iv.status === filters.status;
     const matchType = !filters.interviewType || iv.interviewType === filters.interviewType;
     const matchMode = !filters.mode || iv.mode === filters.mode;
     const matchDate = isDateInPreset(iv.scheduledAt, datePreset, customStart, customEnd);
 
-    return matchSearch && matchStatus && matchType && matchMode && matchDate;
-  });
+    let matchTab = true;
+    switch(activeTab) {
+      case 'Upcoming': matchTab = iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now; break;
+      case 'Today': matchTab = iv.status === 'Scheduled' && !iv.isOverdue && iv.scheduledAt.startsWith(todayStr); break;
+      case 'Feedback Pending': matchTab = iv.status === 'Completed' && iv.feedbackStatus !== 'Submitted'; break;
+      case 'Overdue': matchTab = iv.isOverdue; break;
+      case 'Completed': matchTab = iv.status === 'Completed'; break;
+      case 'Cancelled': matchTab = iv.status === 'Cancelled'; break;
+      default: matchTab = true;
+    }
+
+    return matchSearch && matchStatus && matchType && matchMode && matchDate && matchTab;
+  }).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
 
-  // Submit Feedback Handler
+  // Handlers
   const handleFeedbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInterview) return;
@@ -118,7 +171,8 @@ export default function InterviewsList() {
       strengths: feedbackForm.strengths.trim(),
       concerns: feedbackForm.concerns.trim(),
       feedbackNotes: feedbackForm.feedbackNotes.trim(),
-      recommendation: feedbackForm.recommendation
+      recommendation: feedbackForm.recommendation,
+      feedbackStatus: 'Submitted'
     });
 
     triggerToast(isEditingFeedback ? 'Interview feedback updated successfully!' : 'Interview feedback submitted successfully!');
@@ -127,7 +181,6 @@ export default function InterviewsList() {
     setIsEditingFeedback(false);
   };
 
-  // Open Feedback Modal
   const openFeedbackModal = (interview: Interview, isEdit = false) => {
     setSelectedInterview(interview);
     setFeedbackForm({
@@ -143,13 +196,11 @@ export default function InterviewsList() {
     setActiveModal('feedback');
   };
 
-  // Open View Feedback
   const openViewFeedbackModal = (interview: Interview) => {
     setSelectedInterview(interview);
     setActiveModal('view_feedback');
   };
 
-  // Open Reschedule Modal
   const openRescheduleModal = (interview: Interview) => {
     setSelectedInterview(interview);
     const dateObj = new Date(interview.scheduledAt);
@@ -163,23 +214,18 @@ export default function InterviewsList() {
       interviewerName: interview.interviewerName,
       mode: interview.mode,
       meetingLink: interview.meetingLink || '',
-      rescheduleReason: interview.rescheduleReason || ''
+      rescheduleReason: ''
     });
     setRescheduleError('');
     setActiveModal('reschedule');
   };
 
-  // Reschedule Submit Handler
   const handleRescheduleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInterview) return;
 
-    if (!rescheduleForm.date) {
-      setRescheduleError('Date is required.');
-      return;
-    }
-    if (!rescheduleForm.time) {
-      setRescheduleError('Time is required.');
+    if (!rescheduleForm.date || !rescheduleForm.time) {
+      setRescheduleError('Date and Time are required.');
       return;
     }
     if (rescheduleForm.durationMinutes <= 0) {
@@ -203,7 +249,8 @@ export default function InterviewsList() {
       interviewerName: rescheduleForm.interviewerName.trim(),
       mode: rescheduleForm.mode,
       meetingLink: rescheduleForm.meetingLink.trim(),
-      rescheduleReason: rescheduleForm.rescheduleReason.trim()
+      rescheduleReason: rescheduleForm.rescheduleReason.trim(),
+      rescheduledAt: new Date().toISOString()
     });
 
     triggerToast('Interview rescheduled successfully!');
@@ -211,15 +258,23 @@ export default function InterviewsList() {
     setSelectedInterview(null);
   };
 
-  // Change Status Handler
   const handleStatusChange = (interviewId: string, status: InterviewStatus) => {
     updateInterviewStatus(interviewId, status);
-    triggerToast(`Interview status updated to ${status}`);
-    
-    // Sync the selected interview modal context if open
+    triggerToast(`Interview marked as ${status}`);
     if (selectedInterview && selectedInterview.id === interviewId) {
-      setSelectedInterview(prev => prev ? { ...prev, status } : null);
+      setSelectedInterview(null);
+      setActiveModal(null);
     }
+  };
+
+  const handleCancelSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInterview) return;
+    if (!cancelReason.trim()) return;
+    cancelInterview(selectedInterview.id, cancelReason.trim());
+    triggerToast('Interview cancelled.');
+    setActiveModal(null);
+    setSelectedInterview(null);
   };
 
   return (
@@ -232,10 +287,44 @@ export default function InterviewsList() {
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        <p className="text-slate-600">Monitor scheduled, completed, overdue, and no-show interviews across client deployments.</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Interviews</h1>
+          <p className="text-slate-600 mt-1">Schedule and manage Candidate interviews across active Jobs and Clients.</p>
+        </div>
+        <button 
+          onClick={() => setIsScheduleModalOpen(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+        >
+          <Calendar className="w-4 h-4" />
+          <Plus className="w-4 h-4 -ml-1" />
+          Schedule Interview
+        </button>
       </div>
 
+      {/* Summary Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+        {(Object.keys(summaryCounts) as SummaryTab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors border",
+              activeTab === tab
+                ? "bg-blue-50 text-blue-700 border-blue-200"
+                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            {tab} <span className={cn(
+              "ml-1.5 px-1.5 py-0.5 rounded text-xs",
+              activeTab === tab ? "bg-blue-200 text-blue-800" : "bg-slate-100 text-slate-500"
+            )}>{summaryCounts[tab]}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
@@ -275,28 +364,11 @@ export default function InterviewsList() {
             </span>
           )}
         </div>
-
-        {datePreset !== 'All Time' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Scheduled Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
-              <button 
-                onClick={() => {
-                  setDatePreset('All Time');
-                  setCustomStart('');
-                  setCustomEnd('');
-                }} 
-                className="hover:text-blue-900 focus:outline-none"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          </div>
-        )}
       </div>
 
+      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
               <tr>
@@ -331,7 +403,7 @@ export default function InterviewsList() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-slate-700">{formatDateTime(interview.scheduledAt)}</div>
-                      <div className="text-xs text-slate-500 mt-1">{interview.durationMinutes} mins</div>
+                      <div className="text-xs text-slate-500 mt-1">{interview.durationMinutes} mins • {interview.timezone || 'Local'}</div>
                     </td>
                     <td className="px-6 py-4 text-slate-700">
                       {interview.interviewerName}
@@ -340,13 +412,13 @@ export default function InterviewsList() {
                       <div className="flex flex-col gap-2">
                         <span className={cn(
                           "inline-flex items-center w-fit px-2.5 py-0.5 rounded text-xs font-medium border",
-                          interview.status === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
-                          interview.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          interview.status === 'No Show' ? "bg-red-50 text-red-700 border-red-200" :
-                          interview.status === 'Cancelled' ? "bg-slate-50 text-slate-600 border-slate-200" :
-                          "bg-slate-50 text-slate-700 border-slate-200"
+                          interview.derivedDisplayStatus === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
+                          interview.derivedDisplayStatus === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          interview.derivedDisplayStatus === 'Overdue' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          interview.derivedDisplayStatus === 'No Show' ? "bg-red-50 text-red-700 border-red-200" :
+                          "bg-slate-50 text-slate-600 border-slate-200"
                         )}>
-                          {interview.status}
+                          {interview.derivedDisplayStatus}
                         </span>
                         {interview.status === 'Completed' && (
                           <span className={cn(
@@ -359,26 +431,47 @@ export default function InterviewsList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-end items-center">
                         <button 
                           onClick={() => {
                             setSelectedInterview(interview);
                             setActiveModal('view_detail');
                           }} 
-                          className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1 rounded flex items-center gap-1 shadow-sm"
+                          className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1 rounded shadow-sm"
                         >
-                          <Eye className="w-3.5 h-3.5" /> View
+                          View
                         </button>
 
-                        {interview.status === 'Scheduled' && (
-                          <button 
-                            onClick={() => openRescheduleModal(interview)} 
-                            className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1 rounded shadow-sm"
-                          >
-                            Reschedule
-                          </button>
+                        {(interview.mode === 'Video' || interview.mode === 'Manual Link') && interview.meetingLink && interview.status === 'Scheduled' && (
+                           <a 
+                             href={interview.meetingLink}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded shadow-sm flex items-center gap-1"
+                           >
+                             <Video className="w-3.5 h-3.5" /> Join
+                           </a>
                         )}
-                        {interview.status === 'Completed' && interview.feedbackStatus === 'Pending' && (
+
+                        {interview.status === 'Scheduled' && (
+                           <button 
+                             onClick={() => openRescheduleModal(interview)} 
+                             className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1 rounded shadow-sm"
+                           >
+                             Reschedule
+                           </button>
+                        )}
+                        
+                        {interview.isOverdue && (
+                           <button 
+                             onClick={() => handleStatusChange(interview.id, 'Completed')} 
+                             className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-2.5 py-1 rounded shadow-sm"
+                           >
+                             Mark Completed
+                           </button>
+                        )}
+
+                        {interview.status === 'Completed' && interview.feedbackStatus !== 'Submitted' && (
                           <button 
                             onClick={() => openFeedbackModal(interview)} 
                             className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded shadow-sm"
@@ -386,6 +479,7 @@ export default function InterviewsList() {
                             Submit Feedback
                           </button>
                         )}
+                        
                         {interview.status === 'Completed' && interview.feedbackStatus === 'Submitted' && (
                           <button 
                             onClick={() => openViewFeedbackModal(interview)} 
@@ -394,14 +488,36 @@ export default function InterviewsList() {
                             View Feedback
                           </button>
                         )}
-                        {interview.status === 'No Show' && (
-                          <button 
-                            onClick={() => openRescheduleModal(interview)} 
-                            className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1 rounded shadow-sm"
-                          >
-                            Reschedule
-                          </button>
-                        )}
+
+                        <div className="relative group">
+                           <button className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
+                             <MoreHorizontal className="w-4 h-4" />
+                           </button>
+                           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
+                              {interview.status === 'Scheduled' && (
+                                <button 
+                                  onClick={() => { setSelectedInterview(interview); setCancelReason(''); setActiveModal('cancel'); }}
+                                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium"
+                                >
+                                  Cancel Interview
+                                </button>
+                              )}
+                              {(interview.status === 'Scheduled' || interview.isOverdue) && (
+                                <button 
+                                  onClick={() => handleStatusChange(interview.id, 'No Show')}
+                                  className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                                >
+                                  Mark No-Show
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => { setSelectedInterview(interview); setActiveModal('view_detail'); }}
+                                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                              >
+                                View History
+                              </button>
+                           </div>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -427,66 +543,15 @@ export default function InterviewsList() {
               <h2 className="text-lg font-bold text-slate-800">
                 {isEditingFeedback ? 'Edit Interview Feedback' : 'Submit Interview Feedback'}
               </h2>
-              <button 
-                onClick={() => { setActiveModal(null); setSelectedInterview(null); }} 
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            
             <form onSubmit={handleFeedbackSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-              {feedbackError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {feedbackError}
-                </div>
-              )}
-
-              {/* Context Summary */}
-              <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4 text-xs">
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Candidate</span>
-                  <span className="font-semibold text-slate-700">
-                    {candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Role</span>
-                  <span className="font-semibold text-slate-700">
-                    {jobs.find(j => j.id === selectedInterview.jobId)?.title}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Client</span>
-                  <span className="font-semibold text-slate-700">
-                    {clients.find(c => c.id === selectedInterview.clientId)?.name}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Type</span>
-                  <span className="font-semibold text-slate-700">{selectedInterview.interviewType}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Interviewer</span>
-                  <span className="font-semibold text-slate-700">{selectedInterview.interviewerName}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Date & Time</span>
-                  <span className="font-semibold text-slate-700">{formatDateTime(selectedInterview.scheduledAt)}</span>
-                </div>
-              </div>
-
-              {/* Decision Section */}
+              {feedbackError && <div className="text-red-700 text-sm bg-red-50 p-3 rounded-lg">{feedbackError}</div>}
+              {/* Form fields identical to original */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Overall Result Recommendation *</label>
-                  <select 
-                    required 
-                    value={feedbackForm.overallResult} 
-                    onChange={e => setFeedbackForm({...feedbackForm, overallResult: e.target.value as any})} 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                  >
+                  <select required value={feedbackForm.overallResult} onChange={e => setFeedbackForm({...feedbackForm, overallResult: e.target.value as any})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
                     <option value="">Select recommendation...</option>
                     <option value="Strong Hire">Strong Hire</option>
                     <option value="Hire">Hire</option>
@@ -498,86 +563,28 @@ export default function InterviewsList() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Rating (1 to 5) *</label>
                   <div className="flex items-center gap-1.5 mt-2">
                     {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setFeedbackForm({...feedbackForm, overallRating: star})}
-                        className="focus:outline-none"
-                      >
-                        <Star className={cn(
-                          "w-6 h-6 transition-colors",
-                          feedbackForm.overallRating >= star ? "text-amber-400 fill-amber-400" : "text-slate-300"
-                        )} />
+                      <button key={star} type="button" onClick={() => setFeedbackForm({...feedbackForm, overallRating: star})} className="focus:outline-none">
+                        <Star className={cn("w-6 h-6", feedbackForm.overallRating >= star ? "text-amber-400 fill-amber-400" : "text-slate-300")} />
                       </button>
                     ))}
                     <span className="text-xs font-semibold text-slate-500 ml-2">({feedbackForm.overallRating}/5)</span>
                   </div>
                 </div>
               </div>
-
-              {/* Form Details */}
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Strengths</label>
-                  <textarea 
-                    rows={2} 
-                    value={feedbackForm.strengths} 
-                    onChange={e => setFeedbackForm({...feedbackForm, strengths: e.target.value})} 
-                    placeholder="Candidate strengths..." 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Concerns</label>
-                  <textarea 
-                    rows={2} 
-                    value={feedbackForm.concerns} 
-                    onChange={e => setFeedbackForm({...feedbackForm, concerns: e.target.value})} 
-                    placeholder="Potential concerns..." 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Notes / Action Details *</label>
-                  <textarea 
-                    rows={3} 
-                    required
-                    value={feedbackForm.feedbackNotes} 
-                    onChange={e => setFeedbackForm({...feedbackForm, feedbackNotes: e.target.value})} 
-                    placeholder="Detailed assessment notes..." 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Recommendation Action *</label>
-                  <select 
-                    required 
-                    value={feedbackForm.recommendation} 
-                    onChange={e => setFeedbackForm({...feedbackForm, recommendation: e.target.value as any})} 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                  >
-                    <option value="">Select action recommendation...</option>
-                    <option value="Hire">Proceed to Offer</option>
-                    <option value="Hold">Keep in Pipeline / Hold</option>
-                    <option value="Reject">Reject Application</option>
-                  </select>
-                </div>
+                <textarea rows={2} value={feedbackForm.strengths} onChange={e => setFeedbackForm({...feedbackForm, strengths: e.target.value})} placeholder="Candidate strengths..." className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
+                <textarea rows={2} value={feedbackForm.concerns} onChange={e => setFeedbackForm({...feedbackForm, concerns: e.target.value})} placeholder="Potential concerns..." className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
+                <textarea rows={3} required value={feedbackForm.feedbackNotes} onChange={e => setFeedbackForm({...feedbackForm, feedbackNotes: e.target.value})} placeholder="Detailed assessment notes... *" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
+                <select required value={feedbackForm.recommendation} onChange={e => setFeedbackForm({...feedbackForm, recommendation: e.target.value as any})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  <option value="">Select action recommendation...</option>
+                  <option value="Hire">Proceed to Offer</option>
+                  <option value="Hold">Keep in Pipeline / Hold</option>
+                  <option value="Reject">Reject Application</option>
+                </select>
               </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3 bg-white sticky bottom-0 z-10">
-                <button 
-                  type="button" 
-                  onClick={() => { setActiveModal(null); setSelectedInterview(null); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {isEditingFeedback ? 'Save Changes' : 'Submit Feedback'}
-                </button>
+              <div className="pt-4 border-t flex justify-end gap-3 bg-white sticky bottom-0">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">Save</button>
               </div>
             </form>
           </div>
@@ -588,84 +595,19 @@ export default function InterviewsList() {
       {activeModal === 'view_feedback' && selectedInterview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
               <h2 className="text-lg font-bold text-slate-800">Interview Feedback Summary</h2>
-              <button 
-                onClick={() => { setActiveModal(null); setSelectedInterview(null); }} 
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            
             <div className="p-6 overflow-y-auto space-y-6">
-              {/* Decision Badge */}
-              <div className="flex items-center justify-between bg-slate-50 border border-slate-200/60 rounded-xl p-4">
-                <div>
-                  <span className="text-xs text-slate-400 block mb-0.5">Interviewer Decision</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    selectedInterview.overallResult === 'Strong Hire' || selectedInterview.overallResult === 'Hire' ? "text-green-600" :
-                    selectedInterview.overallResult === 'Hold' ? "text-amber-600" : "text-red-600"
-                  )}>
-                    {selectedInterview.overallResult || 'N/A'}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-slate-400 block mb-0.5">Rating Given</span>
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <Star key={star} className={cn(
-                        "w-4 h-4",
-                        (selectedInterview.overallRating || 0) >= star ? "text-amber-400 fill-amber-400" : "text-slate-200"
-                      )} />
-                    ))}
-                  </div>
-                </div>
+              <div className="space-y-4 text-sm">
+                <p><strong>Result:</strong> {selectedInterview.overallResult}</p>
+                <p><strong>Rating:</strong> {selectedInterview.overallRating}/5</p>
+                <p><strong>Notes:</strong> {selectedInterview.feedbackNotes}</p>
               </div>
-
-              {/* Assessment details */}
-              <div className="space-y-4">
-                <div>
-                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Strengths</span>
-                  <div className="text-slate-700 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    {selectedInterview.strengths || 'No strengths recorded.'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Concerns</span>
-                  <div className="text-slate-700 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    {selectedInterview.concerns || 'No concerns recorded.'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Detailed Notes & recommendations</span>
-                  <div className="text-slate-700 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                    {selectedInterview.feedbackNotes || 'No notes available.'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 block">System Recommendation Action</span>
-                  <span className="text-sm font-semibold text-slate-700">
-                    {selectedInterview.recommendation === 'Hire' ? 'Proceed to Offer' :
-                     selectedInterview.recommendation === 'Hold' ? 'Hold' : 'Reject Application'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-between gap-3 bg-white">
-                <button 
-                  onClick={() => openFeedbackModal(selectedInterview, true)}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-                >
-                  <Edit className="w-4 h-4" /> Edit Feedback
-                </button>
-                <button 
-                  onClick={() => { setActiveModal(null); setSelectedInterview(null); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Close
-                </button>
+              <div className="flex justify-between border-t pt-4">
+                <button onClick={() => openFeedbackModal(selectedInterview, true)} className="px-4 py-2 text-sm border text-blue-600 border-blue-200 bg-blue-50 rounded-lg">Edit Feedback</button>
+                <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Close</button>
               </div>
             </div>
           </div>
@@ -676,120 +618,56 @@ export default function InterviewsList() {
       {activeModal === 'reschedule' && selectedInterview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
               <h2 className="text-lg font-bold text-slate-800">Reschedule Interview</h2>
-              <button 
-                onClick={() => { setActiveModal(null); setSelectedInterview(null); }} 
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            
             <form onSubmit={handleRescheduleSubmit} className="p-6 space-y-4 overflow-y-auto">
-              {rescheduleError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {rescheduleError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">New Date *</label>
-                <input 
-                  type="date" 
-                  required 
-                  value={rescheduleForm.date} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, date: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
+              {rescheduleError && <div className="text-red-700 text-sm bg-red-50 p-3 rounded-lg">{rescheduleError}</div>}
+              <input type="date" required value={rescheduleForm.date} onChange={e => setRescheduleForm({...rescheduleForm, date: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <input type="time" required value={rescheduleForm.time} onChange={e => setRescheduleForm({...rescheduleForm, time: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <input type="number" required value={rescheduleForm.durationMinutes} onChange={e => setRescheduleForm({...rescheduleForm, durationMinutes: parseInt(e.target.value)})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <input type="text" required value={rescheduleForm.interviewerName} onChange={e => setRescheduleForm({...rescheduleForm, interviewerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <select required value={rescheduleForm.mode} onChange={e => setRescheduleForm({...rescheduleForm, mode: e.target.value as any})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="Phone">Phone</option>
+                <option value="Video">Video</option>
+                <option value="In-person">In-person</option>
+                <option value="Manual Link">Manual Link</option>
+              </select>
+              <textarea required rows={2} value={rescheduleForm.rescheduleReason} onChange={e => setRescheduleForm({...rescheduleForm, rescheduleReason: e.target.value})} placeholder="Reason for Rescheduling *" className="w-full px-3 py-2 border rounded-lg text-sm resize-none" />
+              <div className="pt-4 border-t flex justify-end gap-3">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg">Save Reschedule</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
 
+      {/* CANCEL MODAL */}
+      {activeModal === 'cancel' && selectedInterview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
+              <h2 className="text-lg font-bold text-red-600 flex items-center gap-2"><AlertCircle className="w-5 h-5"/> Cancel Interview</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleCancelSubmit} className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">Are you sure you want to cancel the interview for <strong>{candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}</strong>?</p>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Start Time *</label>
-                <input 
-                  type="time" 
-                  required 
-                  value={rescheduleForm.time} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, time: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Duration (Minutes) *</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  required 
-                  value={rescheduleForm.durationMinutes} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, durationMinutes: parseInt(e.target.value) || 0})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Interviewer Name *</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={rescheduleForm.interviewerName} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, interviewerName: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Mode *</label>
-                <select 
-                  required 
-                  value={rescheduleForm.mode} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, mode: e.target.value as any})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                >
-                  <option value="Phone">Phone</option>
-                  <option value="Video">Video</option>
-                  <option value="In-person">In-person</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Meeting Link or Location</label>
-                <input 
-                  type="text" 
-                  value={rescheduleForm.meetingLink} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, meetingLink: e.target.value})} 
-                  placeholder="e.g. Teams link or Conference room"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Reason for Rescheduling *</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Reason for Cancellation *</label>
                 <textarea 
-                  rows={2} 
                   required
-                  value={rescheduleForm.rescheduleReason} 
-                  onChange={e => setRescheduleForm({...rescheduleForm, rescheduleReason: e.target.value})} 
-                  placeholder="State the reason..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Provide a reason..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
                 />
               </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => { setActiveModal(null); setSelectedInterview(null); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Save Reschedule
-                </button>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Keep Interview</button>
+                <button type="submit" className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg">Confirm Cancellation</button>
               </div>
             </form>
           </div>
@@ -800,165 +678,47 @@ export default function InterviewsList() {
       {activeModal === 'view_detail' && selectedInterview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
               <h2 className="text-lg font-bold text-slate-800">Interview Details</h2>
-              <button 
-                onClick={() => { setActiveModal(null); setSelectedInterview(null); }} 
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            
             <div className="p-6 overflow-y-auto space-y-6">
-              <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Candidate Name</span>
-                  <span className="font-semibold text-slate-800">
-                    {candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Target Role / Job</span>
-                  <span className="font-semibold text-slate-800">
-                    {jobs.find(j => j.id === selectedInterview.jobId)?.title}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Client</span>
-                  <span className="font-semibold text-slate-800">
-                    {clients.find(c => c.id === selectedInterview.clientId)?.name}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Interview Type</span>
-                  <span className="font-semibold text-slate-800">{selectedInterview.interviewType}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Scheduled Date & Time</span>
-                  <span className="font-semibold text-slate-800">{formatDateTime(selectedInterview.scheduledAt)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Duration</span>
-                  <span className="font-semibold text-slate-800">{selectedInterview.durationMinutes} minutes</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Interviewer</span>
-                  <span className="font-semibold text-slate-800">{selectedInterview.interviewerName}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Meeting Mode</span>
-                  <span className="font-semibold text-slate-800">{selectedInterview.mode}</span>
-                </div>
-                {selectedInterview.meetingLink && (
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block mb-0.5">Meeting Link or Location</span>
-                    <a 
-                      href={selectedInterview.meetingLink.startsWith('http') ? selectedInterview.meetingLink : '#'} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="font-semibold text-blue-600 hover:underline break-all"
-                    >
-                      {selectedInterview.meetingLink}
-                    </a>
-                  </div>
-                )}
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Status</span>
-                  <span className={cn(
-                    "inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border",
-                    selectedInterview.status === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
-                    selectedInterview.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                    selectedInterview.status === 'No Show' ? "bg-red-50 text-red-700 border-red-200" :
-                    "bg-slate-50 text-slate-600 border-slate-200"
-                  )}>
-                    {selectedInterview.status}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-0.5">Feedback Status</span>
-                  <span className="font-semibold text-slate-800">{selectedInterview.feedbackStatus}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Candidate:</strong> {candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}</div>
+                <div><strong>Job:</strong> {jobs.find(j => j.id === selectedInterview.jobId)?.title}</div>
+                <div><strong>Client:</strong> {clients.find(c => c.id === selectedInterview.clientId)?.name}</div>
+                <div><strong>Status:</strong> {selectedInterview.status}</div>
+                <div><strong>Date & Time:</strong> {formatDateTime(selectedInterview.scheduledAt)} ({selectedInterview.timezone || 'Local'})</div>
+                <div><strong>Interviewer:</strong> {selectedInterview.interviewerName}</div>
+                <div className="col-span-2"><strong>Mode:</strong> {selectedInterview.mode} - {selectedInterview.provider || 'No provider'}</div>
+                {selectedInterview.meetingLink && <div className="col-span-2"><strong>Location/Link:</strong> <a href={selectedInterview.meetingLink} target="_blank" rel="noreferrer" className="text-blue-600 underline break-all">{selectedInterview.meetingLink}</a></div>}
+                {selectedInterview.candidateInstructions && <div className="col-span-2 text-slate-600 bg-slate-50 p-2 rounded"><strong>Instructions:</strong> {selectedInterview.candidateInstructions}</div>}
               </div>
 
-              {/* Reschedule Reason Timeline view */}
               {selectedInterview.rescheduleReason && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm flex items-start gap-2.5">
-                  <History className="w-4 h-4 text-amber-600 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-amber-800 block mb-0.5">Rescheduled History Log</span>
-                    <p className="text-amber-700 text-xs">{selectedInterview.rescheduleReason}</p>
-                    {selectedInterview.rescheduledAt && (
-                      <span className="text-[10px] text-amber-500 block mt-1">Logged on {formatDateTime(selectedInterview.rescheduledAt)}</span>
-                    )}
-                  </div>
+                <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-800">
+                  <strong>Reschedule History:</strong> {selectedInterview.rescheduleReason} ({formatDateTime(selectedInterview.rescheduledAt!)})
+                </div>
+              )}
+              {selectedInterview.cancellationReason && (
+                <div className="bg-red-50 p-3 rounded-lg text-sm text-red-800">
+                  <strong>Cancellation Reason:</strong> {selectedInterview.cancellationReason} ({formatDateTime(selectedInterview.cancelledAt!)})
                 </div>
               )}
 
-              {/* Modal footer containing context-aware actions */}
-              <div className="pt-6 border-t border-slate-100 flex flex-wrap gap-3 justify-between bg-white">
-                <div className="flex gap-2">
-                  {selectedInterview.status === 'Scheduled' && (
-                    <>
-                      <button 
-                        onClick={() => handleStatusChange(selectedInterview.id, 'Completed')}
-                        className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm"
-                      >
-                        Mark Completed
-                      </button>
-                      <button 
-                        onClick={() => handleStatusChange(selectedInterview.id, 'No Show')}
-                        className="px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm"
-                      >
-                        Mark No-Show
-                      </button>
-                      <button 
-                        onClick={() => handleStatusChange(selectedInterview.id, 'Cancelled')}
-                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  )}
-                </div>
-                
-                <div className="flex gap-2 ml-auto">
-                  {selectedInterview.status === 'Scheduled' && (
-                    <button 
-                      onClick={() => openRescheduleModal(selectedInterview)}
-                      className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"
-                    >
-                      Reschedule
-                    </button>
-                  )}
-                  {selectedInterview.status === 'Completed' && selectedInterview.feedbackStatus === 'Pending' && (
-                    <button 
-                      onClick={() => openFeedbackModal(selectedInterview)}
-                      className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
-                    >
-                      Submit Feedback
-                    </button>
-                  )}
-                  {selectedInterview.status === 'Completed' && selectedInterview.feedbackStatus === 'Submitted' && (
-                    <button 
-                      onClick={() => openViewFeedbackModal(selectedInterview)}
-                      className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"
-                    >
-                      View Feedback
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => { setActiveModal(null); setSelectedInterview(null); }}
-                    className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                  >
-                    Close
-                  </button>
-                </div>
+              <div className="flex justify-end pt-4 border-t">
+                <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Close</button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Global Schedule Interview Modal */}
+      <ScheduleInterviewModal 
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+      />
     </div>
   );
 }

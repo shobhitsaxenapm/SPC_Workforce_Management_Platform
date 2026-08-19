@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import JobMatchesTab from './JobMatchesTab';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
+import ScheduleInterviewModal from './ScheduleInterviewModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function JobDetail() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   
   if (!job) return <div>Job not found</div>;
 
@@ -395,13 +397,22 @@ export default function JobDetail() {
                         
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
-                          <select 
-                            className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                            value={app.currentStage}
-                            onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
-                          >
-                            {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => setScheduleCandidateId(candidate.id)}
+                              className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                              title="Schedule Interview"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                            </button>
+                            <select 
+                              className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
+                              value={app.currentStage}
+                              onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                            >
+                              {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
                         </div>
                       </div>
                     );
@@ -436,6 +447,13 @@ export default function JobDetail() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         job={job}
+      />
+
+      <ScheduleInterviewModal 
+        isOpen={!!scheduleCandidateId}
+        onClose={() => setScheduleCandidateId(null)}
+        initialCandidateId={scheduleCandidateId || ''}
+        initialJobId={job.id}
       />
     </div>
   );

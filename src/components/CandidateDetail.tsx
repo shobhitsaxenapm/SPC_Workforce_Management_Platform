@@ -8,6 +8,7 @@ import AIInsightCard from './AIInsightCard';
 import { useApp } from '../context/AppContext';
 import CandidateFormModal from './CandidateFormModal';
 import MatchInsightModal from './MatchInsightModal';
+import ScheduleInterviewModal from './ScheduleInterviewModal';
 
 type TabType = 'Overview' | 'Matching Jobs' | 'Jobs & Hiring Progress' | 'Activity' | 'Documents';
 
@@ -63,11 +64,10 @@ export default function CandidateDetail() {
   
   // Action Modals State
   const [selectedInsight, setSelectedInsight] = useState<any>(null);
-  const [showPipelineConfirmModal, setShowPipelineConfirmModal] = useState<string | null>(null); // jobId
-  const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<any | null>(null); // application data
-  const [showOnboardingModal, setShowOnboardingModal] = useState<any | null>(null); // application data
-  
-  // Simulated Loading States
+  const [showMatchModal, setShowMatchModal] = useState<{jobId: string, candidateId: string} | null>(null);
+  const [showPipelineConfirmModal, setShowPipelineConfirmModal] = useState<string | null>(null);
+  const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<{jobId: string} | null>(null);
+  const [showOnboardingModal, setShowOnboardingModal] = useState<{jobId: string} | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
   // Filters for Matching Jobs
@@ -133,7 +133,6 @@ export default function CandidateDetail() {
       origin: 'Added by recruiter from Candidate Profile',
       date: new Date().toISOString()
     }]);
-    setShowPipelineConfirmModal(null);
   };
 
   const handleDismiss = (jobId: string) => {
@@ -143,21 +142,22 @@ export default function CandidateDetail() {
   };
 
   const handleAction = async (action: string, app: any) => {
+    const jobId = app.jobId;
     switch (action) {
       case 'Begin Screening':
-        if (window.confirm(`Begin screening for ${mockJobs.find(j => j.id === app.jobId)?.title}?`)) {
-          setIsProcessing(app.jobId);
+        if (window.confirm(`Begin screening for ${mockJobs.find(j => j.id === jobId)?.title}?`)) {
+          setIsProcessing(jobId);
           setTimeout(() => {
-            setLocalStageUpdates(prev => ({...prev, [app.jobId]: 'Screening'}));
+            setLocalStageUpdates(prev => ({...prev, [jobId]: 'Screening'}));
             setIsProcessing(null);
           }, 800);
         }
         break;
       case 'Schedule Interview':
-        setShowScheduleInterviewModal(app);
+        setShowScheduleInterviewModal({ jobId });
         break;
       case 'Start Onboarding':
-        setShowOnboardingModal(app);
+        setShowOnboardingModal({ jobId });
         break;
       case 'View Match':
         const job = mockJobs.find(j => j.id === app.jobId);
@@ -173,15 +173,6 @@ export default function CandidateDetail() {
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
         break;
     }
-  };
-
-  const confirmScheduleInterview = () => {
-    setIsProcessing(showScheduleInterviewModal.jobId);
-    setTimeout(() => {
-      setLocalStageUpdates(prev => ({...prev, [showScheduleInterviewModal.jobId]: 'Interview Scheduled'}));
-      setIsProcessing(null);
-      setShowScheduleInterviewModal(null);
-    }, 800);
   };
 
   const confirmStartOnboarding = () => {
@@ -719,70 +710,12 @@ export default function CandidateDetail() {
       )}
 
       {/* Schedule Interview Modal */}
-      {showScheduleInterviewModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-               <h3 className="font-bold text-slate-800">Schedule Interview</h3>
-             </div>
-             <div className="p-6">
-                <div className="mb-4 text-sm text-slate-600">
-                  Scheduling interview for <strong>{candidate.fullName}</strong> - {mockJobs.find(j => j.id === showScheduleInterviewModal.jobId)?.title}
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Interview Round</label>
-                      <select className="w-full border-slate-300 rounded-lg text-sm">
-                        <option>HR Screening</option>
-                        <option>Technical Round 1</option>
-                        <option>Client Interview</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Mode</label>
-                      <select className="w-full border-slate-300 rounded-lg text-sm">
-                        <option>Video Call</option>
-                        <option>Phone Call</option>
-                        <option>In Person</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Date</label>
-                      <input type="date" className="w-full border-slate-300 rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Time</label>
-                      <input type="time" className="w-full border-slate-300 rounded-lg text-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Interviewer</label>
-                    <input type="text" placeholder="Search team members..." className="w-full border-slate-300 rounded-lg text-sm" />
-                  </div>
-                </div>
-             </div>
-             <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
-                <button 
-                  onClick={() => setShowScheduleInterviewModal(null)} 
-                  disabled={isProcessing === showScheduleInterviewModal.jobId}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={confirmScheduleInterview} 
-                  disabled={isProcessing === showScheduleInterviewModal.jobId}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isProcessing === showScheduleInterviewModal.jobId ? 'Scheduling...' : 'Schedule Interview'}
-                </button>
-             </div>
-          </div>
-        </div>
-      )}
+      <ScheduleInterviewModal 
+        isOpen={!!showScheduleInterviewModal} 
+        onClose={() => setShowScheduleInterviewModal(null)} 
+        initialCandidateId={candidate.id}
+        initialJobId={showScheduleInterviewModal?.jobId}
+      />
 
       {/* Start Onboarding Confirmation Modal */}
       {showOnboardingModal && (

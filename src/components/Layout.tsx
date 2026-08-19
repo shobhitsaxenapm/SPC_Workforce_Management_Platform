@@ -89,15 +89,15 @@ const navigationConfig: NavModuleConfig[] = [
 
 // --- Components ---
 
-function NavModule({ 
-  module, 
-  currentPath, 
-  forceOpen 
-}: { 
+const NavModule: React.FC<{ 
   module: NavModuleConfig; 
   currentPath: string;
   forceOpen: boolean;
-}) {
+}> = ({ 
+  module, 
+  currentPath, 
+  forceOpen 
+}) => {
   const [isExpanded, setIsExpanded] = useState(forceOpen);
 
   // Auto-expand if a child route becomes active, but don't auto-collapse if user opened it

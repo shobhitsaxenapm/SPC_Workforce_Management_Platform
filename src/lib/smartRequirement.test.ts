@@ -61,15 +61,25 @@ describe('Requirement Lifecycle and Fulfilment', () => {
       version: 2,
       revisions: [
         {
+          id: 'rev_1',
+          requirementId: 'req_1',
           version: 1,
-          timestamp: new Date().toISOString(),
-          userId: 'user_1',
+          changedFields: [],
+          previousValues: {},
+          newValues: {},
+          changedAt: new Date().toISOString(),
+          changedBy: 'user_1',
           reason: 'Initial creation'
         },
         {
+          id: 'rev_2',
+          requirementId: 'req_1',
           version: 2,
-          timestamp: new Date().toISOString(),
-          userId: 'user_1',
+          changedFields: [],
+          previousValues: {},
+          newValues: {},
+          changedAt: new Date().toISOString(),
+          changedBy: 'user_1',
           reason: 'Increased headcount'
         }
       ]
