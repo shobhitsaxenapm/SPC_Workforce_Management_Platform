@@ -133,6 +133,8 @@ export default function CandidateDetail() {
       origin: 'Added by recruiter from Candidate Profile',
       date: new Date().toISOString()
     }]);
+    setShowPipelineConfirmModal(null);
+    setActiveTab('Jobs & Hiring Progress');
   };
 
   const handleDismiss = (jobId: string) => {
