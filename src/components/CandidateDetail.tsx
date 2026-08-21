@@ -504,9 +504,9 @@ export default function CandidateDetail() {
                      <button onClick={() => setSelectedInsight({ job, client, insight })} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center">
                        View Match
                      </button>
-                     <button onClick={() => window.open(`/job-desk/${job.id}`)} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center">
+                     <Link to={`/job-desk/${job.id}`} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center block">
                        View Job
-                     </button>
+                     </Link>
                      <button onClick={() => handleDismiss(job.id)} className="w-full px-4 py-2 mt-2 text-slate-500 hover:text-red-600 text-sm font-medium transition-colors text-center">
                        Dismiss Match
                      </button>

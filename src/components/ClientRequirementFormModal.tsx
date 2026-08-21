@@ -136,7 +136,7 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
 
     if (!formData.clientId) { setValidationError('Client is required.'); return; }
     if (!formData.roleTitle.trim()) { setValidationError('Role Title is required.'); return; }
-    if (!formData.title.trim()) { setValidationError('Business is required.'); return; }
+    if (!formData.title.trim()) { setValidationError('Project/Business is required.'); return; }
     if (formData.positionsRequired < 1) { setValidationError('Number of positions must be at least 1.'); return; }
     if (!formData.targetJoiningDate) { setValidationError('Target Joining Date is required.'); return; }
     if (!formData.assignedRecruiterId) { setValidationError('Assigned Recruiter is required.'); return; }
@@ -334,13 +334,9 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
                     <label className="block text-sm font-medium text-slate-700 mb-1">Role Title *</label>
                     <input type="text" required value={formData.roleTitle} onChange={e => setFormData({...formData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Business *</label>
-                    <input type="text" placeholder="Enter Business identifier" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                    <input type="text" value={formData.projectName} onChange={e => setFormData({...formData, projectName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Project/Business *</label>
+                    <input type="text" placeholder="Enter Project/Business identifier" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Locations</label>
