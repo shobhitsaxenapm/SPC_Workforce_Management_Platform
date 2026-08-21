@@ -12,7 +12,7 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId } = useApp();
+  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId, setQuickViewCandidateId } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -378,9 +378,9 @@ export default function JobDetail() {
                     return (
                       <div key={app.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex justify-between items-start mb-2">
-                            <Link to={`/candidates/${candidate.id}`} className="font-semibold text-slate-800 hover:text-blue-600 truncate mr-2">
+                            <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-slate-800 hover:text-blue-600 truncate mr-2 outline-none text-left">
                             {candidate.fullName}
-                            </Link>
+                            </button>
                             {app.matchScore && (
                                 <span className={cn(
                                     "text-[10px] font-bold px-1.5 py-0.5 rounded",

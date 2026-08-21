@@ -45,7 +45,10 @@ export default function RequirementDetail() {
     createJob, 
     updateApplicationStage,
     updateRequirementLifecycle,
-    deleteRequirement
+    deleteRequirement,
+    setQuickViewClientId,
+    setQuickViewCandidateId,
+    setQuickViewJobId
   } = useApp();
 
   const req = requirements.find(r => r.id === id);
@@ -341,7 +344,7 @@ export default function RequirementDetail() {
         <div className="flex items-center gap-3 text-sm">
           <Link to="/clients" className="text-slate-500 hover:text-slate-800">Clients</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <Link to={`/clients/${client?.id}`} className="text-slate-500 hover:text-slate-800">{client?.name}</Link>
+          <button onClick={() => client && setQuickViewClientId(client.id)} className="text-slate-500 hover:text-slate-800 outline-none focus-visible:underline">{client?.name}</button>
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="font-medium text-slate-800 font-mono">{req.code}</span>
         </div>
@@ -568,7 +571,17 @@ export default function RequirementDetail() {
               
               <h3 className="font-semibold text-slate-800 mb-3">Client</h3>
               <div className="flex flex-col gap-2">
-                <Link to={`/clients/${client?.id}`} className="font-medium text-blue-600 hover:underline">{client?.name}</Link>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => client && setQuickViewClientId(client.id)} className="font-medium text-blue-600 hover:underline outline-none text-left">{client?.name}</button>
+                  {client?.status && (
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border",
+                      client.status === 'Active' ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
+                    )}>
+                      {client.status}
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm text-slate-600 flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-slate-400" />
                   {client?.industry}
@@ -669,9 +682,9 @@ export default function RequirementDetail() {
                       return (
                         <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4">
-                          <Link to={`/candidates/${candidate.id}`} className="font-semibold text-blue-600 hover:underline">
+                          <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-blue-600 hover:underline outline-none">
                             {candidate.fullName}
-                          </Link>
+                          </button>
                           <div className="text-xs text-slate-500 mt-0.5">{candidate.email}</div>
                         </td>
                         <td className="px-6 py-4 text-slate-700">
@@ -729,9 +742,9 @@ export default function RequirementDetail() {
                     if (!candidate) return null;
                     return (
                       <div key={app.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                        <Link to={`/candidates/${candidate.id}`} className="font-medium text-slate-800 hover:text-blue-600 block mb-1">
+                        <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-medium text-slate-800 hover:text-blue-600 block mb-1 outline-none text-left">
                           {candidate.fullName}
-                        </Link>
+                        </button>
                         <p className="text-xs text-slate-500 mb-1">{job?.title}</p>
                         <p className="text-xs text-slate-400 mb-3">{candidate.currentRole} • {candidate.totalExperience}</p>
                         
@@ -810,9 +823,9 @@ export default function RequirementDetail() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <Link to={`/job-desk/${job.id}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                        <button onClick={() => setQuickViewJobId(job.id)} className="text-blue-600 hover:text-blue-800 font-medium outline-none text-left">
                           View details
-                        </Link>
+                        </button>
                       </td>
                     </tr>
                   );

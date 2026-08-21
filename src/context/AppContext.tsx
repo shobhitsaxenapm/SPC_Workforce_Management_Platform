@@ -17,6 +17,12 @@ interface AppContextType {
   matchRuns: JobMatchRun[];
   quickViewRequirementId: string | null;
   setQuickViewRequirementId: (id: string | null) => void;
+  quickViewClientId: string | null;
+  setQuickViewClientId: (id: string | null) => void;
+  quickViewJobId: string | null;
+  setQuickViewJobId: (id: string | null) => void;
+  quickViewCandidateId: string | null;
+  setQuickViewCandidateId: (id: string | null) => void;
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
   createClient: (clientData: Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>) => { success: boolean; error?: string };
@@ -46,7 +52,7 @@ interface AppContextType {
   startOnboardingFromOffer: (offerId: string) => { success: boolean; error?: string };
   runJobMatching: (jobId: string) => void;
   dismissMatch: (jobId: string, candidateId: string) => void;
-  addMatchToPipeline: (jobId: string, candidateId: string) => { success: boolean; error?: string };
+  addMatchToPipeline: (jobId: string, candidateId: string, source?: string) => { success: boolean; error?: string; applicationId?: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -88,6 +94,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
 
   const [quickViewRequirementId, setQuickViewRequirementId] = useState<string | null>(null);
+  const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
+  const [quickViewJobId, setQuickViewJobId] = useState<string | null>(null);
+  const [quickViewCandidateId, setQuickViewCandidateId] = useState<string | null>(null);
 
   // Safe seeding logic: check if key is absent (null), otherwise parse
   const [clients, setClients] = useState<Client[]>(() => {
@@ -905,7 +914,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistMatchRuns(updatedRuns);
   };
 
-  const addMatchToPipeline = (jobId: string, candidateId: string) => {
+  const addMatchToPipeline = (jobId: string, candidateId: string, source?: string) => {
     // Check if already applied
     const existingApp = applications.find(a => a.jobId === jobId && a.candidateId === candidateId);
     if (existingApp) {
@@ -925,7 +934,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       requirementId: job.requirementId,
       currentStage: 'Sourced',
       appliedDate: new Date().toISOString(),
-      source: 'Internal Match',
+      source: source || 'Internal Match',
       assignedRecruiterId: currentUser?.id || job.assignedRecruiterId,
       matchScore: match?.score,
       matchStrengths: match?.matchStrengths,
@@ -934,7 +943,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     persistApplications([newApp, ...applications]);
-    return { success: true };
+    return { success: true, applicationId: newApp.id };
   };
 
   return (
@@ -952,6 +961,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         matchRuns,
         quickViewRequirementId,
         setQuickViewRequirementId,
+        quickViewClientId,
+        setQuickViewClientId,
+        quickViewJobId,
+        setQuickViewJobId,
+        quickViewCandidateId,
+        setQuickViewCandidateId,
         login,
         logout,
         createClient,

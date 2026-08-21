@@ -53,7 +53,7 @@ const getStageActions = (stage: string): ActionConfig => {
 
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications } = useApp();
+  const { candidates, applications, setQuickViewJobId, setQuickViewClientId } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
@@ -170,6 +170,9 @@ export default function CandidateDetail() {
         } else {
           alert('No match insights available for this relationship.');
         }
+        break;
+      case 'View Job':
+        setQuickViewJobId(jobId);
         break;
       default:
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
@@ -470,9 +473,9 @@ export default function CandidateDetail() {
                    
                    <div className="flex-1 space-y-3">
                      <div>
-                       <Link to={`/job-desk/${job.id}`} className="font-bold text-lg text-slate-800 hover:text-blue-600">
-                         {job.title}
-                       </Link>
+                       <button onClick={() => setQuickViewJobId(job.id)} className="font-bold text-lg text-slate-800 hover:text-blue-600 outline-none text-left">
+                        {job.title}
+                      </button>
                        <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
                          <span className="font-medium text-slate-700 flex items-center gap-1.5"><Building2 className="w-4 h-4"/> {client.name}</span>
                          <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> {job.location}</span>
@@ -506,9 +509,9 @@ export default function CandidateDetail() {
                      <button onClick={() => setSelectedInsight({ job, client, insight })} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center">
                        View Match
                      </button>
-                     <Link to={`/job-desk/${job.id}`} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center block">
-                       View Job
-                     </Link>
+                     <button onClick={() => setQuickViewJobId(job.id)} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center block outline-none">
+                      View Job
+                    </button>
                      <button onClick={() => handleDismiss(job.id)} className="w-full px-4 py-2 mt-2 text-slate-500 hover:text-red-600 text-sm font-medium transition-colors text-center">
                        Dismiss Match
                      </button>
@@ -555,13 +558,13 @@ export default function CandidateDetail() {
                 <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Link to={`/job-desk/${job?.id}`} className="font-semibold text-slate-800 hover:text-blue-600 text-lg">
+                      <button onClick={() => job && setQuickViewJobId(job.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-lg outline-none text-left">
                         {job?.title || 'Unknown Job'}
-                      </Link>
+                      </button>
                       <span className="text-slate-400">•</span>
-                      <Link to={`/clients/${client?.id}`} className="text-sm text-slate-600 hover:text-blue-600">
+                      <button onClick={() => client && setQuickViewClientId(client.id)} className="text-sm text-slate-600 hover:text-blue-600 outline-none">
                         {client?.name || 'Unknown Client'}
-                      </Link>
+                      </button>
                     </div>
                     <div className="text-xs text-slate-500 space-y-1">
                       <p><span className="font-medium text-slate-700">{relationshipLabel}</span> • Since {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>

@@ -11,7 +11,7 @@ import ClientRequirementFormModal from './ClientRequirementFormModal';
 import { ClientRequirement } from '../types';
 
 export default function RequirementsList() {
-  const { requirements, clients, applications, deleteRequirement, updateRequirementLifecycle } = useApp();
+  const { requirements, clients, applications, deleteRequirement, updateRequirementLifecycle, setQuickViewClientId } = useApp();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requirementToEdit, setRequirementToEdit] = useState<string | undefined>(undefined);
@@ -157,7 +157,7 @@ export default function RequirementsList() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm text-gray-700 truncate block" onClick={e => e.stopPropagation()}>
-                        <Link to={`/clients/${client?.id}`} className="hover:text-blue-600">{client?.name}</Link>
+                        <button onClick={() => client && setQuickViewClientId(client.id)} className="hover:text-blue-600 outline-none text-left">{client?.name}</button>
                       </div>
                     </td>
                     <td className="px-4 py-3">

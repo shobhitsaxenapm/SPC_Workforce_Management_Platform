@@ -12,7 +12,7 @@ interface ScheduleInterviewModalProps {
 }
 
 export default function ScheduleInterviewModal({ isOpen, onClose, initialCandidateId, initialJobId }: ScheduleInterviewModalProps) {
-  const { candidates, jobs, clients, applications, scheduleInterview } = useApp();
+  const { candidates, jobs, clients, applications, scheduleInterview, addMatchToPipeline, setQuickViewJobId } = useApp();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
@@ -20,6 +20,9 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   // Form State
   const [selectedCandidateId, setSelectedCandidateId] = useState(initialCandidateId || '');
   const [selectedJobId, setSelectedJobId] = useState(initialJobId || '');
+  const [stagedNewJobLink, setStagedNewJobLink] = useState('');
+  const [showJobLinkPanel, setShowJobLinkPanel] = useState(false);
+  const [jobSearchQuery, setJobSearchQuery] = useState('');
   
   const [details, setDetails] = useState({
     interviewType: 'HR Screening',
@@ -28,6 +31,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     durationMinutes: 45,
     interviewerName: '',
+    interviewerEmail: '',
     candidateInstructions: '',
     internalNotes: ''
   });
@@ -46,7 +50,8 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   const candidateApplications = applications.filter(a => a.candidateId === selectedCandidateId);
   const availableJobs = jobs.filter(j => candidateApplications.some(a => a.jobId === j.id));
   
-  const selectedJob = availableJobs.find(j => j.id === selectedJobId);
+  const isNewlyLinked = !!stagedNewJobLink && stagedNewJobLink === selectedJobId;
+  const selectedJob = isNewlyLinked ? jobs.find(j => j.id === selectedJobId) : availableJobs.find(j => j.id === selectedJobId);
   const selectedClient = clients.find(c => c.id === selectedJob?.clientId);
   const currentApplication = candidateApplications.find(a => a.jobId === selectedJobId);
 
@@ -56,6 +61,9 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
       setError('');
       setSelectedCandidateId(initialCandidateId || '');
       setSelectedJobId(initialJobId || '');
+      setStagedNewJobLink('');
+      setShowJobLinkPanel(false);
+      setJobSearchQuery('');
       setDetails({
         interviewType: 'HR Screening',
         date: '',
@@ -63,6 +71,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         durationMinutes: 45,
         interviewerName: '',
+        interviewerEmail: '',
         candidateInstructions: '',
         internalNotes: ''
       });
@@ -95,6 +104,10 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
     if (!details.date) return 'Date is required.';
     if (!details.time) return 'Start time is required.';
     if (!details.interviewerName) return 'Interviewer is required.';
+    if (!details.interviewerEmail) return 'Interviewer email is required.';
+    if (details.interviewerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.interviewerEmail)) {
+      return 'Please enter a valid interviewer email address.';
+    }
     if (details.durationMinutes <= 0) return 'Duration must be greater than 0.';
     
     const scheduledDateTime = new Date(`${details.date}T${details.time}:00`);
@@ -141,8 +154,19 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
       const scheduledAt = new Date(`${details.date}T${details.time}:00`).toISOString();
       const finalMeetingLink = modeConfig.mode === 'Manual Link' ? modeConfig.meetingLink : modeConfig.location;
 
+      let finalApplicationId = currentApplication?.id || '';
+      if (isNewlyLinked) {
+        const linkResult = addMatchToPipeline(selectedJobId, selectedCandidateId, 'Added by recruiter during interview scheduling');
+        if (!linkResult.success) {
+          setError(linkResult.error || 'Failed to link candidate to the selected job.');
+          setIsScheduling(false);
+          return;
+        }
+        finalApplicationId = linkResult.applicationId || '';
+      }
+
       const result = scheduleInterview({
-        applicationId: currentApplication?.id || '',
+        applicationId: finalApplicationId,
         candidateId: selectedCandidateId,
         jobId: selectedJobId,
         clientId: selectedJob?.clientId || '',
@@ -150,6 +174,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         scheduledAt,
         durationMinutes: details.durationMinutes,
         interviewerName: details.interviewerName,
+        interviewerEmail: details.interviewerEmail,
         mode: modeConfig.mode,
         timezone: details.timezone,
         provider: modeConfig.provider,
@@ -236,34 +261,97 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
                 </select>
               </div>
 
-              {selectedCandidateId && (
+              {selectedCandidateId && !showJobLinkPanel && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Associated Job Process *</label>
-                  {availableJobs.length === 0 ? (
-                    <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                      This candidate is not currently associated with any active jobs. You must add them to a job pipeline first.
+                  {availableJobs.length === 0 && !stagedNewJobLink ? (
+                    <div className="text-sm text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
+                      <p className="mb-3">This Candidate is not currently linked to an eligible Job. Select a Job to continue scheduling the interview.</p>
+                      <button onClick={() => setShowJobLinkPanel(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Select and Link Job</button>
                     </div>
                   ) : (
-                    <select
-                      value={selectedJobId}
-                      onChange={(e) => {
-                        setSelectedJobId(e.target.value);
-                        setError('');
-                      }}
-                      disabled={!!initialJobId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm disabled:bg-slate-50 disabled:text-slate-500"
-                    >
-                      <option value="">Select associated job...</option>
-                      {availableJobs.map(j => {
-                        const app = candidateApplications.find(a => a.jobId === j.id);
-                        return (
-                          <option key={j.id} value={j.id}>
-                            {j.title} (Stage: {app?.currentStage})
+                    <div className="flex gap-2 items-center">
+                      <select
+                        value={selectedJobId}
+                        onChange={(e) => {
+                          setSelectedJobId(e.target.value);
+                          setStagedNewJobLink('');
+                          setError('');
+                        }}
+                        disabled={!!initialJobId}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm disabled:bg-slate-50 disabled:text-slate-500"
+                      >
+                        <option value="">Select associated job...</option>
+                        {stagedNewJobLink && (
+                          <option value={stagedNewJobLink}>
+                            {jobs.find(j => j.id === stagedNewJobLink)?.title} (New Link)
                           </option>
-                        );
-                      })}
-                    </select>
+                        )}
+                        {availableJobs.map(j => {
+                          const app = candidateApplications.find(a => a.jobId === j.id);
+                          return (
+                            <option key={j.id} value={j.id}>
+                              {j.title} (Stage: {app?.currentStage})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {!initialJobId && (
+                        <button onClick={() => setShowJobLinkPanel(true)} className="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 whitespace-nowrap transition-colors">Link New Job</button>
+                      )}
+                    </div>
                   )}
+                </div>
+              )}
+
+              {selectedCandidateId && showJobLinkPanel && (
+                <div className="border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                    <h3 className="font-semibold text-slate-800 text-sm">Select and Link Job</h3>
+                    <button onClick={() => setShowJobLinkPanel(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-4 h-4"/></button>
+                  </div>
+                  <div className="p-4 bg-white space-y-4">
+                    <input 
+                      type="text" 
+                      placeholder="Search jobs by title, ID, client, or location..."
+                      value={jobSearchQuery}
+                      onChange={e => setJobSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                      {jobs.filter(j => 
+                        (j.status === 'Published' || j.status === 'Open') &&
+                        !availableJobs.some(aj => aj.id === j.id) &&
+                        (j.title.toLowerCase().includes(jobSearchQuery.toLowerCase()) || 
+                         j.code.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
+                         j.location.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
+                         clients.find(c => c.id === j.clientId)?.name.toLowerCase().includes(jobSearchQuery.toLowerCase()))
+                      ).map(j => {
+                        const cClient = clients.find(c => c.id === j.clientId);
+                        return (
+                          <div key={j.id} className="p-3 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/30 transition-colors flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+                            <div>
+                              <div className="font-medium text-slate-800 text-sm">{j.title} <span className="text-slate-500 font-normal text-xs ml-1">{j.code}</span></div>
+                              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                                <span>{cClient?.name}</span>
+                                <span>{j.location}</span>
+                                <span>{j.openings} Openings</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button onClick={() => setQuickViewJobId(j.id)} className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors">View Details</button>
+                              <button onClick={() => {
+                                setStagedNewJobLink(j.id);
+                                setSelectedJobId(j.id);
+                                setShowJobLinkPanel(false);
+                                setError('');
+                              }} className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">Select Job</button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -272,7 +360,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
           {/* STEP 2: Details */}
           {step === 2 && (
             <div className="space-y-5 animate-fade-in">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Interview Round *</label>
                   <select
@@ -294,6 +382,16 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
                     value={details.interviewerName}
                     onChange={(e) => setDetails({...details, interviewerName: e.target.value})}
                     placeholder="E.g., John Doe"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Interviewer Email *</label>
+                  <input
+                    type="email"
+                    value={details.interviewerEmail}
+                    onChange={(e) => setDetails({...details, interviewerEmail: e.target.value})}
+                    placeholder="john@example.com"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
@@ -469,7 +567,18 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
                   </div>
                   <div>
                     <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Job / Client</span>
-                    <span className="font-medium text-slate-800">{selectedJob?.title} <span className="text-slate-400 font-normal">at {selectedClient?.name}</span></span>
+                    <span className="font-medium text-slate-800 flex flex-col items-start gap-1">
+                      <span>{selectedJob?.title} <span className="text-slate-400 font-normal">at {selectedClient?.name}</span></span>
+                      {isNewlyLinked ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <LinkIcon className="w-3 h-3" /> Will be newly linked on schedule
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          <Check className="w-3 h-3" /> Already linked
+                        </span>
+                      )}
+                    </span>
                   </div>
                   
                   <div>

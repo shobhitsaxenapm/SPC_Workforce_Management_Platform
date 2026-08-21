@@ -261,6 +261,7 @@ export interface Interview {
   scheduledAt: string;
   durationMinutes: number;
   interviewerName: string;
+  interviewerEmail?: string;
   mode: 'Phone' | 'Video' | 'In-person' | 'Manual Link';
   status: InterviewStatus;
   feedbackStatus: 'Not Started' | 'Pending' | 'Submitted';

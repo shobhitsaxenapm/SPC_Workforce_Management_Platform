@@ -25,6 +25,9 @@ import {
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import RequirementQuickViewModal from './RequirementQuickViewModal';
+import ClientQuickViewModal from './ClientQuickViewModal';
+import JobQuickViewModal from './JobQuickViewModal';
+import CandidateQuickViewModal from './CandidateQuickViewModal';
 
 // --- Navigation Configuration ---
 type NavItem = {
@@ -299,6 +302,9 @@ export default function Layout() {
       </div>
 
       <RequirementQuickViewModal />
+      <ClientQuickViewModal />
+      <JobQuickViewModal />
+      <CandidateQuickViewModal />
     </div>
   );
 }
