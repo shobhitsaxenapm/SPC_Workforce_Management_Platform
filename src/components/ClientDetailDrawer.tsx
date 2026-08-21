@@ -29,7 +29,7 @@ interface ClientDetailDrawerProps {
 }
 
 export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirement }: ClientDetailDrawerProps) {
-  const { clients, requirements, applications } = useApp();
+  const { clients, requirements, jobs, applications, setQuickViewRequirementId } = useApp();
   const [activeTab, setActiveTab] = useState<'overview' | 'requirements' | 'activity'>('overview');
 
   if (!clientId) return null;
@@ -272,12 +272,12 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                             <div className="flex justify-between items-start gap-3">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <Link 
-                                    to={`/requirements/${req.id}`} 
-                                    className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                                  <button 
+                                    onClick={() => setQuickViewRequirementId(req.id)}
+                                    className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline"
                                   >
                                     {req.title}
-                                  </Link>
+                                  </button>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                                   <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{req.code}</span>

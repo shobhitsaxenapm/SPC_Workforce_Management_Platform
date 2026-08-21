@@ -12,7 +12,7 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus } = useApp();
+  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -95,7 +95,7 @@ export default function JobDetail() {
         <div className="flex items-center gap-3 text-sm">
           <Link to="/requirements" className="text-slate-500 hover:text-slate-800">Reqs</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <Link to={`/requirements/${req?.id}`} className="text-slate-500 hover:text-slate-800">{req?.code}</Link>
+          <button onClick={() => req && setQuickViewRequirementId(req.id)} className="text-slate-500 hover:text-slate-800 outline-none focus-visible:underline">{req?.code}</button>
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="font-medium text-slate-800 font-mono">{job.code}</span>
         </div>
@@ -349,7 +349,7 @@ export default function JobDetail() {
                 
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Linked Requirement</p>
-                  <Link to={`/requirements/${req?.id}`} className="text-sm font-medium text-blue-600 hover:underline">{req?.title}</Link>
+                  <button onClick={() => req && setQuickViewRequirementId(req.id)} className="text-sm font-medium text-blue-600 hover:underline outline-none">{req?.title}</button>
                 </div>
               </div>
             </div>

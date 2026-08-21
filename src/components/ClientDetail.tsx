@@ -10,7 +10,7 @@ import { INDUSTRY_OPTIONS } from '../lib/constants';
 
 export default function ClientDetail() {
   const { id } = useParams();
-  const { clients, requirements, applications, currentUser } = useApp();
+  const { clients, requirements, applications, currentUser, setQuickViewRequirementId } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -160,9 +160,9 @@ export default function ClientDetail() {
                   <div key={req.id} className="p-5 hover:bg-slate-50 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <Link to={`/requirements/${req.id}`} className="font-medium text-slate-800 hover:text-blue-600">
+                        <button onClick={() => setQuickViewRequirementId(req.id)} className="font-medium text-slate-800 hover:text-blue-600 text-left outline-none focus-visible:underline">
                           {req.title}
-                        </Link>
+                        </button>
                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
                           <span className="font-mono bg-slate-100 px-1.5 rounded">{req.code}</span>
                           <span>•</span>

@@ -15,6 +15,8 @@ interface AppContextType {
   offers: Offer[];
   onboardings: Onboarding[];
   matchRuns: JobMatchRun[];
+  quickViewRequirementId: string | null;
+  setQuickViewRequirementId: (id: string | null) => void;
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
   createClient: (clientData: Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>) => { success: boolean; error?: string };
@@ -84,6 +86,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     return null;
   });
+
+  const [quickViewRequirementId, setQuickViewRequirementId] = useState<string | null>(null);
 
   // Safe seeding logic: check if key is absent (null), otherwise parse
   const [clients, setClients] = useState<Client[]>(() => {
@@ -946,6 +950,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         offers,
         onboardings,
         matchRuns,
+        quickViewRequirementId,
+        setQuickViewRequirementId,
         login,
         logout,
         createClient,

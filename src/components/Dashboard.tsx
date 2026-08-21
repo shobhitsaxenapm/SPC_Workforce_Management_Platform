@@ -17,7 +17,7 @@ import {
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { requirements, applications, clients, candidates, onboardings } = useApp();
+  const { requirements, applications, clients, candidates, onboardings, setQuickViewRequirementId } = useApp();
 
   // ── Derived Executive Metrics ──
   const activeReqs = requirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled');
@@ -223,9 +223,9 @@ export default function Dashboard() {
                   <div key={req.id} className="px-5 py-4">
                     <div className="flex items-start justify-between mb-2.5">
                       <div className="flex items-center gap-2">
-                        <Link to={`/requirements/${req.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                        <button onClick={() => setQuickViewRequirementId(req.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
                           {req.roleTitle} — {client?.name}
-                        </Link>
+                        </button>
                         <span className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
                           isContractType 

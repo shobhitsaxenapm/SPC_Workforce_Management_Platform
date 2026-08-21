@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
+import RequirementQuickViewModal from './RequirementQuickViewModal';
 
 // --- Navigation Configuration ---
 type NavItem = {
@@ -295,6 +296,8 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      <RequirementQuickViewModal />
     </div>
   );
 }
