@@ -113,6 +113,7 @@ export default function RequirementDetail() {
   const [cStart, setCStart] = useState('');
   const [cEnd, setCEnd] = useState('');
   const [cFills, setCFills] = useState<Record<string, string>>({ jobId: '', stage: '', source: '' });
+  const [cMatch, setCMatch] = useState<string>('All Matches');
 
   // Date/Filter States for Activity Tab
   const [aPreset, setAPreset] = useState<DatePreset>('All Time');
@@ -225,7 +226,7 @@ export default function RequirementDetail() {
     { key: 'source', label: 'Sourcing Source', options: cSourceOptions },
   ];
 
-  const filteredApps = reqApps.filter(app => {
+  const filteredAppsWithoutMatch = reqApps.filter(app => {
     const candidate = candidates.find(c => c.id === app.candidateId);
     const job = reqJobs.find(j => j.id === app.jobId);
     
@@ -242,6 +243,21 @@ export default function RequirementDetail() {
     const matchDate = isDateInPreset(app.appliedDate, cPreset, cStart, cEnd);
 
     return matchSearch && matchJob && matchStage && matchSource && matchDate;
+  });
+
+  const getMatchCount = (min: number, max: number) => {
+    return filteredAppsWithoutMatch.filter(a => a.matchScore !== undefined && a.matchScore >= min && a.matchScore <= max).length;
+  };
+
+  const filteredApps = filteredAppsWithoutMatch.filter(app => {
+    if (cMatch === 'All Matches') return true;
+    const score = app.matchScore;
+    if (score === undefined || score === null) return false;
+    if (cMatch === '90%–100%') return score >= 90 && score <= 100;
+    if (cMatch === '80%–89%') return score >= 80 && score <= 89;
+    if (cMatch === '70%–79%') return score >= 70 && score <= 79;
+    if (cMatch === '60%–69%') return score >= 60 && score <= 69;
+    return false;
   });
 
   // Derived Activity Timeline
@@ -587,6 +603,17 @@ export default function RequirementDetail() {
                   setCEnd(end);
                 }}
               />
+              <select 
+                value={cMatch}
+                onChange={e => setCMatch(e.target.value)}
+                className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all text-slate-700 font-medium"
+              >
+                <option value="All Matches">All Matches</option>
+                <option value="90%–100%">90%–100% ({getMatchCount(90, 100)})</option>
+                <option value="80%–89%">80%–89% ({getMatchCount(80, 89)})</option>
+                <option value="70%–79%">70%–79% ({getMatchCount(70, 79)})</option>
+                <option value="60%–69%">60%–69% ({getMatchCount(60, 69)})</option>
+              </select>
               <FilterPanel
                 fields={cFilterFields}
                 values={cFills}
@@ -625,13 +652,22 @@ export default function RequirementDetail() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredApps.map(app => {
-                    const candidate = candidates.find(c => c.id === app.candidateId);
-                    const job = reqJobs.find(j => j.id === app.jobId);
-                    if (!candidate) return null;
-
-                    return (
-                      <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                  {filteredApps.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                        {cMatch !== 'All Matches' 
+                          ? "No candidates found in this match range." 
+                          : "No candidates found matching the current filters."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredApps.map(app => {
+                      const candidate = candidates.find(c => c.id === app.candidateId);
+                      const job = reqJobs.find(j => j.id === app.jobId);
+                      if (!candidate) return null;
+  
+                      return (
+                        <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4">
                           <Link to={`/candidates/${candidate.id}`} className="font-semibold text-blue-600 hover:underline">
                             {candidate.fullName}
@@ -666,13 +702,7 @@ export default function RequirementDetail() {
                         </td>
                       </tr>
                     );
-                  })}
-                  {filteredApps.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                        No candidates match the current filters.
-                      </td>
-                    </tr>
+                  })
                   )}
                 </tbody>
               </table>
