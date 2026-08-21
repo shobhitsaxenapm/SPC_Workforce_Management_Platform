@@ -19,7 +19,8 @@ import {
   LogOut,
   LineChart,
   ChevronDown,
-  Layers
+  Layers,
+  LayoutGrid
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
@@ -46,7 +47,7 @@ const navigationConfig: NavModuleConfig[] = [
     label: 'Recruitment',
     icon: Briefcase,
     items: [
-      { title: 'Overview', path: '/', icon: Briefcase },
+      { title: 'Dashboard', path: '/', icon: LayoutGrid },
       { title: 'Clients', path: '/clients', icon: Building2 },
       { title: 'Client Requirements', path: '/requirements', icon: ClipboardList },
       { title: 'Jobs', path: '/job-desk', icon: Briefcase },
@@ -188,7 +189,7 @@ export default function Layout() {
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/') return 'Recruitment Overview';
+    if (path === '/') return 'Recruitment Dashboard';
     
     // Search through all modules for the active item title
     for (const mod of navigationConfig) {
