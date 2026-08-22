@@ -187,6 +187,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         setError(result.error || 'Scheduling failed. Please try again.');
         setIsScheduling(false);
       } else {
+        alert("Interview scheduled successfully.");
         setIsScheduling(false);
         onClose();
       }

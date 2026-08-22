@@ -19,7 +19,11 @@ export default function OffersList() {
     jobs, 
     clients, 
     onboardings,
-    updateOfferStatus, 
+    updateOfferStatus,
+    submitOfferForApproval,
+    approveOffer,
+    issueOffer,
+    recordOfferResponse,
     extendOfferExpiry, 
     startOnboardingFromOffer 
   } = useApp();
@@ -117,7 +121,7 @@ export default function OffersList() {
 
   // Mark Accepted Handler
   const handleMarkAccepted = (offerId: string) => {
-    updateOfferStatus(offerId, 'Accepted');
+    recordOfferResponse(offerId, 'Accepted');
     triggerToast('Offer status updated to Accepted!');
     
     if (selectedOffer && selectedOffer.id === offerId) {
@@ -127,7 +131,7 @@ export default function OffersList() {
 
   // Mark Withdrawn Handler
   const handleMarkWithdrawn = (offerId: string) => {
-    updateOfferStatus(offerId, 'Withdrawn');
+    recordOfferResponse(offerId, 'Withdrawn');
     triggerToast('Offer has been withdrawn.');
     
     if (selectedOffer && selectedOffer.id === offerId) {
@@ -154,10 +158,7 @@ export default function OffersList() {
       return;
     }
 
-    updateOfferStatus(selectedOffer.id, 'Declined', { 
-      rejectionReason: rejectionReason.trim(),
-      rejectedAt: new Date().toISOString()
-    });
+    recordOfferResponse(selectedOffer.id, 'Declined', rejectionReason.trim());
 
     triggerToast('Offer has been marked as Rejected.');
     setActiveModal(null);
@@ -499,7 +500,7 @@ export default function OffersList() {
                 {selectedOffer.status === 'Draft' && (
                   <button 
                     onClick={() => {
-                      updateOfferStatus(selectedOffer.id, 'Approval Pending');
+                      submitOfferForApproval(selectedOffer.id);
                       triggerToast('Offer submitted for approvals review.');
                       setSelectedOffer(prev => prev ? { ...prev, status: 'Approval Pending' } : null);
                     }}
@@ -513,9 +514,9 @@ export default function OffersList() {
                   <>
                     <button 
                       onClick={() => {
-                        updateOfferStatus(selectedOffer.id, 'Approved', { approvedBy: 'Priya Desai' });
+                        approveOffer(selectedOffer.id);
                         triggerToast('Offer approved successfully!');
-                        setSelectedOffer(prev => prev ? { ...prev, status: 'Approved', approvedBy: 'Priya Desai' } : null);
+                        setSelectedOffer(prev => prev ? { ...prev, status: 'Approved', approvedBy: 'Admin' } : null);
                       }}
                       className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm"
                     >
@@ -533,9 +534,9 @@ export default function OffersList() {
                 {selectedOffer.status === 'Approved' && (
                   <button 
                     onClick={() => {
-                      updateOfferStatus(selectedOffer.id, 'Sent', { sentDate: new Date().toISOString() });
+                      issueOffer(selectedOffer.id);
                       triggerToast('Offer letter sent to candidate!');
-                      setSelectedOffer(prev => prev ? { ...prev, status: 'Sent', sentDate: new Date().toISOString() } : null);
+                      setSelectedOffer(prev => prev ? { ...prev, status: 'Sent', sentDate: new Date().toISOString(), deliveryStatus: 'Sent' } : null);
                     }}
                     className="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1.5"
                   >

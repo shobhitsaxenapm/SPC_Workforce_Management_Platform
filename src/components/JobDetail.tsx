@@ -12,7 +12,7 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, requirements, clients, applications, candidates, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId, setQuickViewCandidateId } = useApp();
+  const { jobs, requirements, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId, setQuickViewCandidateId } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -393,8 +393,20 @@ export default function JobDetail() {
                             )}
                         </div>
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
-                        <p className="text-xs text-slate-400 mb-4 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
+                        <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
                         
+                        {(() => {
+                           const existingOffer = offers.find(o => o.applicationId === app.id);
+                           if (existingOffer) {
+                              return (
+                                <div className="mb-3 px-2 py-1 bg-indigo-50 border border-indigo-100 rounded-md text-[10px] font-medium text-indigo-700 flex justify-between items-center">
+                                  <span>Offer: {existingOffer.status}</span>
+                                </div>
+                              );
+                           }
+                           return null;
+                        })()}
+
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
                           <div className="flex items-center gap-2">

@@ -208,6 +208,21 @@ export interface Candidate {
   createdMethod?: string;
 }
 
+export interface ScreeningData {
+  status: 'Pending' | 'Passed' | 'Requested Info';
+  candidateInterested?: boolean;
+  availabilityConfirmed?: boolean;
+  noticePeriodConfirmed?: boolean;
+  locationConfirmed?: boolean;
+  compensationConfirmed?: boolean;
+  minQualificationVerified?: boolean;
+  skillsReviewed?: boolean;
+  communicationNotes?: string;
+  recruiterNotes?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
 export interface Application {
   id: string;
   candidateId: string;
@@ -216,11 +231,13 @@ export interface Application {
   currentStage: ApplicationStage;
   appliedDate: string;
   source: string;
+  associationOrigin?: string;
   assignedRecruiterId: string;
   matchScore?: number;
   matchStrengths?: string[];
   matchGaps?: string[];
   rejectionReason?: string;
+  screeningData?: ScreeningData;
   lastActivity: string;
 }
 export interface MatchScoreBreakdown {
@@ -306,6 +323,32 @@ export interface Offer {
   withdrawnAt?: string;
   extendedAt?: string;
   assignedRecruiterId?: string;
+
+  // Added Comprehensive Offer Fields
+  employingEntity?: 'SPC' | 'Client';
+  employingEntityName?: string;
+  registeredOfficeAddress?: string;
+  offerDate?: string;
+  offerReference?: string;
+  department?: string;
+  workLocation?: string;
+  employmentType?: string;
+  reportingManager?: string;
+  annualCTC?: string;
+  fixedCompensation?: string;
+  variableCompensation?: string;
+  otherAllowances?: string;
+  probationPeriod?: string;
+  noticePeriod?: string;
+  workingHours?: string;
+  authorizedSignatoryName?: string;
+  authorizedSignatoryDesignation?: string;
+  additionalTerms?: string;
+  
+  // Version and Tracking
+  templateVersion?: string;
+  version?: number;
+  deliveryStatus?: 'Not Sent' | 'Sending' | 'Sent' | 'Failed';
 }
 
 export interface Onboarding {

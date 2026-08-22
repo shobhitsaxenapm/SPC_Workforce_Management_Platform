@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
+import { Application } from '../types';
 import AIInsightCard from './AIInsightCard';
 import { useApp } from '../context/AppContext';
 import CandidateFormModal from './CandidateFormModal';
 import MatchInsightModal from './MatchInsightModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
+import CandidateScreeningModal from './CandidateScreeningModal';
+import OfferPreparationModal from './OfferPreparationModal';
 
 type TabType = 'Overview' | 'Matching Jobs' | 'Jobs & Hiring Progress' | 'Activity' | 'Documents';
 
@@ -18,56 +21,25 @@ interface ActionConfig {
   moreActions: string[];
 }
 
-const getStageActions = (stage: string): ActionConfig => {
-  switch (stage) {
-    case 'Sourced': 
-      return { primary: 'Begin Screening', secondary: ['View Job Process', 'View Job'], moreActions: ['Remove from Pipeline', 'Add Internal Note'] };
-    case 'Applied': 
-      return { primary: 'Begin Screening', secondary: ['View Application', 'View Job'], moreActions: ['Reject Application', 'Mark Withdrawn', 'Add Internal Note'] };
-    case 'Screening': 
-      return { primary: 'Schedule Interview', secondary: ['View Application', 'View Job'], moreActions: ['Reject', 'Return to Applied', 'Add Internal Note'] };
-    case 'Interview Scheduled': 
-      return { primary: 'View Interview', secondary: ['Reschedule', 'View Application'], moreActions: ['Cancel Interview', 'Mark No Show', 'Add Internal Note'] };
-    case 'Interviewing': 
-    case 'Interview Completed': 
-      return { primary: 'Review Feedback', secondary: ['Prepare Offer', 'View Application'], moreActions: [] }; 
-    case 'Offered': 
-      return { primary: 'View Offer', secondary: ['Record Offer Response', 'View Application'], moreActions: ['Revise Offer', 'Withdraw Offer', 'Add Internal Note'] };
-    case 'Offer Accepted': 
-      return { primary: 'Start Onboarding', secondary: ['View Offer', 'View Application'], moreActions: ['Add Internal Note', 'View History'] };
-    case 'Offer Declined': 
-      return { primary: 'View Offer History', secondary: ['View Application', 'View Job'], moreActions: ['Reopen Process', 'Add Internal Note'] };
-    case 'Ready for Onboarding': 
-      return { primary: 'Open Onboarding', secondary: ['View Application', 'View Offer'], moreActions: ['Add Internal Note', 'Mark Withdrawn', 'View History'] };
-    case 'Onboarding': 
-      return { primary: 'Continue Onboarding', secondary: ['View Application', 'View Onboarding Checklist'], moreActions: ['Add Internal Note', 'View History'] };
-    case 'Joined': 
-      return { primary: 'View Employee', secondary: ['View Deployment', 'View Job History'], moreActions: [] };
-    case 'Rejected':
-    case 'Withdrawn': 
-      return { primary: 'View History', secondary: ['View Application', 'View Job'], moreActions: ['Reopen Process'] };
-    default: 
-      return { primary: null, secondary: ['View History'], moreActions: [] };
-  }
-}
-
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications, setQuickViewJobId, setQuickViewClientId } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, setQuickViewJobId, setQuickViewClientId } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
   // Local state for prototype functionality
-  const [addedPipelineJobs, setAddedPipelineJobs] = useState<Array<{jobId: string; stage: string; origin: string; date: string}>>([]);
   const [dismissedMatches, setDismissedMatches] = useState<string[]>([]);
-  const [localStageUpdates, setLocalStageUpdates] = useState<Record<string, string>>({}); // Mapping jobId -> stage
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isAddingToPipeline, setIsAddingToPipeline] = useState<boolean>(false);
   
   // Action Modals State
   const [selectedInsight, setSelectedInsight] = useState<any>(null);
   const [showMatchModal, setShowMatchModal] = useState<{jobId: string, candidateId: string} | null>(null);
   const [showPipelineConfirmModal, setShowPipelineConfirmModal] = useState<string | null>(null);
+  const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null); // appId
   const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<{jobId: string} | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState<{jobId: string} | null>(null);
+  const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
   // Filters for Matching Jobs
@@ -78,29 +50,12 @@ export default function CandidateDetail() {
   const candidate = candidates.find(c => c.id === id);
   if (!candidate) return <div className="p-8 text-center text-slate-500">Candidate not found</div>;
 
-  // Existing Applications
-  const existingCandidateApps = applications.filter(a => a.candidateId === candidate.id).map(app => ({
-    ...app,
-    currentStage: localStageUpdates[app.jobId] || app.currentStage
-  }));
+  // Existing Applications (directly from context)
+  const existingCandidateApps = applications.filter(a => a.candidateId === candidate.id);
   
-  // Pipeline Jobs
-  const pipelineJobs = addedPipelineJobs.map(p => ({
-    id: `local-${p.jobId}`,
-    candidateId: candidate.id,
-    jobId: p.jobId,
-    requirementId: '',
-    currentStage: localStageUpdates[p.jobId] || p.stage,
-    appliedDate: p.date,
-    assignedRecruiterId: 'u3', // Assuming Amit Kumar
-    source: candidate.source,
-    associationOrigin: p.origin,
-    isLocal: true,
-  }));
-
   // Combine for Jobs & Hiring Progress tab
-  const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId), ...pipelineJobs.map(p => p.jobId)];
-  const combinedApplications = [...existingCandidateApps, ...pipelineJobs];
+  const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId)];
+  const combinedApplications = [...existingCandidateApps];
 
   // All Candidate Match Insights
   const candidateInsights = getMatchingJobsForCandidate(candidate.id);
@@ -109,7 +64,6 @@ export default function CandidateDetail() {
   const matchingJobs = candidateInsights.filter(insight => {
     if (insight.matchScore < 70) return false;
     if (dismissedMatches.includes(insight.jobId)) return false;
-    if (allAssociatedJobIds.includes(insight.jobId)) return false;
     
     const job = mockJobs.find(j => j.id === insight.jobId);
     if (!job) return false;
@@ -125,38 +79,73 @@ export default function CandidateDetail() {
 
   const topMatches = matchingJobs.slice(0, 3);
 
-  // --- Handlers ---
-  const handleAddToPipeline = (jobId: string) => {
-    setAddedPipelineJobs([...addedPipelineJobs, {
-      jobId,
-      stage: 'Sourced',
-      origin: 'Added by recruiter from Candidate Profile',
-      date: new Date().toISOString()
-    }]);
-    setShowPipelineConfirmModal(null);
-    setActiveTab('Jobs & Hiring Progress');
-  };
+  const getActionsForApplication = (app: Application): ActionConfig => {
+    const stage = app.currentStage;
+    const hasApp = stage !== 'Sourced';
+    const hasOffer = offers.some(o => o.applicationId === app.id);
+    const hasOnboarding = onboardings.some(o => o.applicationId === app.id);
+    const hasInterview = interviews.some(i => i.applicationId === app.id);
 
-  const handleDismiss = (jobId: string) => {
-    if (window.confirm('Are you sure you want to dismiss this match? It will be hidden from the matching jobs list.')) {
-      setDismissedMatches([...dismissedMatches, jobId]);
+    const baseSecondary = ['View Hiring Process', 'View Job'];
+    if (hasApp) baseSecondary.unshift('View Application');
+
+    switch (stage) {
+      case 'Sourced':
+        return { primary: 'Begin Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+      case 'Applied':
+        return { primary: 'Begin Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+      case 'Screening':
+        return { 
+          primary: app.screeningData?.status === 'Passed' ? 'Schedule Interview' : 'Continue Screening', 
+          secondary: baseSecondary, 
+          moreActions: ['Add Internal Note'] 
+        };
+      case 'Interview Scheduled':
+      case 'Interview Round 1':
+      case 'Interview Round 2':
+        return { primary: 'View Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+      case 'Interview Completed':
+        return { primary: 'Confirm Selection', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
+      case 'Selected':
+        const existingOffer = offers.find(o => o.applicationId === app.id);
+        const hasDraft = existingOffer && (existingOffer.status === 'Draft' || existingOffer.status === 'Approval Pending');
+        return { primary: hasDraft ? 'Continue Offer' : 'Prepare Offer', secondary: baseSecondary, moreActions: [] };
+      case 'Offer Sent':
+      case 'Offer Extended':
+        return { primary: 'Record Response', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+      case 'Offer Accepted':
+        return { primary: 'Start Onboarding Handover', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+      case 'Ready for Onboarding':
+        return { primary: 'Open Handover', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+      case 'Joined':
+        return { primary: 'View Handover', secondary: baseSecondary, moreActions: [] };
+      case 'Rejected':
+      case 'Withdrawn':
+      case 'Offer Declined':
+        return { primary: 'View History', secondary: baseSecondary, moreActions: [] };
+      default:
+        return { primary: null, secondary: baseSecondary, moreActions: [] };
     }
   };
 
-  const handleAction = async (action: string, app: any) => {
+  const handleAction = async (action: string, app: Application) => {
     const jobId = app.jobId;
     switch (action) {
       case 'Begin Screening':
-        if (window.confirm(`Begin screening for ${mockJobs.find(j => j.id === jobId)?.title}?`)) {
-          setIsProcessing(jobId);
-          setTimeout(() => {
-            setLocalStageUpdates(prev => ({...prev, [jobId]: 'Screening'}));
-            setIsProcessing(null);
-          }, 800);
-        }
+      case 'Continue Screening':
+        setShowScreeningModal(app.id);
         break;
       case 'Schedule Interview':
         setShowScheduleInterviewModal({ jobId });
+        break;
+      case 'Confirm Selection':
+        useApp().updateApplicationStage(app.id, 'Selected');
+        setToast({ message: 'Candidate selection confirmed. Ready for Offer.', type: 'success' });
+        setTimeout(() => setToast(null), 3000);
+        break;
+      case 'Prepare Offer':
+      case 'Continue Offer':
+        setShowOfferPreparationModal(app.id);
         break;
       case 'Start Onboarding':
         setShowOnboardingModal({ jobId });
@@ -174,16 +163,46 @@ export default function CandidateDetail() {
       case 'View Job':
         setQuickViewJobId(jobId);
         break;
+      case 'Open Handover':
+      case 'View Offer':
+      case 'View Interview':
+      case 'Record Response':
+      case 'Review Feedback':
+      case 'Start Onboarding Handover':
+      case 'View Application':
+      case 'View Hiring Process':
+        alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
+        break;
       default:
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
         break;
     }
   };
 
+  const handleAddToPipeline = async (jobId: string) => {
+    setIsAddingToPipeline(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const res = useApp().addMatchToPipeline(jobId, candidate.id, 'Added from Candidate Match');
+    setIsAddingToPipeline(false);
+    if (res.success) {
+      setToast({ message: `${candidate.fullName} was added to the ${mockJobs.find(j => j.id === jobId)?.title} pipeline at Sourced.`, type: 'success' });
+      setShowPipelineConfirmModal(null);
+      setTimeout(() => setToast(null), 3000);
+    } else {
+      setToast({ message: res.error || 'Failed to add to pipeline.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleDismiss = (jobId: string) => {
+    if (window.confirm('Are you sure you want to dismiss this match? It will be hidden from the matching jobs list.')) {
+      setDismissedMatches([...dismissedMatches, jobId]);
+    }
+  };
+
   const confirmStartOnboarding = () => {
-    setIsProcessing(showOnboardingModal.jobId);
+    setIsProcessing(showOnboardingModal?.jobId || null);
     setTimeout(() => {
-      setLocalStageUpdates(prev => ({...prev, [showOnboardingModal.jobId]: 'Ready for Onboarding'}));
       setIsProcessing(null);
       setShowOnboardingModal(null);
     }, 800);
@@ -191,6 +210,21 @@ export default function CandidateDetail() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+          <div className={cn(
+            "flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border",
+            toast.type === 'error' ? "bg-red-600 border-red-500 text-white" : "bg-slate-900 border-slate-800 text-white"
+          )}>
+            {toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-300" /> : <Check className="w-4 h-4 text-green-400" />}
+            <span className="text-sm font-medium">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-4 text-white/70 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
@@ -503,9 +537,17 @@ export default function CandidateDetail() {
                    </div>
                    
                    <div className="flex flex-col gap-2 shrink-0 md:w-40">
-                     <button onClick={() => setShowPipelineConfirmModal(job.id)} className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-center">
-                       Add to Pipeline
-                     </button>
+                     {combinedApplications.find(a => a.jobId === job.id) ? (
+                       <div className="w-full px-4 py-2 bg-slate-100 text-slate-500 text-sm font-medium rounded-lg text-center border border-slate-200">
+                         {['Rejected', 'Withdrawn', 'Offer Declined'].includes(combinedApplications.find(a => a.jobId === job.id)!.currentStage) 
+                           ? combinedApplications.find(a => a.jobId === job.id)!.currentStage 
+                           : 'In Pipeline'}
+                       </div>
+                     ) : (
+                       <button onClick={() => setShowPipelineConfirmModal(job.id)} className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-center">
+                         Add to Pipeline
+                       </button>
+                     )}
                      <button onClick={() => setSelectedInsight({ job, client, insight })} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center">
                        View Match
                      </button>
@@ -550,7 +592,7 @@ export default function CandidateDetail() {
             }
 
             const currentStage = app.currentStage || 'Unknown';
-            const actionConfig = getStageActions(currentStage);
+            const actionConfig = getActionsForApplication(app);
 
             return (
               <div key={'id' in app ? app.id : `app-${app.jobId}`} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
@@ -676,6 +718,14 @@ export default function CandidateDetail() {
         />
       )}
 
+      {showOfferPreparationModal && (
+        <OfferPreparationModal 
+          isOpen={true}
+          onClose={() => setShowOfferPreparationModal(null)}
+          applicationId={showOfferPreparationModal}
+        />
+      )}
+
       {/* Pipeline Confirmation Modal */}
       {showPipelineConfirmModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
@@ -698,7 +748,7 @@ export default function CandidateDetail() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Association Origin</label>
-                    <div className="font-medium text-sm text-slate-800">Added by recruiter from Candidate Profile</div>
+                    <div className="font-medium text-sm text-slate-800">Added from Candidate Match</div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Candidate Source</label>
@@ -710,8 +760,17 @@ export default function CandidateDetail() {
                 <button onClick={() => setShowPipelineConfirmModal(null)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
                   Cancel
                 </button>
-                <button onClick={() => handleAddToPipeline(showPipelineConfirmModal)} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                  Confirm Addition
+                <button 
+                  onClick={() => handleAddToPipeline(showPipelineConfirmModal)} 
+                  disabled={isAddingToPipeline}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 flex items-center justify-center gap-2 min-w-[140px]"
+                >
+                  {isAddingToPipeline ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Adding to Pipeline...
+                    </>
+                  ) : 'Confirm Addition'}
                 </button>
              </div>
           </div>
@@ -725,6 +784,21 @@ export default function CandidateDetail() {
         initialCandidateId={candidate.id}
         initialJobId={showScheduleInterviewModal?.jobId}
       />
+
+      {/* Candidate Screening Modal */}
+      {showScreeningModal && (
+        <CandidateScreeningModal
+          applicationId={showScreeningModal}
+          isOpen={true}
+          onClose={() => setShowScreeningModal(null)}
+          onProceedToInterview={() => {
+            const app = applications.find(a => a.id === showScreeningModal);
+            if (app) {
+              setShowScheduleInterviewModal({ jobId: app.jobId });
+            }
+          }}
+        />
+      )}
 
       {/* Start Onboarding Confirmation Modal */}
       {showOnboardingModal && (

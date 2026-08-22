@@ -39,7 +39,14 @@ interface AppContextType {
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
     jobId: string
   ) => { success: boolean; error?: string };
-  updateApplicationStage: (appId: string, stage: ApplicationStage) => void;
+  updateApplicationStage: (appId: string, stage: ApplicationStage, rejectionReason?: string) => void;
+  updateApplicationScreening: (appId: string, data: any) => void;
+  createOffer: (offerData: Omit<Offer, 'id' | 'status'>) => string;
+  updateOffer: (offerId: string, updates: Partial<Offer>) => void;
+  submitOfferForApproval: (offerId: string) => void;
+  approveOffer: (offerId: string) => void;
+  issueOffer: (offerId: string) => void;
+  recordOfferResponse: (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => void;
   updateRequirementLifecycle: (reqId: string, status: RequirementLifecycleStatus, reason?: string) => { success: boolean; error?: string };
   updateRequirement: (reqId: string, updates: Partial<ClientRequirement>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
@@ -616,6 +623,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistApplications(updated);
   };
 
+  const updateApplicationScreening = (appId: string, screeningData: any) => {
+    const updated = applications.map(a => {
+      if (a.id === appId) {
+        return { ...a, screeningData: { ...a.screeningData, ...screeningData }, lastActivity: new Date().toISOString() };
+      }
+      return a;
+    });
+    persistApplications(updated);
+  };
+
   const updateRequirementLifecycle = (reqId: string, status: RequirementLifecycleStatus, reason?: string) => {
     const req = requirements.find(r => r.id === reqId);
     if (!req) return { success: false, error: 'Requirement not found' };
@@ -787,6 +804,47 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistOffers(updated);
   };
 
+  const createOffer = (offerData: Omit<Offer, 'id' | 'status'>) => {
+    const newOffer: Offer = {
+      ...offerData,
+      id: `off_gen_${Date.now()}`,
+      status: 'Draft',
+      version: 1,
+      deliveryStatus: 'Not Sent'
+    };
+    persistOffers([newOffer, ...offers]);
+    return newOffer.id;
+  };
+
+  const updateOffer = (offerId: string, updates: Partial<Offer>) => {
+    persistOffers(offers.map(o => o.id === offerId ? { ...o, ...updates, version: (o.version || 1) + 1 } : o));
+  };
+
+  const submitOfferForApproval = (offerId: string) => {
+    updateOfferStatus(offerId, 'Approval Pending');
+  };
+
+  const approveOffer = (offerId: string) => {
+    updateOfferStatus(offerId, 'Approved', { approvedBy: currentUser?.name || 'Admin' });
+  };
+
+  const issueOffer = (offerId: string) => {
+    updateOfferStatus(offerId, 'Sent', { sentDate: new Date().toISOString(), deliveryStatus: 'Sent' });
+  };
+
+  const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => {
+    if (response === 'Negotiation Requested') return;
+    const statusMap: Record<string, OfferStatus> = {
+      'Accepted': 'Accepted',
+      'Declined': 'Declined',
+      'Expired': 'Expired',
+      'Withdrawn': 'Withdrawn'
+    };
+    const metadata: Partial<Offer> = {};
+    if (reason) metadata.notes = reason;
+    updateOfferStatus(offerId, statusMap[response], metadata);
+  };
+
   const extendOfferExpiry = (offerId: string, newExpiryDate: string) => {
     const updated = offers.map(o => {
       if (o.id === offerId) {
@@ -946,13 +1004,43 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return { success: true, applicationId: newApp.id };
   };
 
+  const deriveApplicationStage = (app: Application): ApplicationStage => {
+    if (onboardings.some(o => o.applicationId === app.id)) return 'Ready for Onboarding';
+    
+    const offer = offers.find(o => o.applicationId === app.id);
+    if (offer) {
+      if (offer.status === 'Accepted') return 'Offer Accepted';
+      if (offer.status === 'Declined') return 'Offer Declined';
+      if (offer.status === 'Withdrawn') return 'Withdrawn';
+      if (offer.status === 'Sent' || offer.status === 'Viewed' || offer.status === 'Expired') return 'Offer Sent';
+    }
+    
+    if (app.currentStage === 'Selected') return 'Selected';
+
+    const interview = interviews.find(i => i.applicationId === app.id);
+    if (interview) {
+      if (interview.status === 'Scheduled') return 'Interview Scheduled';
+      return 'Interview Round 1';
+    }
+    
+    const preInterviewStages: ApplicationStage[] = ['Sourced', 'Applied', 'Screening', 'Rejected', 'Withdrawn'];
+    if (preInterviewStages.includes(app.currentStage)) return app.currentStage;
+    
+    return 'Applied';
+  };
+
+  const derivedApplications = applications.map(app => ({
+    ...app,
+    currentStage: deriveApplicationStage(app)
+  }));
+
   return (
     <AppContext.Provider
       value={{
         currentUser,
         jobs,
         candidates,
-        applications,
+        applications: derivedApplications,
         requirements,
         clients,
         interviews,
@@ -981,6 +1069,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateJobStatus,
         submitApplication,
         updateApplicationStage,
+        updateApplicationScreening,
         updateRequirementLifecycle,
         updateRequirement,
         submitInterviewFeedback,
@@ -988,6 +1077,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         rescheduleInterview,
         cancelInterview,
         updateInterviewStatus,
+        createOffer,
+        updateOffer,
+        submitOfferForApproval,
+        approveOffer,
+        issueOffer,
+        recordOfferResponse,
         updateOfferStatus,
         extendOfferExpiry,
         startOnboardingFromOffer,
