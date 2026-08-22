@@ -12,6 +12,9 @@ import MatchInsightModal from './MatchInsightModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import CandidateScreeningModal from './CandidateScreeningModal';
 import OfferPreparationModal from './OfferPreparationModal';
+import ViewInterviewModal from './ViewInterviewModal';
+import AddJobToCandidateModal from './AddJobToCandidateModal';
+import CandidateProcessModal from './CandidateProcessModal';
 
 type TabType = 'Overview' | 'Matching Jobs' | 'Jobs & Hiring Progress' | 'Activity' | 'Documents';
 
@@ -23,12 +26,14 @@ interface ActionConfig {
 
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications, interviews, offers, onboardings, setQuickViewJobId, setQuickViewClientId } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
-  // Local state for prototype functionality
   const [dismissedMatches, setDismissedMatches] = useState<string[]>([]);
+  const [showViewInterviewModal, setShowViewInterviewModal] = useState<{jobId: string, candidateId: string} | null>(null);
+  const [showAddJobModal, setShowAddJobModal] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isAddingToPipeline, setIsAddingToPipeline] = useState<boolean>(false);
   
@@ -86,8 +91,7 @@ export default function CandidateDetail() {
     const hasOnboarding = onboardings.some(o => o.applicationId === app.id);
     const hasInterview = interviews.some(i => i.applicationId === app.id);
 
-    const baseSecondary = ['View Hiring Process', 'View Job'];
-    if (hasApp) baseSecondary.unshift('View Application');
+    const baseSecondary = ['View Process', 'View Job'];
 
     switch (stage) {
       case 'Sourced':
@@ -165,13 +169,14 @@ export default function CandidateDetail() {
         break;
       case 'Open Handover':
       case 'View Offer':
-      case 'View Interview':
       case 'Record Response':
       case 'Review Feedback':
       case 'Start Onboarding Handover':
-      case 'View Application':
-      case 'View Hiring Process':
-        alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
+      case 'View Process':
+        setShowProcessModal(app.id);
+        break;
+      case 'View Interview':
+        setShowViewInterviewModal({ jobId: app.jobId, candidateId: app.candidateId });
         break;
       default:
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
@@ -182,11 +187,12 @@ export default function CandidateDetail() {
   const handleAddToPipeline = async (jobId: string) => {
     setIsAddingToPipeline(true);
     await new Promise(resolve => setTimeout(resolve, 800));
-    const res = useApp().addMatchToPipeline(jobId, candidate.id, 'Added from Candidate Match');
+    const res = addMatchToPipeline(jobId, candidate.id, 'Added from Candidate Match');
     setIsAddingToPipeline(false);
     if (res.success) {
       setToast({ message: `${candidate.fullName} was added to the ${mockJobs.find(j => j.id === jobId)?.title} pipeline at Sourced.`, type: 'success' });
       setShowPipelineConfirmModal(null);
+      setActiveTab('Jobs & Hiring Progress');
       setTimeout(() => setToast(null), 3000);
     } else {
       setToast({ message: res.error || 'Failed to add to pipeline.', type: 'error' });
@@ -572,7 +578,15 @@ export default function CandidateDetail() {
       {/* Jobs & Hiring Progress Tab Content */}
       {activeTab === 'Jobs & Hiring Progress' && (
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-slate-800">Current Job Processes</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-slate-800">Current Job Processes</h3>
+            <button 
+              onClick={() => setShowAddJobModal(true)} 
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Add to Job Pipeline
+            </button>
+          </div>
           
           {combinedApplications.length > 0 ? combinedApplications.map(app => {
             const job = mockJobs.find(j => j.id === app.jobId);
@@ -685,8 +699,16 @@ export default function CandidateDetail() {
               </div>
             );
           }) : (
-            <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500">
-              No active job processes found for this candidate.
+            <div className="p-12 text-center text-slate-500 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <Briefcase className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+              <h3 className="text-lg font-medium text-slate-800 mb-2">No Active Job Processes</h3>
+              <p className="mb-6 max-w-md mx-auto">This candidate is not currently being evaluated for any jobs.</p>
+              <button 
+                onClick={() => setShowAddJobModal(true)}
+                className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm mx-auto flex items-center gap-2"
+              >
+                Add to Job Pipeline
+              </button>
             </div>
           )}
         </div>
@@ -723,6 +745,36 @@ export default function CandidateDetail() {
           isOpen={true}
           onClose={() => setShowOfferPreparationModal(null)}
           applicationId={showOfferPreparationModal}
+        />
+      )}
+
+      {showViewInterviewModal && (
+        <ViewInterviewModal
+          isOpen={true}
+          onClose={() => setShowViewInterviewModal(null)}
+          jobId={showViewInterviewModal.jobId}
+          candidateId={showViewInterviewModal.candidateId}
+        />
+      )}
+
+      {showAddJobModal && (
+        <AddJobToCandidateModal
+          isOpen={true}
+          onClose={() => setShowAddJobModal(false)}
+          candidateId={candidate.id}
+        />
+      )}
+
+      {showProcessModal && (
+        <CandidateProcessModal
+          isOpen={true}
+          onClose={() => setShowProcessModal(null)}
+          applicationId={showProcessModal}
+          onAction={(action) => {
+            const app = applications.find(a => a.id === showProcessModal);
+            if (app) handleAction(action, app);
+          }}
+          actionConfig={getActionsForApplication(applications.find(a => a.id === showProcessModal)!)}
         />
       )}
 

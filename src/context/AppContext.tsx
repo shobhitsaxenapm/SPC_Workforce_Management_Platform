@@ -30,7 +30,7 @@ interface AppContextType {
   deleteClient: (clientId: string) => void;
   deleteRequirement: (reqId: string) => void;
   createRequirement: (reqData: Omit<ClientRequirement, 'id' | 'code' | 'positionsFilled' | 'lifecycleStatus' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'>) => void;
-  createCandidate: (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => { success: boolean; error?: string };
+  createCandidate: (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => { success: boolean; error?: string; candidateId?: string };
   updateCandidate: (candidateId: string, updates: Partial<Candidate>) => void;
   createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled'>, requirementId?: string) => void;
   updateJob: (jobId: string, updates: Partial<Job>) => void;
@@ -59,7 +59,7 @@ interface AppContextType {
   startOnboardingFromOffer: (offerId: string) => { success: boolean; error?: string };
   runJobMatching: (jobId: string) => void;
   dismissMatch: (jobId: string, candidateId: string) => void;
-  addMatchToPipeline: (jobId: string, candidateId: string, source?: string) => { success: boolean; error?: string; applicationId?: string };
+  addMatchToPipeline: (jobId: string, candidateId: string, associationOrigin?: string) => { success: boolean; error?: string; applicationId?: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -487,7 +487,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       createdAt: new Date().toISOString(),
     };
     persistCandidates([newCandidate, ...candidates]);
-    return { success: true };
+    return { success: true, candidateId: newCandidate.id };
   };
 
   const updateCandidate = (candidateId: string, updates: Partial<Candidate>) => {
@@ -613,24 +613,32 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return { success: true };
   };
 
-  const updateApplicationStage = (appId: string, stage: ApplicationStage) => {
-    const updated = applications.map(a => {
-      if (a.id === appId) {
-        return { ...a, currentStage: stage, lastActivity: new Date().toISOString() };
-      }
-      return a;
+  const updateApplicationStage = (appId: string, stage: ApplicationStage, rejectionReason?: string) => {
+    setApplications(prev => {
+      const updated = prev.map(a => {
+        if (a.id === appId) {
+          const updates: Partial<Application> = { currentStage: stage, lastActivity: new Date().toISOString() };
+          if (rejectionReason !== undefined) updates.rejectionReason = rejectionReason;
+          return { ...a, ...updates };
+        }
+        return a;
+      });
+      localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
     });
-    persistApplications(updated);
   };
 
   const updateApplicationScreening = (appId: string, screeningData: any) => {
-    const updated = applications.map(a => {
-      if (a.id === appId) {
-        return { ...a, screeningData: { ...a.screeningData, ...screeningData }, lastActivity: new Date().toISOString() };
-      }
-      return a;
+    setApplications(prev => {
+      const updated = prev.map(a => {
+        if (a.id === appId) {
+          return { ...a, screeningData: { ...a.screeningData, ...screeningData }, lastActivity: new Date().toISOString() };
+        }
+        return a;
+      });
+      localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
     });
-    persistApplications(updated);
   };
 
   const updateRequirementLifecycle = (reqId: string, status: RequirementLifecycleStatus, reason?: string) => {
@@ -972,7 +980,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistMatchRuns(updatedRuns);
   };
 
-  const addMatchToPipeline = (jobId: string, candidateId: string, source?: string) => {
+  const addMatchToPipeline = (jobId: string, candidateId: string, associationOrigin?: string) => {
     // Check if already applied
     const existingApp = applications.find(a => a.jobId === jobId && a.candidateId === candidateId);
     if (existingApp) {
@@ -981,6 +989,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const job = jobs.find(j => j.id === jobId);
     if (!job) return { success: false, error: 'Job not found.' };
+    
+    const candidate = candidates.find(c => c.id === candidateId);
 
     const run = matchRuns.find(r => r.jobId === jobId);
     const match = run?.matches.find(m => m.candidateId === candidateId);
@@ -992,7 +1002,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       requirementId: job.requirementId,
       currentStage: 'Sourced',
       appliedDate: new Date().toISOString(),
-      source: source || 'Internal Match',
+      source: candidate?.source || 'Internal Match',
+      associationOrigin,
       assignedRecruiterId: currentUser?.id || job.assignedRecruiterId,
       matchScore: match?.score,
       matchStrengths: match?.matchStrengths,

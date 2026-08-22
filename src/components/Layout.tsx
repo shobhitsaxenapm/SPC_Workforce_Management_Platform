@@ -249,7 +249,7 @@ export default function Layout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 ml-64 flex flex-col min-h-screen min-w-0">
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-xl font-semibold text-slate-800">
@@ -295,7 +295,7 @@ export default function Layout() {
 
         {/* Page Content */}
         <main className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>

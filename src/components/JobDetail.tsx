@@ -9,6 +9,7 @@ import JobMatchesTab from './JobMatchesTab';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
+import AddCandidateToJobModal from './AddCandidateToJobModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function JobDetail() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   
   if (!job) return <div>Job not found</div>;
@@ -360,7 +362,28 @@ export default function JobDetail() {
       {activeTab === 'Matches' && <JobMatchesTab job={job} />}
 
       {activeTab === 'Pipeline' && (
-        <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px]">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center px-2">
+            <h3 className="font-semibold text-slate-800">Pipeline Board</h3>
+            {['Closed', 'Filled', 'Cancelled', 'On Hold'].includes(job.status) ? (
+              <div className="group relative">
+                <button disabled className="px-4 py-2 bg-blue-100 text-blue-400 text-sm font-medium rounded-lg flex items-center gap-2 cursor-not-allowed">
+                  <UserPlus className="w-4 h-4" /> Add Candidate
+                </button>
+                <div className="absolute hidden group-hover:block bottom-full mb-2 right-0 w-64 p-2 bg-slate-800 text-white text-xs rounded shadow-xl z-10 text-center">
+                  Cannot add candidates to a job that is {job.status}.
+                </div>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowAddCandidateModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <UserPlus className="w-4 h-4" /> Add Candidate
+              </button>
+            )}
+          </div>
+          <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px] w-full">
           {canonicalStages.map(stage => {
             const appsInStage = groupedApps[stage] || [];
             if (stage === 'Other' && appsInStage.length === 0) return null;
@@ -439,6 +462,7 @@ export default function JobDetail() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -467,6 +491,14 @@ export default function JobDetail() {
         initialCandidateId={scheduleCandidateId || ''}
         initialJobId={job.id}
       />
+
+      {showAddCandidateModal && (
+        <AddCandidateToJobModal 
+          jobId={job.id} 
+          isOpen={showAddCandidateModal} 
+          onClose={() => setShowAddCandidateModal(false)} 
+        />
+      )}
     </div>
   );
 }
