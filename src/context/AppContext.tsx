@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementLifecycleStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun } from '../types';
+import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementLifecycleStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
@@ -15,6 +15,7 @@ interface AppContextType {
   offers: Offer[];
   onboardings: Onboarding[];
   matchRuns: JobMatchRun[];
+  informationRequests: InformationRequest[];
   quickViewRequirementId: string | null;
   setQuickViewRequirementId: (id: string | null) => void;
   quickViewClientId: string | null;
@@ -41,6 +42,11 @@ interface AppContextType {
   ) => { success: boolean; error?: string };
   updateApplicationStage: (appId: string, stage: ApplicationStage, rejectionReason?: string) => void;
   updateApplicationScreening: (appId: string, data: any) => void;
+  createInformationRequest: (reqData: Omit<InformationRequest, 'id' | 'status' | 'responses'>) => void;
+  recordInformationResponse: (reqId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => void;
+  updateInformationRequestStatus: (reqId: string, status: InformationRequest['status'], reason?: string) => void;
+  resolveInformationRequest: (reqId: string) => void;
+  cancelInformationRequest: (reqId: string, reason?: string) => void;
   createOffer: (offerData: Omit<Offer, 'id' | 'status'>) => string;
   updateOffer: (offerId: string, updates: Partial<Offer>) => void;
   submitOfferForApproval: (offerId: string) => void;
@@ -277,6 +283,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return runs;
   });
 
+  const [informationRequests, setInformationRequests] = useState<InformationRequest[]>(() => {
+    if (localStorage.getItem('spc_info_reqs') === null) {
+      localStorage.setItem('spc_info_reqs', JSON.stringify([]));
+    }
+    return safeParse<InformationRequest[]>('spc_info_reqs', []);
+  });
+
   // Sync session changes
   useEffect(() => {
     if (currentUser) {
@@ -339,6 +352,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const persistOffers = (newOffers: Offer[]) => {
     setOffers(newOffers);
     localStorage.setItem('spc_offers', JSON.stringify(newOffers));
+  };
+
+  const persistInformationRequests = (reqs: InformationRequest[]) => {
+    setInformationRequests(reqs);
+    localStorage.setItem('spc_info_reqs', JSON.stringify(reqs));
   };
 
   const persistOnboardings = (newOnboardings: Onboarding[]) => {
@@ -639,6 +657,53 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.setItem('spc_applications', JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const createInformationRequest = (reqData: Omit<InformationRequest, 'id' | 'status' | 'responses'>) => {
+    const newReq: InformationRequest = {
+      ...reqData,
+      id: 'req_info_' + Math.random().toString(36).substr(2, 9),
+      status: reqData.communicationStatus === 'Recorded manually' ? 'Awaiting Response' : 'Draft',
+      responses: []
+    };
+    persistInformationRequests([newReq, ...informationRequests]);
+  };
+
+  const recordInformationResponse = (reqId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => {
+    const newResponse: RequestResponse = {
+      ...response,
+      id: 'resp_' + Math.random().toString(36).substr(2, 9),
+      requestId: reqId
+    };
+    const updated = informationRequests.map(r => {
+      if (r.id === reqId) {
+        return { 
+          ...r, 
+          status: 'Response Received' as const, 
+          responses: [...(r.responses || []), newResponse]
+        };
+      }
+      return r;
+    });
+    persistInformationRequests(updated);
+  };
+
+  const updateInformationRequestStatus = (reqId: string, status: InformationRequest['status'], reason?: string) => {
+    const updated = informationRequests.map(r => {
+      if (r.id === reqId) {
+        return { ...r, status, cancellationReason: reason };
+      }
+      return r;
+    });
+    persistInformationRequests(updated);
+  };
+
+  const resolveInformationRequest = (reqId: string) => {
+    updateInformationRequestStatus(reqId, 'Resolved');
+  };
+
+  const cancelInformationRequest = (reqId: string, reason?: string) => {
+    updateInformationRequestStatus(reqId, 'Cancelled', reason);
   };
 
   const updateRequirementLifecycle = (reqId: string, status: RequirementLifecycleStatus, reason?: string) => {
@@ -1058,6 +1123,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         offers,
         onboardings,
         matchRuns,
+        informationRequests,
         quickViewRequirementId,
         setQuickViewRequirementId,
         quickViewClientId,
@@ -1081,6 +1147,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         submitApplication,
         updateApplicationStage,
         updateApplicationScreening,
+        createInformationRequest,
+        recordInformationResponse,
+        updateInformationRequestStatus,
+        resolveInformationRequest,
+        cancelInformationRequest,
         updateRequirementLifecycle,
         updateRequirement,
         submitInterviewFeedback,

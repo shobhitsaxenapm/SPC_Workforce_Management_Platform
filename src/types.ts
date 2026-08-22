@@ -209,7 +209,7 @@ export interface Candidate {
 }
 
 export interface ScreeningData {
-  status: 'Pending' | 'Passed' | 'Requested Info';
+  status: 'Pending' | 'Passed' | 'Requested Info' | 'Awaiting Candidate Information';
   candidateInterested?: boolean;
   availabilityConfirmed?: boolean;
   noticePeriodConfirmed?: boolean;
@@ -221,6 +221,34 @@ export interface ScreeningData {
   recruiterNotes?: string;
   updatedBy?: string;
   updatedAt?: string;
+}
+
+export interface RequestResponse {
+  id: string;
+  requestId: string;
+  receivedAt: string;
+  channel: string;
+  candidateResponse: Record<string, string>;
+  recruiterNote?: string;
+  supportingDocument?: string;
+}
+
+export interface InformationRequest {
+  id: string;
+  applicationId: string;
+  candidateId: string;
+  jobId: string;
+  questions: string[];
+  candidateMessage: string;
+  internalNote?: string;
+  communicationMethod: 'Email' | 'SMS' | 'Manual Follow-up';
+  communicationStatus: 'Sent' | 'Recorded manually' | 'External follow-up required';
+  requestedBy: string;
+  requestedAt: string;
+  dueDate: string;
+  status: 'Draft' | 'Awaiting Response' | 'Response Received' | 'Resolved' | 'Cancelled';
+  responses?: RequestResponse[];
+  cancellationReason?: string;
 }
 
 export interface Application {

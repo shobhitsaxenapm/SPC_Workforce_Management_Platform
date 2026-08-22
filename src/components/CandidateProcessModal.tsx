@@ -23,7 +23,7 @@ const STAGES = [
 const TERMINAL_STAGES = ['Rejected', 'Withdrawn', 'Offer Declined'];
 
 export default function CandidateProcessModal({ isOpen, onClose, applicationId, onAction, actionConfig }: CandidateProcessModalProps) {
-  const { applications, candidates, jobs, clients, matchRuns, interviews, offers, onboardings } = useApp();
+  const { applications, candidates, jobs, clients, matchRuns, interviews, offers, onboardings, informationRequests } = useApp();
 
   if (!isOpen) return null;
 
@@ -66,6 +66,34 @@ export default function CandidateProcessModal({ isOpen, onClose, applicationId, 
       note: `Status: ${app.screeningData.status}`
     });
   }
+
+  const appInfoRequests = informationRequests.filter(r => r.applicationId === applicationId);
+  appInfoRequests.forEach(r => {
+    if (r.requestedAt) {
+      activities.push({
+        date: r.requestedAt,
+        action: 'Information requested',
+        user: 'Recruiter',
+        note: `${r.questions.length} questions asked via ${r.communicationMethod}`
+      });
+    }
+    r.responses?.forEach(resp => {
+      activities.push({
+        date: resp.receivedAt,
+        action: 'Response received',
+        user: 'Candidate',
+        note: `Via ${resp.channel}`
+      });
+    });
+    if (r.status === 'Resolved' || r.status === 'Cancelled') {
+      activities.push({
+        date: r.responses?.[r.responses.length - 1]?.receivedAt || r.requestedAt,
+        action: `Request ${r.status.toLowerCase()}`,
+        user: 'Recruiter',
+        note: r.cancellationReason || ''
+      });
+    }
+  });
 
   appInterviews.forEach(i => {
     if (i.scheduledAt) {

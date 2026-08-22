@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, CheckCircle2, HelpCircle, AlertCircle, Clock, MapPin, Briefcase, GraduationCap, DollarSign, Target, FileText } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { X, CheckCircle2, HelpCircle, AlertCircle, Clock, MapPin, Briefcase, GraduationCap, DollarSign, Target, FileText, MessageSquare, Copy } from 'lucide-react';
+import { cn, formatDate } from '../lib/utils';
 import { ScreeningData } from '../types';
+import RequestInformationModal from './RequestInformationModal';
+import RecordResponseModal from './RecordResponseModal';
 
 interface CandidateScreeningModalProps {
   applicationId: string;
@@ -12,7 +14,7 @@ interface CandidateScreeningModalProps {
 }
 
 export default function CandidateScreeningModal({ applicationId, isOpen, onClose, onProceedToInterview }: CandidateScreeningModalProps) {
-  const { applications, candidates, jobs, clients, updateApplicationStage, updateApplicationScreening } = useApp();
+  const { applications, candidates, jobs, clients, updateApplicationStage, updateApplicationScreening, informationRequests, resolveInformationRequest, cancelInformationRequest, currentUser } = useApp();
   
   const application = applications.find(a => a.id === applicationId);
   const candidate = candidates.find(c => c.id === application?.candidateId);
@@ -25,6 +27,10 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [attemptedProceed, setAttemptedProceed] = useState(false);
+  const [showRequestInfoModal, setShowRequestInfoModal] = useState(false);
+  const [showRecordResponseModal, setShowRecordResponseModal] = useState(false);
+
+  const activeInfoRequest = informationRequests.find(r => r.applicationId === application?.id && (r.status === 'Draft' || r.status === 'Awaiting Response' || r.status === 'Response Received'));
 
   // Load existing screening data
   useEffect(() => {
@@ -83,14 +89,21 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
   };
 
   const handleRequestInfo = async () => {
-    setIsProcessing(true);
-    await new Promise(r => setTimeout(r, 600));
-    updateApplicationScreening(application.id, { ...formData, status: 'Requested Info' });
-    setIsProcessing(false);
-    onClose();
+    setShowRequestInfoModal(true);
+  };
+
+  const handleCopyRequestMessage = () => {
+    if (activeInfoRequest) {
+      navigator.clipboard.writeText(activeInfoRequest.candidateMessage);
+    }
   };
 
   const handleProceedToInterview = async () => {
+    if (activeInfoRequest) {
+      setAttemptedProceed(true);
+      return; // Validation error handled in UI
+    }
+
     const requiredFields: (keyof ScreeningData)[] = [
       'candidateInterested', 'availabilityConfirmed', 'noticePeriodConfirmed',
       'locationConfirmed', 'compensationConfirmed', 'minQualificationVerified',
@@ -242,75 +255,104 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
             )}
 
             <div>
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                Verification Checklist
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { id: 'candidateInterested', label: 'Candidate Interested' },
-                  { id: 'availabilityConfirmed', label: 'Availability Confirmed' },
-                  { id: 'noticePeriodConfirmed', label: 'Notice Period Confirmed' },
-                  { id: 'locationConfirmed', label: 'Location/Work-mode Compatible' },
-                  { id: 'compensationConfirmed', label: 'Compensation Expected Confirmed' },
-                  { id: 'minQualificationVerified', label: 'Minimum Qualification Verified' },
-                  { id: 'skillsReviewed', label: 'Required Skills Reviewed' },
-                ].map((item) => {
-                  const isChecked = !!formData[item.id as keyof ScreeningData];
-                  const hasError = attemptedProceed && !isChecked;
-                  return (
-                    <label key={item.id} className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors group",
-                      hasError ? "border-red-300 bg-red-50 hover:bg-red-100" : "border-slate-100 hover:bg-slate-50"
-                    )}>
-                      <input 
-                        type="checkbox" 
-                        className={cn(
-                          "mt-0.5 w-4 h-4 rounded focus:ring-blue-500 cursor-pointer",
-                          hasError ? "border-red-400 text-red-600" : "border-slate-300 text-blue-600"
-                        )}
-                        checked={isChecked}
-                        onChange={() => handleCheckboxChange(item.id as keyof ScreeningData)}
-                      />
-                      <span className={cn(
-                        "text-sm font-medium leading-snug",
-                        hasError ? "text-red-700" : "text-slate-700 group-hover:text-slate-900"
-                      )}>{item.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+              {activeInfoRequest ? (
+                <div className="bg-white border-2 border-amber-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-amber-50 px-4 py-3 border-b border-amber-200 flex justify-between items-center">
+                    <h3 className="font-semibold text-amber-800 flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
+                      Awaiting Candidate Information
+                    </h3>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
+                      {activeInfoRequest.status}
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Requested By</div>
+                        <div className="font-medium text-slate-800">{activeInfoRequest.requestedBy === currentUser?.id ? 'You' : activeInfoRequest.requestedBy}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Requested On</div>
+                        <div className="font-medium text-slate-800">{formatDate(activeInfoRequest.requestedAt)}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Communication</div>
+                        <div className="font-medium text-slate-800">{activeInfoRequest.communicationMethod} <span className="text-slate-400 font-normal">({activeInfoRequest.communicationStatus})</span></div>
+                      </div>
+                      <div>
+                         <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Due Date</div>
+                        <div className="font-medium text-red-600">{formatDate(activeInfoRequest.dueDate)}</div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">Requested Questions</div>
+                      <ul className="list-decimal pl-5 space-y-1 text-sm text-slate-700">
+                        {activeInfoRequest.questions.map((q, i) => (
+                          <li key={i}>{q}</li>
+                        ))}
+                      </ul>
+                    </div>
 
-            <div>
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                Screening Notes
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Communication / Basic Screening</label>
-                  <textarea 
-                    name="communicationNotes"
-                    value={formData.communicationNotes || ''}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    placeholder="Notes on communication skills, professionalism, etc."
-                  />
+                    {activeInfoRequest.internalNote && (
+                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-sm">
+                        <div className="text-yellow-800 font-semibold mb-1">Internal Note</div>
+                        <div className="text-yellow-700">{activeInfoRequest.internalNote}</div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
+                      <button onClick={handleCopyRequestMessage} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition-colors">
+                        <Copy className="w-4 h-4" /> Copy Message
+                      </button>
+                      <button onClick={() => setShowRecordResponseModal(true)} className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm">
+                        <MessageSquare className="w-4 h-4" /> Record Response
+                      </button>
+                      <button onClick={() => resolveInformationRequest(activeInfoRequest.id)} className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg flex items-center gap-1.5 transition-colors ml-auto">
+                        <CheckCircle2 className="w-4 h-4" /> Mark Resolved
+                      </button>
+                      <button onClick={() => {
+                        const reason = prompt("Optional reason for cancelling request:");
+                        if (reason !== null) cancelInformationRequest(activeInfoRequest.id, reason);
+                      }} className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors">
+                         Cancel Request
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Recruiter Internal Notes</label>
-                  <textarea 
-                    name="recruiterNotes"
-                    value={formData.recruiterNotes || ''}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    placeholder="Private notes, red flags, recommendations..."
-                  />
-                </div>
-              </div>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                    Verification Checklist
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { id: 'candidateInterested', label: 'Candidate Interested' },
+                      { id: 'availabilityConfirmed', label: 'Availability Confirmed' },
+                      { id: 'noticePeriodConfirmed', label: 'Notice Period Confirmed' },
+                      { id: 'locationConfirmed', label: 'Location/Work-mode Compatible' },
+                      { id: 'compensationConfirmed', label: 'Compensation Expected Confirmed' },
+                      { id: 'minQualificationVerified', label: 'Minimum Qualification Verified' },
+                      { id: 'skillsReviewed', label: 'Required Skills Reviewed' },
+                    ].map(field => (
+                      <label key={field.id} className={cn("flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all", formData[field.id as keyof ScreeningData] === true ? "bg-blue-50 border-blue-200" : attemptedProceed && !formData[field.id as keyof ScreeningData] ? "bg-red-50 border-red-200" : "bg-white border-slate-200 hover:bg-slate-50")}>
+                        <input type="checkbox" checked={formData[field.id as keyof ScreeningData] === true} onChange={() => handleCheckboxChange(field.id as keyof ScreeningData)} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                        <span className="text-sm font-medium text-slate-700">{field.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 mt-6">Screening Notes</label>
+                    <textarea name="communicationNotes" value={formData.communicationNotes || ''} onChange={handleChange} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Notes on communication skills, professionalism, etc." />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 mt-4">Recruiter Internal Notes</label>
+                    <textarea name="recruiterNotes" value={formData.recruiterNotes || ''} onChange={handleChange} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Private notes, red flags, recommendations..." />
+                  </div>
+                </>
+              )}
             </div>
 
             {rejectMode && (
@@ -366,7 +408,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
                   disabled={isProcessing || isProceeding}
                   className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-colors flex items-center gap-2"
                 >
-                  <HelpCircle className="w-4 h-4" /> Request Info
+                  <HelpCircle className="w-4 h-4" /> Request Information
                 </button>
                 <button 
                   onClick={handleSaveScreening}
@@ -393,7 +435,26 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
           </div>
         </div>
         
+        {/* Render Proceed Validation Warning below footer if attempted */}
+        {attemptedProceed && activeInfoRequest && (
+           <div className="absolute bottom-20 left-0 right-0 mx-auto w-fit bg-red-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-20 animate-fade-in">
+             <AlertCircle className="w-4 h-4" /> Resolve the outstanding candidate information request before proceeding to interview.
+           </div>
+        )}
       </div>
+
+      <RequestInformationModal 
+        isOpen={showRequestInfoModal} 
+        onClose={() => setShowRequestInfoModal(false)}
+        applicationId={application.id}
+      />
+      {activeInfoRequest && (
+        <RecordResponseModal 
+          isOpen={showRecordResponseModal}
+          onClose={() => setShowRecordResponseModal(false)}
+          request={activeInfoRequest}
+        />
+      )}
     </div>
   );
 }
