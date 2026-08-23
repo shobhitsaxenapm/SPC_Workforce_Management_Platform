@@ -3,9 +3,32 @@ export type RequirementLifecycleStatus = 'Draft' | 'Open' | 'On Hold' | 'Closed'
 export type RequirementFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
-export type ApplicationStage = 'Sourced' | 'Applied' | 'Under Review' | 'Screening' | 'Interview Round 1' | 'Interview Round 2' | 'Shortlisted' | 'Interview Scheduled' | 'Interview Completed' | 'Selected' | 'Offer Extended' | 'Offer Sent' | 'Offer Accepted' | 'Ready for Onboarding' | 'On Hold' | 'Rejected' | 'Withdrawn' | 'No Show' | 'Offer Declined' | 'Joined';
+export type ApplicationStage = 
+  | 'Sourced'
+  | 'Applied'
+  | 'Screening'
+  | 'Interviewing'
+  | 'Offered'
+  | 'Hired'
+  | 'Joined'
+  | 'Rejected'
+  | 'Withdrawn';
+
+export type ApplicationSubstate = 
+  | 'Added to Pipeline' | 'Ready for Screening'
+  | 'Application Received'
+  | 'Screening In Progress' | 'Awaiting Candidate Information' | 'Screening Completed'
+  | 'Round 1 To Schedule' | 'Round 1 Scheduled' | 'Round 1 Feedback Pending'
+  | 'Next Round To Schedule' | 'Round 2 Scheduled' | 'Round 2 Feedback Pending'
+  | 'Additional Round To Schedule' | 'Final Feedback Pending' | 'Interview Completed'
+  | 'On Hold'
+  | 'Offer Draft' | 'Offer Ready for Review' | 'Offer Sent' | 'Offer Accepted' 
+  | 'Offer Declined' | 'Offer Expired' | 'Offer Withdrawn'
+  | 'Ready for Onboarding' | 'Onboarding Started' | 'Joined'
+  | string;
+
 export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'No Show';
-export type OfferStatus = 'Draft' | 'Approval Pending' | 'Approved' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Rejected' | 'Withdrawn';
+export type OfferStatus = 'Offer Draft' | 'Offer Ready for Review' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn';
 export type OnboardingStatus = 'Documents Requested' | 'Documents Submitted' | 'Verification In Progress' | 'Changes Requested' | 'Approved' | 'Joining Scheduled' | 'Completed';
 export type DeploymentStatus = 'Scheduled' | 'Active' | 'Completed' | 'Terminated';
 export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';
@@ -257,6 +280,7 @@ export interface Application {
   jobId: string;
   requirementId: string;
   currentStage: ApplicationStage;
+  currentSubstate?: ApplicationSubstate;
   appliedDate: string;
   source: string;
   associationOrigin?: string;
@@ -299,10 +323,12 @@ export interface JobMatchRun {
 export interface Interview {
   id: string;
   applicationId: string;
-  candidateId: string;
   jobId: string;
+  candidateId: string;
   clientId: string;
-  interviewType: string;
+  roundName?: string;
+  interviewType?: string;
+  interviewerId?: string;
   scheduledAt: string;
   durationMinutes: number;
   interviewerName: string;

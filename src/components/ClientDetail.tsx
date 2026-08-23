@@ -1,11 +1,12 @@
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { mockUsers } from '../data/mockData';
-import { Building2, MapPin, Mail, Phone, Plus, Calendar, Briefcase, FileText } from 'lucide-react';
+import { Building2, MapPin, Mail, Phone, Plus, Calendar, Briefcase, FileText, Link2 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { useState } from 'react';
 import ClientRequirementFormModal from './ClientRequirementFormModal';
 import ClientFormModal from './ClientFormModal';
+import LinkRequirementModal from './LinkRequirementModal';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
 
 export default function ClientDetail() {
@@ -13,6 +14,7 @@ export default function ClientDetail() {
   const { clients, requirements, applications, currentUser, setQuickViewRequirementId } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   
   const canEdit = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER';
 
@@ -75,6 +77,13 @@ export default function ClientDetail() {
                 Edit Client
               </button>
             )}
+            <button 
+              onClick={() => setIsLinkModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              <Link2 className="w-4 h-4" />
+              Link Requirement
+            </button>
             <button 
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -202,7 +211,23 @@ export default function ClientDetail() {
               }) : (
                 <div className="p-8 text-center text-slate-500">
                   <FileText className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                  <p>No requirements found for this client.</p>
+                  <p className="mb-4">No linked requirements for this client.</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button 
+                      onClick={() => setIsLinkModalOpen(true)}
+                      className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Link Existing Requirement
+                    </button>
+                    <button 
+                      onClick={() => setIsModalOpen(true)}
+                      className="px-4 py-2 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create New
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -210,6 +235,7 @@ export default function ClientDetail() {
         </div>
       </div>
       <ClientRequirementFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultClientId={id} />
+      <LinkRequirementModal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} clientId={id} />
       {isEditModalOpen && (
         <ClientFormModal 
           mode="edit"

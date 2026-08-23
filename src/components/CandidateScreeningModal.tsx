@@ -74,7 +74,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
   const handleStartScreening = async () => {
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 600)); // Simulate API
-    updateApplicationStage(application.id, 'Screening');
+    updateApplicationStage(application.id, 'Screening', 'Screening In Progress');
     updateApplicationScreening(application.id, { ...formData, status: 'Pending' });
     setIsProcessing(false);
     onClose();
@@ -120,9 +120,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
     setIsProceeding(true);
     await new Promise(r => setTimeout(r, 600));
     updateApplicationScreening(application.id, { ...formData, status: 'Passed' });
-    if (application.currentStage === 'Applied' || application.currentStage === 'Sourced') {
-      updateApplicationStage(application.id, 'Screening');
-    }
+    updateApplicationStage(application.id, 'Interviewing', 'Round 1 To Schedule');
     setIsProceeding(false);
     if (onProceedToInterview) {
       onProceedToInterview();
@@ -137,7 +135,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
     }
     setIsProcessing(true);
     await new Promise(r => setTimeout(r, 600));
-    updateApplicationStage(application.id, 'Rejected', rejectionReason);
+    updateApplicationStage(application.id, 'Rejected', undefined, rejectionReason);
     updateApplicationScreening(application.id, { ...formData, status: 'Pending' });
     setIsProcessing(false);
     onClose();

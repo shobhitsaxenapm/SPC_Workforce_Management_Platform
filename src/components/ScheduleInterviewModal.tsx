@@ -25,6 +25,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   
   const [details, setDetails] = useState({
+    roundName: 'Round 1',
     interviewType: 'HR Screening',
     date: '',
     time: '',
@@ -170,6 +171,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         candidateId: selectedCandidateId,
         jobId: selectedJobId,
         clientId: selectedJob?.clientId || '',
+        roundName: details.roundName,
         interviewType: details.interviewType,
         scheduledAt,
         durationMinutes: details.durationMinutes,
@@ -362,8 +364,21 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
           {step === 2 && (
             <div className="space-y-5 animate-fade-in">
               <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Interview Round *</label>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Round Name</label>
+                    <select 
+                      value={details.roundName}
+                      onChange={e => setDetails(d => ({ ...d, roundName: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Round 1">Round 1</option>
+                      <option value="Round 2">Round 2</option>
+                      <option value="Round 3">Round 3</option>
+                      <option value="Final Round">Final Round</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Interview Type</label>
                   <select
                     value={details.interviewType}
                     onChange={(e) => setDetails({...details, interviewType: e.target.value})}

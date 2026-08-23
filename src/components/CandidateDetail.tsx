@@ -15,6 +15,7 @@ import OfferPreparationModal from './OfferPreparationModal';
 import ViewInterviewModal from './ViewInterviewModal';
 import AddJobToCandidateModal from './AddJobToCandidateModal';
 import CandidateProcessModal from './CandidateProcessModal';
+import RecordInterviewFeedbackModal from './RecordInterviewFeedbackModal';
 
 type TabType = 'Overview' | 'Matching Jobs' | 'Jobs & Hiring Progress' | 'Activity' | 'Documents';
 
@@ -45,6 +46,7 @@ export default function CandidateDetail() {
   const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<{jobId: string} | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState<{jobId: string} | null>(null);
   const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
+  const [showRecordFeedbackModal, setShowRecordFeedbackModal] = useState<string | null>(null); // interviewId
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
   // Filters for Matching Jobs
@@ -92,40 +94,39 @@ export default function CandidateDetail() {
     const hasInterview = interviews.some(i => i.applicationId === app.id);
 
     const baseSecondary = ['View Process', 'View Job'];
+    const substate = app.currentSubstate || '';
 
     switch (stage) {
       case 'Sourced':
-        return { primary: 'Begin Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
       case 'Applied':
         return { primary: 'Begin Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
       case 'Screening':
-        return { 
-          primary: app.screeningData?.status === 'Passed' ? 'Schedule Interview' : 'Continue Screening', 
-          secondary: baseSecondary, 
-          moreActions: ['Add Internal Note'] 
-        };
-      case 'Interview Scheduled':
-      case 'Interview Round 1':
-      case 'Interview Round 2':
-        return { primary: 'View Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
-      case 'Interview Completed':
-        return { primary: 'Confirm Selection', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
-      case 'Selected':
-        const existingOffer = offers.find(o => o.applicationId === app.id);
-        const hasDraft = existingOffer && (existingOffer.status === 'Draft' || existingOffer.status === 'Approval Pending');
-        return { primary: hasDraft ? 'Continue Offer' : 'Prepare Offer', secondary: baseSecondary, moreActions: [] };
-      case 'Offer Sent':
-      case 'Offer Extended':
-        return { primary: 'Record Response', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
-      case 'Offer Accepted':
-        return { primary: 'Start Onboarding Handover', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
-      case 'Ready for Onboarding':
-        return { primary: 'Open Handover', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+        return { primary: 'Complete Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+      case 'Interviewing':
+        if (substate.includes('Scheduled')) {
+          return { primary: 'View Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+        }
+        if (substate.includes('Feedback Pending')) {
+          return { primary: 'Record Feedback', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+        }
+        if (substate.includes('To Schedule')) {
+          return { primary: substate.includes('Next Round') ? 'Schedule Next Round' : 'Schedule Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+        }
+        if (substate === 'Interview Completed') {
+          return { primary: 'Prepare Offer', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
+        }
+        return { primary: 'View Process', secondary: baseSecondary, moreActions: [] };
+      case 'Offered':
+        if (substate === 'Offer Draft') return { primary: 'Review Offer', secondary: baseSecondary, moreActions: [] };
+        if (substate === 'Offer Ready for Review') return { primary: 'Review and Send Offer', secondary: baseSecondary, moreActions: [] };
+        if (substate === 'Offer Sent') return { primary: 'Record Response', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+        if (substate === 'Offer Accepted') return { primary: 'Start Onboarding', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+        return { primary: 'View Process', secondary: baseSecondary, moreActions: [] };
+      case 'Hired':
       case 'Joined':
-        return { primary: 'View Handover', secondary: baseSecondary, moreActions: [] };
+        return { primary: 'Open Onboarding', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
       case 'Rejected':
       case 'Withdrawn':
-      case 'Offer Declined':
         return { primary: 'View History', secondary: baseSecondary, moreActions: [] };
       default:
         return { primary: null, secondary: baseSecondary, moreActions: [] };
@@ -140,6 +141,7 @@ export default function CandidateDetail() {
         setShowScreeningModal(app.id);
         break;
       case 'Schedule Interview':
+      case 'Schedule Next Round':
         setShowScheduleInterviewModal({ jobId });
         break;
       case 'Confirm Selection':
@@ -177,6 +179,10 @@ export default function CandidateDetail() {
         break;
       case 'View Interview':
         setShowViewInterviewModal({ jobId: app.jobId, candidateId: app.candidateId });
+        break;
+      case 'Record Feedback':
+        const appInterview = interviews.find(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed'));
+        if (appInterview) setShowRecordFeedbackModal(appInterview.id);
         break;
       default:
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
@@ -759,9 +765,9 @@ export default function CandidateDetail() {
 
       {showAddJobModal && (
         <AddJobToCandidateModal
-          isOpen={true}
+          isOpen={showAddJobModal}
           onClose={() => setShowAddJobModal(false)}
-          candidateId={candidate.id}
+          candidateId={id!}
         />
       )}
 
@@ -895,6 +901,14 @@ export default function CandidateDetail() {
              </div>
           </div>
         </div>
+      )}
+      {showRecordFeedbackModal && (
+        <RecordInterviewFeedbackModal
+          isOpen={!!showRecordFeedbackModal}
+          onClose={() => setShowRecordFeedbackModal(null)}
+          interview={interviews.find(i => i.id === showRecordFeedbackModal)!}
+          candidateName={candidate.fullName}
+        />
       )}
     </div>
   );

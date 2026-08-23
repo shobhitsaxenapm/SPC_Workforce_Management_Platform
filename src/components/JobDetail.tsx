@@ -37,35 +37,23 @@ export default function JobDetail() {
   const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Applied', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Joined', 'Rejected', 'Other'] as const;
-  
-  const normalizeStage = (stage: string) => {
-    const s = stage.toLowerCase();
-    if (s.includes('sourced')) return 'Sourced';
-    if (s.includes('applied') || s === 'under review') return 'Applied';
-    if (s.includes('screen') || s.includes('hold')) return 'Screening';
-    if (s.includes('interview') || s.includes('shortlisted')) return 'Interviewing';
-    if (s.includes('select')) return 'Selected';
-    if (s.includes('offer') || s.includes('ready for onboarding')) return 'Offered';
-    if (s.includes('join')) return 'Joined';
-    if (s.includes('reject') || s.includes('decline') || s.includes('withdrawn') || s.includes('no show')) return 'Rejected';
-    return 'Other';
-  };
+  const canonicalStages = ['Sourced', 'Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
   
   let groupedCount = 0;
   jobApplications.forEach(app => {
-    const canonical = normalizeStage(app.currentStage);
+    const canonical = app.currentStage as string;
     if (groupedApps[canonical]) {
         groupedApps[canonical].push(app);
     } else {
-        groupedApps['Other'] = groupedApps['Other'] || [];
-        groupedApps['Other'].push(app);
+        // Fallback for any invalid stages
+        groupedApps['Withdrawn'] = groupedApps['Withdrawn'] || [];
+        groupedApps['Withdrawn'].push(app);
     }
     groupedCount++;
-    if (canonical === 'Other' && process.env.NODE_ENV === 'development') {
+    if (!groupedApps[canonical] && process.env.NODE_ENV === 'development') {
         console.log(`Unmapped stage: ${app.currentStage} for app ${app.id}`);
     }
   });
@@ -75,7 +63,7 @@ export default function JobDetail() {
   }
 
   const pipelineStages: ApplicationStage[] = [
-    'Sourced', 'Applied', 'Under Review', 'Screening', 'Interview Round 1', 'Interview Round 2', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer Extended', 'Offer Sent', 'Offer Accepted', 'Ready for Onboarding', 'On Hold', 'Rejected', 'Withdrawn', 'No Show', 'Offer Declined', 'Joined'
+    'Sourced', 'Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'
   ];
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
@@ -417,6 +405,10 @@ export default function JobDetail() {
                         </div>
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
                         <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
+                        
+                        <div className="mb-3">
+                          <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate || app.currentStage}</span>
+                        </div>
                         
                         {(() => {
                            const existingOffer = offers.find(o => o.applicationId === app.id);

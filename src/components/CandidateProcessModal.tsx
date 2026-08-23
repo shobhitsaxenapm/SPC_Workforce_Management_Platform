@@ -17,10 +17,10 @@ interface CandidateProcessModalProps {
 }
 
 const STAGES = [
-  'Sourced', 'Screening', 'Interview Scheduled', 'Interviewing', 
-  'Offered', 'Offer Accepted', 'Ready for Onboarding'
+  'Sourced', 'Applied', 'Screening', 'Interviewing', 
+  'Offered', 'Hired', 'Joined'
 ];
-const TERMINAL_STAGES = ['Rejected', 'Withdrawn', 'Offer Declined'];
+const TERMINAL_STAGES = ['Rejected', 'Withdrawn'];
 
 export default function CandidateProcessModal({ isOpen, onClose, applicationId, onAction, actionConfig }: CandidateProcessModalProps) {
   const { applications, candidates, jobs, clients, matchRuns, interviews, offers, onboardings, informationRequests } = useApp();
@@ -149,11 +149,7 @@ export default function CandidateProcessModal({ isOpen, onClose, applicationId, 
   // Determine which stages to highlight
   let currentStageIndex = STAGES.indexOf(currentStage);
   if (currentStageIndex === -1 && !isTerminal) {
-    if (['Applied', 'Under Review'].includes(currentStage)) currentStageIndex = 0;
-    else if (['Shortlisted', 'Selected'].includes(currentStage) || currentStage.includes('Interview')) currentStageIndex = 3;
-    else if (['Offer Extended', 'Offer Sent'].includes(currentStage)) currentStageIndex = 4;
-    else if (['Joined'].includes(currentStage)) currentStageIndex = 6;
-    else currentStageIndex = 0;
+    currentStageIndex = 0;
   }
 
   const handlePrimaryAction = () => {
@@ -180,7 +176,7 @@ export default function CandidateProcessModal({ isOpen, onClose, applicationId, 
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <span className="px-3 py-1 bg-blue-50 text-blue-700 font-medium rounded text-sm border border-blue-200">
-              {currentStage}
+              {app.currentSubstate || currentStage}
             </span>
             <span className="text-sm text-slate-600 font-medium">{job.title}</span>
             <span className="text-slate-400 text-sm">•</span>

@@ -40,7 +40,7 @@ interface AppContextType {
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
     jobId: string
   ) => { success: boolean; error?: string };
-  updateApplicationStage: (appId: string, stage: ApplicationStage, rejectionReason?: string) => void;
+  updateApplicationStage: (appId: string, stage: ApplicationStage, substate?: ApplicationSubstate, rejectionReason?: string) => void;
   updateApplicationScreening: (appId: string, data: any) => void;
   createInformationRequest: (reqData: Omit<InformationRequest, 'id' | 'status' | 'responses'>) => void;
   recordInformationResponse: (reqId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => void;
@@ -631,11 +631,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return { success: true };
   };
 
-  const updateApplicationStage = (appId: string, stage: ApplicationStage, rejectionReason?: string) => {
+  const updateApplicationStage = (appId: string, stage: ApplicationStage, substate?: ApplicationSubstate, rejectionReason?: string) => {
     setApplications(prev => {
       const updated = prev.map(a => {
         if (a.id === appId) {
           const updates: Partial<Application> = { currentStage: stage, lastActivity: new Date().toISOString() };
+          if (substate !== undefined) updates.currentSubstate = substate;
           if (rejectionReason !== undefined) updates.rejectionReason = rejectionReason;
           return { ...a, ...updates };
         }
@@ -841,9 +842,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     persistInterviews([...interviews, newInterview]);
     
-    // Automatically update the application stage to "Interview Scheduled"
+    // Automatically update the application stage to the correct Interviewing substate
     if (newInterview.applicationId) {
-      updateApplicationStage(newInterview.applicationId, 'Interview Scheduled');
+      const substate = newInterview.roundName ? `${newInterview.roundName} Scheduled` : 'Round 1 Scheduled';
+      updateApplicationStage(newInterview.applicationId, 'Interviewing', substate);
     }
 
     return { success: true };
@@ -886,6 +888,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       deliveryStatus: 'Not Sent'
     };
     persistOffers([newOffer, ...offers]);
+    updateApplicationStage(offerData.applicationId, 'Offered', 'Offer Draft');
     return newOffer.id;
   };
 
@@ -899,10 +902,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const approveOffer = (offerId: string) => {
     updateOfferStatus(offerId, 'Approved', { approvedBy: currentUser?.name || 'Admin' });
+    const offer = offers.find(o => o.id === offerId);
+    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Ready for Review');
   };
 
   const issueOffer = (offerId: string) => {
     updateOfferStatus(offerId, 'Sent', { sentDate: new Date().toISOString(), deliveryStatus: 'Sent' });
+    const offer = offers.find(o => o.id === offerId);
+    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Sent');
   };
 
   const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => {
@@ -916,6 +923,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const metadata: Partial<Offer> = {};
     if (reason) metadata.notes = reason;
     updateOfferStatus(offerId, statusMap[response], metadata);
+    
+    const offer = offers.find(o => o.id === offerId);
+    if (offer) {
+      if (response === 'Accepted') {
+        updateApplicationStage(offer.applicationId, 'Offered', 'Offer Accepted');
+      } else if (response === 'Declined' || response === 'Expired' || response === 'Withdrawn') {
+        updateApplicationStage(offer.applicationId, 'Rejected', undefined, reason || `Offer ${response}`);
+      }
+    }
   };
 
   const extendOfferExpiry = (offerId: string, newExpiryDate: string) => {
@@ -1080,35 +1096,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return { success: true, applicationId: newApp.id };
   };
 
-  const deriveApplicationStage = (app: Application): ApplicationStage => {
-    if (onboardings.some(o => o.applicationId === app.id)) return 'Ready for Onboarding';
-    
-    const offer = offers.find(o => o.applicationId === app.id);
-    if (offer) {
-      if (offer.status === 'Accepted') return 'Offer Accepted';
-      if (offer.status === 'Declined') return 'Offer Declined';
-      if (offer.status === 'Withdrawn') return 'Withdrawn';
-      if (offer.status === 'Sent' || offer.status === 'Viewed' || offer.status === 'Expired') return 'Offer Sent';
-    }
-    
-    if (app.currentStage === 'Selected') return 'Selected';
 
-    const interview = interviews.find(i => i.applicationId === app.id);
-    if (interview) {
-      if (interview.status === 'Scheduled') return 'Interview Scheduled';
-      return 'Interview Round 1';
-    }
-    
-    const preInterviewStages: ApplicationStage[] = ['Sourced', 'Applied', 'Screening', 'Rejected', 'Withdrawn'];
-    if (preInterviewStages.includes(app.currentStage)) return app.currentStage;
-    
-    return 'Applied';
-  };
-
-  const derivedApplications = applications.map(app => ({
-    ...app,
-    currentStage: deriveApplicationStage(app)
-  }));
 
   return (
     <AppContext.Provider
@@ -1116,7 +1104,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         currentUser,
         jobs,
         candidates,
-        applications: derivedApplications,
+        applications,
         requirements,
         clients,
         interviews,

@@ -327,7 +327,7 @@ export default function RequirementDetail() {
   });
 
   // Kanban Pipeline Stages
-  const pipelineStages: ApplicationStage[] = ['Sourced', 'Applied', 'Screening', 'Interview Round 1', 'Interview Round 2', 'Selected', 'Offer Extended', 'Joined', 'Rejected'];
+  const pipelineStages: ApplicationStage[] = ['Sourced', 'Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
 
   return (
     <div className="space-y-6">
@@ -456,7 +456,7 @@ export default function RequirementDetail() {
 
       {/* Tabs Menu */}
       <div className="border-b border-slate-200 flex gap-6 overflow-x-auto">
-        {(['overview', 'candidates', 'pipeline', 'jobs', 'activity'] as const).map(tab => (
+        {(['overview', 'jobs', 'candidates', 'pipeline', 'activity'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -747,6 +747,9 @@ export default function RequirementDetail() {
                         </button>
                         <p className="text-xs text-slate-500 mb-1">{job?.title}</p>
                         <p className="text-xs text-slate-400 mb-3">{candidate.currentRole} • {candidate.totalExperience}</p>
+                        <div className="mb-2">
+                          <span className="text-[10px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate || app.currentStage}</span>
+                        </div>
                         
                         <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
                           <span className="text-xs text-slate-400">Score: {app.matchScore}%</span>
