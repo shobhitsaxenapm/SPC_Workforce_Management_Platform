@@ -27,7 +27,7 @@ export default function Dashboard() {
   const calculateFilled = (reqId: string) =>
     applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
 
-  const totalOpen = requirements.reduce((acc, r) => acc + Math.max(r.positionsRequired - calculateFilled(r.id), 0), 0);
+  const totalOpen = requirements.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
   const totalFilled = requirements.reduce((acc, r) => acc + calculateFilled(r.id), 0);
   const fulfillmentPct = totalOpen + totalFilled > 0 ? Math.round((totalFilled / (totalOpen + totalFilled)) * 100) : 0;
 
@@ -215,7 +215,7 @@ export default function Dashboard() {
               {topReqs.map(req => {
                 const client = clients.find(c => c.id === req.clientId);
                 const filled = calculateFilled(req.id);
-                const progress = (filled / req.positionsRequired) * 100;
+                const progress = (filled / req.totalRequestedHeadcount) * 100;
                 const daysLeft = daysUntilTarget(req.targetJoiningDate);
                 const isContractType = req.employmentType === 'Contract' || req.employmentType === 'Contractual';
 
@@ -224,7 +224,7 @@ export default function Dashboard() {
                     <div className="flex items-start justify-between mb-2.5">
                       <div className="flex items-center gap-2">
                         <button onClick={() => setQuickViewRequirementId(req.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
-                          {req.roleTitle} — {client?.name}
+                          {req.title} — {client?.name}
                         </button>
                         <span className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
@@ -258,7 +258,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <span className="text-xs font-medium text-gray-500 shrink-0 w-16 text-right">
-                        {filled}/{req.positionsRequired} filled
+                        {filled}/{req.totalRequestedHeadcount} filled
                       </span>
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500">{candidate!.email}</p>
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-600">{client?.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-600">{req!.roleTitle}</td>
+                  <td className="px-5 py-3 text-sm text-gray-600">{req!.title}</td>
                   <td className="px-5 py-3 text-sm text-gray-500">{formatDate(req!.targetJoiningDate)}</td>
                   <td className="px-5 py-3">
                     <span className={cn(

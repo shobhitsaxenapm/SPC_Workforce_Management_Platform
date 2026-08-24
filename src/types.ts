@@ -1,5 +1,5 @@
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
-export type RequirementLifecycleStatus = 'Draft' | 'Open' | 'On Hold' | 'Closed' | 'Cancelled';
+export type RequirementLifecycleStatus = 'Draft' | 'Open' | 'Fully Allocated' | 'Partially Fulfilled' | 'Fulfilled' | 'On Hold' | 'Closed' | 'Cancelled';
 export type RequirementFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
@@ -64,13 +64,10 @@ export interface ClientRequirement {
   code: string;
   clientId: string;
   title: string;
-  roleTitle: string;
   projectName: string;
   locations: string[];
-  positionsRequired: number;
+  totalRequestedHeadcount: number;
   positionsFilled: number;
-  employmentType: string;
-  contractDuration: string;
   targetJoiningDate: string;
   priority: Priority;
   assignedRecruiterId: string;
@@ -115,11 +112,8 @@ export interface ExtractedRequirementData {
   clientName?: string;
   businessUnit?: string;
   projectName?: string;
-  roleTitle?: string;
-  positionsRequired?: number;
+  totalRequestedHeadcount?: number;
   locations?: string[];
-  employmentType?: string;
-  contractDuration?: string;
   targetJoiningDate?: string;
   priority?: string;
   requiredSkills?: string[];

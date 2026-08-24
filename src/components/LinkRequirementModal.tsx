@@ -21,7 +21,7 @@ export default function LinkRequirementModal({ isOpen, onClose, clientId }: Link
   const filteredRequirements = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return availableRequirements.filter(r => 
-      r.roleTitle.toLowerCase().includes(q) || 
+      r.title.toLowerCase().includes(q) || 
       r.code.toLowerCase().includes(q) ||
       (clients.find(c => c.id === r.clientId)?.name || '').toLowerCase().includes(q)
     );
@@ -78,7 +78,7 @@ export default function LinkRequirementModal({ isOpen, onClose, clientId }: Link
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{req.code}</span>
-                        <h4 className="font-semibold text-slate-800">{req.roleTitle}</h4>
+                        <h4 className="font-semibold text-slate-800">{req.title}</h4>
                       </div>
                       <div className="text-sm text-slate-500 flex items-center gap-1.5">
                         <Briefcase className="w-3.5 h-3.5" />

@@ -7,13 +7,13 @@ describe('Smart Requirement Data Validation', () => {
       clientName: 'TechCorp',
       businessUnit: 'Engineering',
       roleTitle: 'Frontend Developer',
-      positionsRequired: 3,
+      totalRequestedHeadcount: 3,
       locations: ['Remote', 'New York'],
       employmentType: 'Full-time'
     };
 
     expect(data.clientName).toBe('TechCorp');
-    expect(data.positionsRequired).toBe(3);
+    expect(data.totalRequestedHeadcount).toBe(3);
     expect(data.locations).toContain('Remote');
     expect(data.employmentType).toBe('Full-time');
   });

@@ -22,7 +22,8 @@ import {
   Filter,
   Trash2,
   MoreVertical,
-  Ban
+  Ban,
+  AlertTriangle
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { JobVisibility, ApplicationStage, Priority, RequirementLifecycleStatus } from '../types';
@@ -32,6 +33,7 @@ import FilterPanel, { FilterField } from './FilterPanel';
 import ClientRequirementFormModal from './ClientRequirementFormModal';
 import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
+import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function RequirementDetail() {
@@ -84,11 +86,13 @@ export default function RequirementDetail() {
     setSourceMetadata(null);
   };
 
+  const totalRequested = req?.totalRequestedHeadcount || 0;
+  
   // Job Form State
   const [jobFormData, setJobFormData] = useState({
-    title: req?.roleTitle || '',
+    title: req?.title || '',
     location: req?.locations[0] || 'Delhi',
-    openings: req ? Math.max(req.positionsRequired - req.positionsFilled, 1) : 1,
+    openings: req ? Math.max(getUnallocatedPositions(req.id, totalRequested, jobs), 1) : 1,
     experienceRange: '',
     requiredSkills: '',
     preferredSkills: '',
@@ -100,9 +104,8 @@ export default function RequirementDetail() {
   // Edit Requirement Form State
   const [editFormData, setEditFormData] = useState({
     title: req?.title || '',
-    roleTitle: req?.roleTitle || '',
     projectName: req?.projectName || '',
-    positionsRequired: req?.positionsRequired || 1,
+    totalRequestedHeadcount: req?.totalRequestedHeadcount || 1,
     employmentType: req?.employmentType || 'Full-time',
     contractDuration: req?.contractDuration || '',
     targetJoiningDate: req?.targetJoiningDate || '',
@@ -133,9 +136,13 @@ export default function RequirementDetail() {
 
   // Fulfilment Calculation: Joined is filled, others are not
   const filledCount = reqApps.filter(a => a.currentStage === 'Joined').length;
-  const remainingCount = Math.max(req.positionsRequired - filledCount, 0);
-  const progress = (filledCount / req.positionsRequired) * 100;
+  const remainingCount = Math.max(totalRequested - filledCount, 0);
+  const progress = (filledCount / totalRequested) * 100;
   const isReadonly = req.lifecycleStatus === 'Closed' || req.lifecycleStatus === 'Cancelled';
+  
+  const availableToAllocate = getUnallocatedPositions(req.id, totalRequested, jobs);
+  const alreadyAllocated = getAllocatedOpenings(req.id, jobs);
+  const [jobValidationError, setJobValidationError] = useState<string | null>(null);
 
   // Overview Counts
   const sourcedCount = reqApps.filter(a => a.currentStage === 'Sourced').length;
@@ -177,7 +184,13 @@ export default function RequirementDetail() {
 
   const handleCreateJobSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setJobValidationError(null);
     if (!jobFormData.title || !jobFormData.location || jobFormData.openings < 1 || !jobFormData.requiredSkills || !jobFormData.summary) return;
+
+    if (jobFormData.openings > availableToAllocate) {
+      setJobValidationError(`Only ${availableToAllocate} positions remain available under this Client Requirement. Reduce this Job's openings or update the Requirement headcount.`);
+      return;
+    }
 
     createJob({
       clientId: req.clientId,
@@ -185,7 +198,6 @@ export default function RequirementDetail() {
       projectName: req.projectName,
       location: jobFormData.location,
       openings: jobFormData.openings,
-      employmentType: req.employmentType,
       experienceRange: jobFormData.experienceRange || '0-2 Years',
       requiredSkills: jobFormData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
       preferredSkills: [],
@@ -205,7 +217,7 @@ export default function RequirementDetail() {
       setIsCreateJobOpen(false);
       setCreationMode(null);
       setJobFormData({
-        title: req.roleTitle, location: req.locations[0], openings: Math.max(req.positionsRequired - filledCount, 1),
+        title: req.title, location: req.locations[0], openings: Math.max(availableToAllocate - jobFormData.openings, 1),
         experienceRange: '', requiredSkills: '', preferredSkills: '', summary: '', applicationDeadline: '', visibility: 'Public'
       });
     }, 1500);
@@ -265,7 +277,7 @@ export default function RequirementDetail() {
 
   // Derived Activity Timeline
   const rawTimeline: { id: string; type: string; details: string; date: string; candidate?: string; job?: string }[] = [
-    { id: 'act_1', type: 'Requirement Created', details: `Client Requirement for ${req.roleTitle} was successfully created.`, date: req.createdAt }
+    { id: 'act_1', type: 'Requirement Created', details: `Client Requirement for ${req.title} was successfully created.`, date: req.createdAt }
   ];
 
   if (req.revisions) {
@@ -406,9 +418,9 @@ export default function RequirementDetail() {
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-150 px-2 py-0.5 rounded uppercase tracking-wider mb-2 inline-block">Business Profile</span>
+            <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-150 px-2 py-0.5 rounded uppercase tracking-wider mb-2 inline-block">Client Requirement</span>
             <h1 className="text-2xl font-bold text-slate-800">{req.title}</h1>
-            <p className="text-slate-500 mt-1">{req.roleTitle} • {req.projectName}</p>
+            <p className="text-slate-500 mt-1">{client?.name} • {req.projectName}</p>
           </div>
           <span className={cn(
             "px-3 py-1 rounded-full text-sm font-medium border",
@@ -423,6 +435,10 @@ export default function RequirementDetail() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-slate-100">
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-1">Total Requested Headcount</p>
+            <p className="text-slate-800 font-bold text-lg">{req.totalRequestedHeadcount}</p>
+          </div>
           <div>
             <p className="text-xs font-medium text-slate-500 mb-1">Target Joining Date</p>
             <div className="flex items-center gap-2 text-slate-800 font-medium">
@@ -444,12 +460,8 @@ export default function RequirementDetail() {
             </span>
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">Employment Type</p>
-            <p className="text-slate-800 font-medium">{req.employmentType}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">Contract Duration</p>
-            <p className="text-slate-800 font-medium">{req.contractDuration || 'N/A'}</p>
+            <p className="text-xs font-medium text-slate-500 mb-1">Locations</p>
+            <p className="text-slate-800 font-medium">{req.locations.join(', ') || 'N/A'}</p>
           </div>
         </div>
       </div>
@@ -525,23 +537,47 @@ export default function RequirementDetail() {
           {/* Right Sidebar Details */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-4">Fulfilment Progress</h3>
-              <div className="flex justify-between items-end mb-2">
-                <div className="text-3xl font-bold text-slate-800">{filledCount}</div>
-                <div className="text-sm font-medium text-slate-500 mb-1">of {req.positionsRequired} Joined</div>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3 overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-2.5 rounded-full transition-all duration-500",
-                    progress === 100 ? "bg-green-500" : progress > 50 ? "bg-blue-500" : "bg-amber-500"
-                  )}
-                  style={{ width: `${Math.max(progress, 2)}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-slate-600 text-center">{remainingCount} positions remaining</p>
+              <h3 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Headcount Summary</h3>
               
-              <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 text-center text-xs">
+              <div className="mb-6">
+                <div className="flex justify-between items-end mb-2">
+                  <div className="text-sm font-medium text-slate-700">Allocation Progress</div>
+                  <div className="text-xs font-medium text-slate-500">
+                    <span className="text-blue-600 font-bold">{alreadyAllocated}</span> of {totalRequested} Assigned to Jobs
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2 mb-2 overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-2 rounded-full transition-all duration-500",
+                      alreadyAllocated >= totalRequested ? "bg-green-500" : "bg-blue-500"
+                    )}
+                    style={{ width: `${Math.min((alreadyAllocated / Math.max(totalRequested, 1)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 text-right">{availableToAllocate} remaining to allocate</p>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <div className="text-sm font-medium text-slate-700">Fulfilment Progress</div>
+                  <div className="text-xs font-medium text-slate-500">
+                    <span className="text-green-600 font-bold">{filledCount}</span> of {totalRequested} Hired / Joined
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2 mb-2 overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-2 rounded-full transition-all duration-500",
+                      progress === 100 ? "bg-green-500" : progress > 50 ? "bg-emerald-400" : "bg-amber-400"
+                    )}
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 text-right">{remainingCount} remaining to fulfil</p>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100 text-center text-xs">
                 <div>
                   <div className="text-slate-500">Selected</div>
                   <div className="font-semibold text-slate-800 mt-1">{selectedCount}</div>
@@ -990,10 +1026,27 @@ export default function RequirementDetail() {
                 </div>
               ) : (
                 <form id="createJobForm" onSubmit={handleCreateJobSubmit} className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-1 mb-2">
+                  {jobValidationError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2 mb-4">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      {jobValidationError}
+                    </div>
+                  )}
+                  
+                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2 mb-2">
                     <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Requirement</span>
-                    <p className="text-sm text-slate-700 font-medium">{client?.name} • {req.projectName}</p>
-                    <p className="text-xs text-slate-600">Target Date: {formatDate(req.targetJoiningDate)}</p>
+                    <p className="text-sm text-slate-700 font-medium">{client?.name} • {req.title}</p>
+                    <div className="flex gap-6 mt-1">
+                      <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
+                      <div className="text-xs text-slate-600">Already Allocated: <span className="font-semibold">{alreadyAllocated}</span></div>
+                      <div className="text-xs text-slate-600">Available to Allocate: <span className="font-semibold text-blue-700">{availableToAllocate}</span></div>
+                    </div>
+                    
+                    {availableToAllocate === 0 && (
+                      <div className="mt-2 text-xs text-red-600 font-medium bg-white p-2 rounded border border-red-100">
+                        All requested headcount has already been allocated to Jobs. Increase the Requirement headcount or adjust an existing Job before creating another Job.
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -1012,7 +1065,8 @@ export default function RequirementDetail() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Number of Openings *</label>
-                        <input type="number" min="1" required value={jobFormData.openings} onChange={e => setJobFormData({...jobFormData, openings: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        <input type="number" min="1" required disabled={availableToAllocate === 0} value={jobFormData.openings} onChange={e => setJobFormData({...jobFormData, openings: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" />
+                        <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Client Requirement.</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Experience Range</label>
@@ -1065,7 +1119,8 @@ export default function RequirementDetail() {
                 <button 
                   type="submit"
                   form="createJobForm"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={availableToAllocate === 0}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
                 >
                   Publish Job
                 </button>

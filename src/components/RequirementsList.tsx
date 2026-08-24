@@ -50,7 +50,7 @@ export default function RequirementsList() {
     const client = clients.find(c => c.id === req.clientId);
     const matchSearch = !searchTerm || 
       req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.roleTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client?.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchClient = !filters.clientId || req.clientId === filters.clientId;
@@ -142,8 +142,8 @@ export default function RequirementsList() {
                 const client = clients.find(c => c.id === req.clientId);
                 const recruiter = mockUsers.find(u => u.id === req.assignedRecruiterId);
                 const filled = calculateFilled(req.id);
-                const progress = (filled / req.positionsRequired) * 100;
-                const fulfilmentStatus = getFulfilmentStatus(filled, req.positionsRequired);
+                const progress = (filled / req.totalRequestedHeadcount) * 100;
+                const fulfilmentStatus = getFulfilmentStatus(filled, req.totalRequestedHeadcount);
                 const isMenuOpen = openActionMenuId === req.id;
                 const isReadonly = req.lifecycleStatus === 'Closed' || req.lifecycleStatus === 'Cancelled';
                 
@@ -162,14 +162,9 @@ export default function RequirementsList() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1.5 w-full pr-4">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-medium text-gray-700">{filled} / {req.positionsRequired} Filled</span>
-                          <span className={cn(
-                            "font-medium",
-                            fulfilmentStatus === 'Fulfilled' ? "text-green-600" :
-                            fulfilmentStatus === 'Partially Filled' ? "text-amber-600" :
-                            "text-gray-500"
-                          )}>{fulfilmentStatus}</span>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-gray-700">{filled} / {req.totalRequestedHeadcount} Filled</span>
+                          <span className="text-gray-500 font-medium">{Math.round(progress)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                           <div 

@@ -81,7 +81,7 @@ export default function ClientsList() {
           const activeReqsCount = clientReqs.filter(r => r.status !== 'Closed').length;
           const openPositionsCount = clientReqs.reduce((acc, r) => {
             const filled = applications.filter(a => a.requirementId === r.id && a.currentStage === 'Joined').length;
-            return acc + Math.max(r.positionsRequired - filled, 0);
+            return acc + Math.max(r.totalRequestedHeadcount - filled, 0);
           }, 0);
           
           return (

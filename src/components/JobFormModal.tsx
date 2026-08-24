@@ -3,6 +3,8 @@ import { Job, JobStatus, JobVisibility } from '../types';
 import { X, CheckCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
+import { getAllocatedOpenings, getFulfilledPositionsForJob } from '../lib/headcount';
+import { AlertTriangle } from 'lucide-react';
 
 interface JobFormModalProps {
   isOpen: boolean;
@@ -11,8 +13,16 @@ interface JobFormModalProps {
 }
 
 export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps) {
-  const { updateJob, requirements, clients } = useApp();
-  
+  const { updateJob, requirements, clients, jobs, applications } = useApp();
+  const req = requirements.find(r => r.id === job.requirementId);
+  const client = req ? clients.find(c => c.id === req.clientId) : null;
+
+  // Headcount validation logic
+  const totalRequested = req?.totalRequestedHeadcount || 0;
+  const openingsAllocatedToOtherJobs = req ? getAllocatedOpenings(req.id, jobs.filter(j => j.id !== job.id)) : 0;
+  const maximumForEditedJob = totalRequested - openingsAllocatedToOtherJobs;
+  const fulfilledPositions = getFulfilledPositionsForJob(job.id, applications);
+
   const [formData, setFormData] = useState({
     title: job.title,
     location: job.location,
@@ -33,6 +43,14 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
     if (!formData.title) newErrors.title = 'Title is required';
     if (!formData.location) newErrors.location = 'Location is required';
     if (!formData.summary) newErrors.summary = 'Summary is required';
+    
+    const openingValue = Number(formData.openings) || 0;
+    if (openingValue < fulfilledPositions) {
+      newErrors.openings = `This Job already has ${fulfilledPositions} fulfilled positions. Number of openings cannot be reduced below ${fulfilledPositions}.`;
+    } else if (req && openingValue > maximumForEditedJob) {
+      newErrors.openings = `Only ${maximumForEditedJob} positions remain available for this Job. Reduce openings or update Requirement headcount.`;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -68,6 +86,17 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
         </div>
         
         <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
+          {req && (
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
+              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Requirement</span>
+              <p className="text-sm text-slate-700 font-medium">{client?.name} • {req.title}</p>
+              <div className="flex gap-6 mt-1">
+                <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
+                <div className="text-xs text-slate-600">Max Available for this Job: <span className="font-semibold text-blue-700">{maximumForEditedJob}</span></div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <h4 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Core Details</h4>
             <div className="space-y-4">
@@ -100,10 +129,13 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
                   <label className="block text-sm font-medium text-slate-700 mb-1">Openings</label>
                   <input 
                     type="number" 
+                    min={fulfilledPositions || 1}
                     value={formData.openings} 
                     onChange={e => setFormData({...formData, openings: Number(e.target.value)})}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.openings ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Client Requirement.</p>
+                  {errors.openings && <p className="text-red-500 text-xs mt-1 flex items-start gap-1"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/> {errors.openings}</p>}
                 </div>
               </div>
             </div>

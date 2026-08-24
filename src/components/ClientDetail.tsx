@@ -147,7 +147,7 @@ export default function ClientDetail() {
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <p className="text-xs text-slate-500 mb-1">Open Positions</p>
                 <p className="text-xl font-semibold text-slate-800">
-                  {clientReqs.reduce((acc, r) => acc + Math.max(r.positionsRequired - calculateFilled(r.id), 0), 0)}
+                  {clientReqs.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0)}
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export default function ClientDetail() {
             <div className="divide-y divide-slate-100">
               {clientReqs.length > 0 ? clientReqs.map(req => {
                 const filled = calculateFilled(req.id);
-                const progress = (filled / req.positionsRequired) * 100;
+                const progress = (filled / req.totalRequestedHeadcount) * 100;
                 return (
                   <div key={req.id} className="p-5 hover:bg-slate-50 transition-colors">
                     <div className="flex justify-between items-start mb-2">
@@ -175,7 +175,7 @@ export default function ClientDetail() {
                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
                           <span className="font-mono bg-slate-100 px-1.5 rounded">{req.code}</span>
                           <span>•</span>
-                          <span>{req.roleTitle}</span>
+                          <span>{req.projectName}</span>
                         </div>
                       </div>
                       <span className={cn(
@@ -192,7 +192,7 @@ export default function ClientDetail() {
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
                       <div className="flex items-center gap-1.5">
                         <Briefcase className="w-4 h-4 text-slate-400" />
-                        {filled} / {req.positionsRequired} Joined
+                        {filled} / {req.totalRequestedHeadcount} Joined
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-slate-400" />

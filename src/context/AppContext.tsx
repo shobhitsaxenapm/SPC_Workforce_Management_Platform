@@ -478,7 +478,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           ...updatedClients[clientIndex],
           status: 'Active',
           activeRequirementsCount: updatedClients[clientIndex].activeRequirementsCount + 1,
-          openPositionsCount: updatedClients[clientIndex].openPositionsCount + req.positionsRequired
+          openPositionsCount: updatedClients[clientIndex].openPositionsCount + req.totalRequestedHeadcount
         };
       }
     });

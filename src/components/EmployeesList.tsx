@@ -116,7 +116,7 @@ export default function EmployeesList() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-slate-800 font-medium">{emp.roleTitle}</p>
+                    <p className="text-slate-800 font-medium">{emp.title}</p>
                     <p className="text-xs text-slate-500 mt-1">{emp.baseLocation}</p>
                   </td>
                   <td className="px-6 py-4">

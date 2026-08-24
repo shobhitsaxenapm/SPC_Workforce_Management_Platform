@@ -5,6 +5,7 @@ import { mockUsers } from '../data/mockData';
 import { Priority, ExtractedRequirementData, RequirementSourceMetadata, ClientRequirement } from '../types';
 import SmartRequirementUpload from './SmartRequirementUpload';
 import SmartRequirementReview from './SmartRequirementReview';
+import { getAllocatedOpenings, getFulfilledPositions } from '../lib/headcount';
 
 interface ClientRequirementFormModalProps {
   isOpen: boolean;
@@ -41,13 +42,10 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
 
   const [formData, setFormData] = useState({
     clientId: defaultClientId || '',
-    roleTitle: '',
     title: '', // represents "Business" field
     projectName: '',
     locations: '',
-    positionsRequired: 1,
-    employmentType: 'Full-time',
-    contractDuration: '',
+    totalRequestedHeadcount: 1,
     targetJoiningDate: '',
     priority: 'Medium' as Priority,
     assignedRecruiterId: '',
@@ -62,13 +60,10 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
       if (req) {
         const initial = {
           clientId: req.clientId,
-          roleTitle: req.roleTitle,
           title: req.title,
           projectName: req.projectName,
           locations: req.locations.join(', '),
-          positionsRequired: req.positionsRequired,
-          employmentType: req.employmentType,
-          contractDuration: req.contractDuration || '',
+          totalRequestedHeadcount: req.totalRequestedHeadcount,
           targetJoiningDate: req.targetJoiningDate,
           priority: req.priority,
           assignedRecruiterId: req.assignedRecruiterId,
@@ -81,13 +76,10 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
     } else if (isOpen) {
       const initial = {
         clientId: defaultClientId || '',
-        roleTitle: '',
         title: '',
         projectName: '',
         locations: '',
-        positionsRequired: 1,
-        employmentType: 'Full-time',
-        contractDuration: '',
+        totalRequestedHeadcount: 1,
         targetJoiningDate: '',
         priority: 'Medium' as Priority,
         assignedRecruiterId: '',
@@ -125,7 +117,7 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
 
   const getChangedMaterialFields = () => {
     if (!initialData) return [];
-    const materialFields = ['clientId', 'roleTitle', 'title', 'locations', 'positionsRequired', 'employmentType', 'contractDuration', 'targetJoiningDate'];
+    const materialFields = ['clientId', 'title', 'locations', 'totalRequestedHeadcount', 'targetJoiningDate'];
     return materialFields.filter(f => (formData as any)[f] !== initialData[f]);
   };
 
@@ -135,27 +127,35 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
     setValidationError(null);
 
     if (!formData.clientId) { setValidationError('Client is required.'); return; }
-    if (!formData.roleTitle.trim()) { setValidationError('Role Title is required.'); return; }
-    if (!formData.title.trim()) { setValidationError('Project/Business is required.'); return; }
-    if (formData.positionsRequired < 1) { setValidationError('Number of positions must be at least 1.'); return; }
+    if (!formData.title.trim()) { setValidationError('Requirement / Project Name is required.'); return; }
+    if (formData.totalRequestedHeadcount < 1 || !Number.isInteger(formData.totalRequestedHeadcount)) { 
+      setValidationError('Total Requested Headcount must be a positive whole number.'); 
+      return; 
+    }
     if (!formData.targetJoiningDate) { setValidationError('Target Joining Date is required.'); return; }
     if (!formData.assignedRecruiterId) { setValidationError('Assigned Recruiter is required.'); return; }
 
-    const impact = calculateImpact();
-    if (impact && formData.positionsRequired < impact.filledCount) {
-      setValidationError(`Cannot reduce positions below the already filled count (${impact.filledCount}).`);
-      return;
+    if (requirementIdToEdit) {
+      const allocatedOpenings = getAllocatedOpenings(requirementIdToEdit, jobs);
+      const fulfilledPositions = getFulfilledPositions(requirementIdToEdit, jobs, applications);
+      
+      if (formData.totalRequestedHeadcount < allocatedOpenings) {
+        setValidationError(`This requirement already has ${allocatedOpenings} openings allocated across Jobs. Reduce the Job openings before lowering the requested headcount.`);
+        return;
+      }
+      
+      if (formData.totalRequestedHeadcount < fulfilledPositions) {
+        setValidationError(`Cannot reduce requested headcount below the already fulfilled count (${fulfilledPositions}).`);
+        return;
+      }
     }
 
-    const dataPayload = {
+    const dataPayload: any = {
       clientId: formData.clientId,
       title: formData.title.trim(),
-      roleTitle: formData.roleTitle.trim(),
       projectName: formData.projectName.trim() || 'General',
       locations: formData.locations ? formData.locations.split(',').map(l => l.trim()).filter(Boolean) : ['Delhi'],
-      positionsRequired: formData.positionsRequired,
-      employmentType: formData.employmentType,
-      contractDuration: formData.contractDuration || '12 Months',
+      totalRequestedHeadcount: formData.totalRequestedHeadcount,
       targetJoiningDate: formData.targetJoiningDate,
       priority: formData.priority,
       assignedRecruiterId: formData.assignedRecruiterId,
@@ -330,13 +330,9 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Role Title *</label>
-                    <input type="text" required value={formData.roleTitle} onChange={e => setFormData({...formData, roleTitle: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                  </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Project/Business *</label>
-                    <input type="text" placeholder="Enter Project/Business identifier" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Requirement / Project Name *</label>
+                    <input type="text" placeholder="e.g. Hub Operations Hiring" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Locations</label>
@@ -347,22 +343,11 @@ export default function ClientRequirementFormModal({ isOpen, onClose, defaultCli
 
               <div className="space-y-4 pt-2">
                 <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Engagement Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Number of Positions *</label>
-                    <input type="number" min="1" required value={formData.positionsRequired} onChange={e => setFormData({...formData, positionsRequired: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
-                    <select value={formData.employmentType} onChange={e => setFormData({...formData, employmentType: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-                      <option value="Full-time">Full-time</option>
-                      <option value="Contract">Contract</option>
-                      <option value="Part-time">Part-time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Contract Duration</label>
-                    <input type="text" placeholder="e.g. 6 Months" value={formData.contractDuration} onChange={e => setFormData({...formData, contractDuration: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Total Requested Headcount *</label>
+                    <input type="number" min="1" step="1" required value={formData.totalRequestedHeadcount} onChange={e => setFormData({...formData, totalRequestedHeadcount: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                    <p className="text-xs text-slate-500 mt-1">Total number of people requested by the client across all Jobs created under this requirement.</p>
                   </div>
                 </div>
               </div>

@@ -44,7 +44,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
   };
 
   const activeReqsCount = clientReqs.filter(r => r.status !== 'Closed').length;
-  const openPositionsCount = clientReqs.reduce((acc, r) => acc + Math.max(r.positionsRequired - calculateFilled(r.id), 0), 0);
+  const openPositionsCount = clientReqs.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
 
   // Generate dynamic activity timeline items for this client
   const activities: { id: string; title: string; details: string; date: string; icon: any; iconBg: string }[] = [];
@@ -53,7 +53,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
     activities.push({
       id: `act_req_${req.id}`,
       title: `Requirement Created`,
-      details: `Requirement "${req.title}" (${req.code}) created for ${req.positionsRequired} positions.`,
+      details: `Requirement "${req.title}" (${req.code}) created for ${req.totalRequestedHeadcount} positions.`,
       date: req.createdAt,
       icon: ClipboardList,
       iconBg: 'bg-blue-50 text-blue-600 border-blue-200'
@@ -65,7 +65,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
         activities.push({
           id: `act_app_${app.id}`,
           title: `Candidate Placed`,
-          details: `Candidate successfully joined for ${req.roleTitle}.`,
+          details: `Candidate successfully joined for ${req.title}.`,
           date: app.lastActivity || app.appliedDate,
           icon: CheckCircle2,
           iconBg: 'bg-green-50 text-green-600 border-green-200'
@@ -266,7 +266,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                     <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                       {clientReqs.map(req => {
                         const filled = calculateFilled(req.id);
-                        const progress = (filled / req.positionsRequired) * 100;
+                        const progress = (filled / req.totalRequestedHeadcount) * 100;
                         return (
                           <div key={req.id} className="p-4 hover:bg-slate-50 transition-colors">
                             <div className="flex justify-between items-start gap-3">
@@ -282,7 +282,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                                   <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{req.code}</span>
                                   <span>•</span>
-                                  <span>{req.roleTitle}</span>
+                                  <span>{req.projectName}</span>
                                 </div>
                               </div>
 
@@ -300,7 +300,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                             <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                               <div className="flex items-center gap-1.5">
                                 <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-                                {filled} / {req.positionsRequired} Joined
+                                {filled} / {req.totalRequestedHeadcount} Joined
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-gray-400" />

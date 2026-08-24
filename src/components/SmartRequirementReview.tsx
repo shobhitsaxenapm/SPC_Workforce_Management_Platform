@@ -21,11 +21,10 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
       id: `role_${idx}`,
       selected: true,
       clientId: '',
-      roleTitle: ext.roleTitle || '',
-      title: ext.businessUnit || '',
+      title: ext.title || ext.roleTitle || '',
       projectName: ext.projectName || '',
       locations: ext.locations?.join(', ') || '',
-      positionsRequired: ext.positionsRequired || 1,
+      totalRequestedHeadcount: ext.positionsRequired || ext.totalRequestedHeadcount || 1,
       employmentType: ext.employmentType || 'Full-time',
       contractDuration: ext.contractDuration || '',
       targetJoiningDate: ext.targetJoiningDate || '',
@@ -104,9 +103,9 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
 
     selectedRoles.forEach((r, idx) => {
       if (!r.clientId) newErrors[`${r.id}_clientId`] = 'Client is required';
-      if (!r.roleTitle) newErrors[`${r.id}_roleTitle`] = 'Role Title is required';
+      if (!r.title) newErrors[`${r.id}_title`] = 'Requirement Name is required';
       if (!r.targetJoiningDate) newErrors[`${r.id}_targetJoiningDate`] = 'Target Date is required';
-      if (r.positionsRequired < 1) newErrors[`${r.id}_positionsRequired`] = 'Positions must be >= 1';
+      if (r.totalRequestedHeadcount < 1) newErrors[`${r.id}_totalRequestedHeadcount`] = 'Headcount must be >= 1';
     });
 
     setErrors(newErrors);
@@ -120,10 +119,9 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
     const reqsToCreate = selectedRoles.map(r => ({
       clientId: r.clientId,
       title: r.title,
-      roleTitle: r.roleTitle,
+      totalRequestedHeadcount: r.totalRequestedHeadcount,
       projectName: r.projectName,
       locations: r.locations.split(',').map(s => s.trim()).filter(Boolean),
-      positionsRequired: r.positionsRequired,
       employmentType: r.employmentType,
       contractDuration: r.contractDuration,
       targetJoiningDate: r.targetJoiningDate,
@@ -244,7 +242,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
                   <button onClick={() => toggleRole(role.id)} className="text-slate-500 hover:text-blue-600 focus:outline-none">
                     {role.selected ? <CheckSquare className="w-6 h-6 text-blue-600" /> : <Square className="w-6 h-6" />}
                   </button>
-                  <h4 className="font-semibold text-slate-800">Role {index + 1}: {role.roleTitle || 'Untitled Role'}</h4>
+                  <h4 className="font-semibold text-slate-800">Role {index + 1}: {role.title || 'Untitled Role'}</h4>
                 </div>
                 <button onClick={() => toggleRole(role.id)} className="text-xs text-slate-500 hover:text-slate-800">
                   {role.selected ? 'Exclude Role' : 'Include Role'}
@@ -255,21 +253,22 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Role Title <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Requirement Name <span className="text-red-500">*</span></label>
                       <input 
                         type="text" 
-                        value={role.roleTitle} 
-                        onChange={e => updateRole(role.id, 'roleTitle', e.target.value)}
-                        className={cn("w-full rounded-md border p-2 text-sm", errors[`${role.id}_roleTitle`] ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                        value={role.title} 
+                        onChange={e => updateRole(role.id, 'title', e.target.value)}
+                        className={cn("w-full rounded-md border p-2 text-sm", errors[`${role.id}_title`] ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Positions <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Requested Headcount</label>
                       <input 
                         type="number" 
-                        value={role.positionsRequired} 
-                        onChange={e => updateRole(role.id, 'positionsRequired', parseInt(e.target.value) || 1)}
-                        className={cn("w-full rounded-md border p-2 text-sm", errors[`${role.id}_positionsRequired`] ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                        min="1"
+                        value={role.totalRequestedHeadcount} 
+                        onChange={e => updateRole(role.id, 'totalRequestedHeadcount', parseInt(e.target.value) || 1)}
+                        className={cn("w-full rounded-md border p-2 text-sm", errors[`${role.id}_totalRequestedHeadcount`] ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                       />
                     </div>
                     <div>

@@ -9,6 +9,8 @@ import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
+import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
+import { AlertTriangle } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
@@ -67,16 +69,23 @@ export default function JobsList() {
       if (req) {
         setFormData(prev => ({
           ...prev,
-          title: req.roleTitle,
+          title: req.title,
           clientId: req.clientId,
           projectName: req.projectName,
           location: req.locations[0] || 'Delhi',
-          openings: Math.max(req.positionsRequired - req.positionsFilled, 1),
-          employmentType: req.employmentType,
+          openings: Math.max(getUnallocatedPositions(req.id, req.totalRequestedHeadcount, jobs), 1),
+          employmentType: 'Contract', // default as employmentType removed
         }));
       }
     }
   };
+
+  const req = requirements.find(r => r.id === selectedReqId);
+  const clientForReq = req ? clients.find(c => c.id === req.clientId) : null;
+  
+  const totalRequested = req?.totalRequestedHeadcount || 0;
+  const alreadyAllocated = req ? getAllocatedOpenings(req.id, jobs) : 0;
+  const availableToAllocate = req ? getUnallocatedPositions(req.id, totalRequested, jobs) : 0;
 
   const handleCreateJob = (e: React.FormEvent, status: JobStatus) => {
     e.preventDefault();
@@ -97,13 +106,9 @@ export default function JobsList() {
 
     // Validation against selected requirement slots
     if (selectedReqId !== 'none') {
-      const req = requirements.find(r => r.id === selectedReqId);
-      if (req) {
-        const maxRemaining = req.positionsRequired - req.positionsFilled;
-        if (openings > maxRemaining) {
-          setValidationError(`Openings count cannot exceed remaining requirement positions (Max allowed: ${maxRemaining}).`);
-          return;
-        }
+      if (openings > availableToAllocate) {
+        setValidationError(`Only ${availableToAllocate} positions remain available under this Client Requirement. Reduce this Job's openings or update the Requirement headcount.`);
+        return;
       }
     }
 
@@ -434,10 +439,29 @@ export default function JobsList() {
                   <p className="text-slate-500 text-sm">The job opening has been successfully saved.</p>
                 </div>
               ) : (
-                <form className="space-y-6">
+                <form id="createJobForm" className="space-y-6">
                   {validationError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                       {validationError}
+                    </div>
+                  )}
+
+                  {req && (
+                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
+                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Requirement</span>
+                      <p className="text-sm text-slate-700 font-medium">{clientForReq?.name} • {req.title}</p>
+                      <div className="flex gap-6 mt-1">
+                        <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
+                        <div className="text-xs text-slate-600">Already Allocated: <span className="font-semibold">{alreadyAllocated}</span></div>
+                        <div className="text-xs text-slate-600">Available to Allocate: <span className="font-semibold text-blue-700">{availableToAllocate}</span></div>
+                      </div>
+                      
+                      {availableToAllocate === 0 && (
+                        <div className="mt-2 text-xs text-red-600 font-medium bg-white p-2 rounded border border-red-100">
+                          All requested headcount has already been allocated to Jobs. Increase the Requirement headcount or adjust an existing Job before creating another Job.
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -526,10 +550,14 @@ export default function JobsList() {
                           type="number" 
                           min="1" 
                           required 
+                          disabled={req ? availableToAllocate === 0 : false}
                           value={formData.openings} 
                           onChange={e => setFormData({...formData, openings: parseInt(e.target.value) || 0})} 
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400" 
                         />
+                        {req && (
+                          <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Client Requirement.</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
@@ -631,42 +659,20 @@ export default function JobsList() {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-between sticky bottom-0 z-10">
-              {!isSuccess ? (
-                <>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleCreateJob(e, 'Draft')}
-                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-                  >
-                    Save as Draft
-                  </button>
-                  <div className="flex gap-3">
-                    <button 
-                      type="button"
-                      onClick={handleCloseModal}
-                      className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={(e) => handleCreateJob(e, 'Published')}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                    >
-                      Publish Job
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="w-full flex justify-end">
-                   <button 
-                      onClick={handleCloseModal}
-                      className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Close
-                    </button>
-                </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10">
+              <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              {!isSuccess && (
+                <button 
+                  type="submit" 
+                  form="createJobForm" 
+                  onClick={(e) => handleCreateJob(e, 'Published')}
+                  disabled={req ? availableToAllocate === 0 : false}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+                >
+                  Create Job
+                </button>
               )}
             </div>
           </div>

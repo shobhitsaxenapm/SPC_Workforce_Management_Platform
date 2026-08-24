@@ -44,10 +44,9 @@ export default function RequirementQuickViewModal() {
   const client = clients.find(c => c.id === req.clientId);
   const recruiter = mockUsers?.find(u => u.id === req.assignedRecruiterId);
   const reqJobs = jobs.filter(j => j.requirementId === req.id);
-  const reqApps = applications.filter(a => a.requirementId === req.id);
   
-  const filledCount = reqApps.filter(a => a.currentStage === 'Joined').length;
-  const progress = (filledCount / req.positionsRequired) * 100;
+  const filledCount = applications.filter(a => a.requirementId === req.id && a.currentStage === 'Joined').length;
+  const progress = (filledCount / req.totalRequestedHeadcount) * 100;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
@@ -93,9 +92,9 @@ export default function RequirementQuickViewModal() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> Headcount</p>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-bold text-slate-800">{filledCount}</span>
-                <span className="text-sm font-medium text-slate-500 mb-0.5">/ {req.positionsRequired}</span>
+              <div className="flex items-end gap-1.5 mb-2">
+                <span className="text-3xl font-bold text-slate-800 leading-none">{filledCount}</span>
+                <span className="text-sm font-medium text-slate-500 mb-0.5">/ {req.totalRequestedHeadcount}</span>
               </div>
               <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className="bg-blue-600 h-full" style={{ width: `${Math.min(progress, 100)}%` }} />
@@ -131,7 +130,7 @@ export default function RequirementQuickViewModal() {
                 <dl className="space-y-2 text-sm">
                   <div className="grid grid-cols-3 gap-2">
                     <dt className="text-slate-500">Role Title:</dt>
-                    <dd className="col-span-2 font-medium text-slate-800">{req.roleTitle}</dd>
+                    <dd className="col-span-2 font-medium text-slate-800">{req.title}</dd>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <dt className="text-slate-500">Project:</dt>
