@@ -17,18 +17,18 @@ import {
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { requirements, applications, clients, candidates, onboardings, setQuickViewRequirementId } = useApp();
+  const { projects, applications, clients, candidates, onboardings, setQuickViewProjectId } = useApp();
 
   // ── Derived Executive Metrics ──
-  const activeReqs = requirements.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled');
-  const activeReqsCount = activeReqs.length;
-  const activeClients = new Set(activeReqs.map(r => r.clientId)).size;
+  const activeProjects = projects.filter(r => r.status !== 'Closed' && r.status !== 'Fulfilled');
+  const activeProjectsCount = activeProjects.length;
+  const activeClients = new Set(activeProjects.map(r => r.clientId)).size;
 
-  const calculateFilled = (reqId: string) =>
-    applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
+  const calculateFilled = (projectId: string) =>
+    applications.filter(a => a.projectId === projectId && a.currentStage === 'Joined').length;
 
-  const totalOpen = requirements.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
-  const totalFilled = requirements.reduce((acc, r) => acc + calculateFilled(r.id), 0);
+  const totalOpen = projects.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
+  const totalFilled = projects.reduce((acc, r) => acc + calculateFilled(r.id), 0);
   const fulfillmentPct = totalOpen + totalFilled > 0 ? Math.round((totalFilled / (totalOpen + totalFilled)) * 100) : 0;
 
   // Time-to-Fill simulation (derived from data density)
@@ -37,8 +37,8 @@ export default function Dashboard() {
   // Projected billing from offers + joined candidates
   const projectedBilling = '₹12.5L';
 
-  // ── Top Requirements Progress (sorted by urgency) ──
-  const topReqs = [...activeReqs]
+  // ── Top Projects Progress (sorted by urgency) ──
+  const topProjects = [...activeProjects]
     .sort((a, b) => new Date(a.targetJoiningDate).getTime() - new Date(b.targetJoiningDate).getTime())
     .slice(0, 4);
 
@@ -48,7 +48,7 @@ export default function Dashboard() {
     .slice(0, 6)
     .map(app => {
       const candidate = candidates.find(c => c.id === app.candidateId);
-      const req = requirements.find(r => r.id === app.requirementId);
+      const req = projects.find(r => r.id === app.projectId);
       const client = req ? clients.find(c => c.id === req.clientId) : null;
       return { app, candidate, req, client };
     })
@@ -72,11 +72,11 @@ export default function Dashboard() {
       {/* ── SECTION 1: EXECUTIVE KPI RIBBON ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: Active Requirements */}
+        {/* Card 1: Active Projects */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 p-5">
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Active Requirements</p>
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Active Projects</p>
           <div className="flex items-end justify-between">
-            <p className="text-3xl font-semibold text-gray-900">{activeReqsCount}</p>
+            <p className="text-3xl font-semibold text-gray-900">{activeProjectsCount}</p>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <Briefcase className="w-5 h-5" />
             </div>
@@ -201,11 +201,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN (60%): Top Requirements Progress */}
+        {/* RIGHT COLUMN (60%): Top Projects Progress */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200/75 overflow-hidden h-full">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Top Requirements Progress</h2>
+              <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Top Projects Progress</h2>
               <Link to="/requirements" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
                 View All <ChevronRight className="w-3.5 h-3.5" />
               </Link>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                   <div key={req.id} className="px-5 py-4">
                     <div className="flex items-start justify-between mb-2.5">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setQuickViewRequirementId(req.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
+                        <button onClick={() => setQuickViewProjectId(req.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
                           {req.title} — {client?.name}
                         </button>
                         <span className={cn(

@@ -4,34 +4,34 @@ import { X, ExternalLink, Calendar, MapPin, Briefcase, Users, AlertCircle, FileT
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 
-export default function RequirementQuickViewModal() {
-  const { quickViewRequirementId, setQuickViewRequirementId, requirements, clients, jobs, applications, mockUsers } = useApp();
+export default function ProjectQuickViewModal() {
+  const { quickViewProjectId, setQuickViewProjectId, projects, clients, jobs, applications, mockUsers } = useApp();
   const modalRef = useRef<HTMLDivElement>(null);
   
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setQuickViewRequirementId(null);
+      if (e.key === 'Escape') setQuickViewProjectId(null);
     };
-    if (quickViewRequirementId) {
+    if (quickViewProjectId) {
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [quickViewRequirementId, setQuickViewRequirementId]);
+  }, [quickViewProjectId, setQuickViewProjectId]);
 
-  if (!quickViewRequirementId) return null;
+  if (!quickViewProjectId) return null;
 
-  const req = requirements.find(r => r.id === quickViewRequirementId);
+  const req = projects.find(r => r.id === quickViewProjectId);
   
   if (!req) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 flex flex-col items-center">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h2 className="text-lg font-semibold text-slate-800">Requirement Not Found</h2>
+          <h2 className="text-lg font-semibold text-slate-800">Project Not Found</h2>
           <p className="text-slate-500 mt-2 text-center">The requested requirement does not exist or has been deleted.</p>
           <button 
-            onClick={() => setQuickViewRequirementId(null)}
+            onClick={() => setQuickViewProjectId(null)}
             className="mt-6 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200"
           >
             Close
@@ -43,9 +43,9 @@ export default function RequirementQuickViewModal() {
 
   const client = clients.find(c => c.id === req.clientId);
   const recruiter = mockUsers?.find(u => u.id === req.assignedRecruiterId);
-  const reqJobs = jobs.filter(j => j.requirementId === req.id);
+  const reqJobs = jobs.filter(j => j.projectId === req.id);
   
-  const filledCount = applications.filter(a => a.requirementId === req.id && a.currentStage === 'Joined').length;
+  const filledCount = applications.filter(a => a.projectId === req.id && a.currentStage === 'Joined').length;
   const progress = (filledCount / req.totalRequestedHeadcount) * 100;
 
   return (
@@ -78,7 +78,7 @@ export default function RequirementQuickViewModal() {
             <p className="text-sm text-slate-600 mt-1">Client: <span className="font-medium text-slate-800">{client?.name || 'Unknown'}</span></p>
           </div>
           <button 
-            onClick={() => setQuickViewRequirementId(null)}
+            onClick={() => setQuickViewProjectId(null)}
             className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             aria-label="Close modal"
           >
@@ -182,7 +182,7 @@ export default function RequirementQuickViewModal() {
           
           {req.notes && (
             <div className="mt-8 pt-6 border-t border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-800 mb-2">Notes & Requirements</h3>
+              <h3 className="text-sm font-semibold text-slate-800 mb-2">Notes & Projects</h3>
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap">
                 {req.notes}
               </div>
@@ -193,7 +193,7 @@ export default function RequirementQuickViewModal() {
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3 rounded-b-xl">
           <button 
-            onClick={() => setQuickViewRequirementId(null)}
+            onClick={() => setQuickViewProjectId(null)}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-colors"
           >
             Close
@@ -202,10 +202,10 @@ export default function RequirementQuickViewModal() {
             to={`/requirements/${req.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setQuickViewRequirementId(null)}
+            onClick={() => setQuickViewProjectId(null)}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2"
           >
-            Open Full Requirement <ExternalLink className="w-4 h-4" />
+            Open Full Project <ExternalLink className="w-4 h-4" />
           </Link>
         </div>
       </div>

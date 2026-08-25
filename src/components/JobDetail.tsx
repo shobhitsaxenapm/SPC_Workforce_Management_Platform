@@ -13,7 +13,7 @@ import AddCandidateToJobModal from './AddCandidateToJobModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, requirements, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewRequirementId, setQuickViewCandidateId } = useApp();
+  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewProjectId, setQuickViewCandidateId } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export default function JobDetail() {
   
   if (!job) return <div>Job not found</div>;
 
-  const req = requirements.find(r => r.id === job.requirementId);
+  const req = projects.find(r => r.id === job.projectId);
   const client = clients.find(c => c.id === job.clientId);
   const recruiter = mockUsers.find(u => u.id === job.assignedRecruiterId);
   const jobApplications = applications.filter(a => a.jobId === job.id);
@@ -83,9 +83,9 @@ export default function JobDetail() {
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3 text-sm">
-          <Link to="/requirements" className="text-slate-500 hover:text-slate-800">Reqs</Link>
+          <Link to="/projects" className="text-slate-500 hover:text-slate-800">Reqs</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <button onClick={() => req && setQuickViewRequirementId(req.id)} className="text-slate-500 hover:text-slate-800 outline-none focus-visible:underline">{req?.code}</button>
+          <button onClick={() => req && setQuickViewProjectId(req.id)} className="text-slate-500 hover:text-slate-800 outline-none focus-visible:underline">{req?.code}</button>
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="font-medium text-slate-800 font-mono">{job.code}</span>
         </div>
@@ -338,8 +338,8 @@ export default function JobDetail() {
                 <hr className="border-slate-100" />
                 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Linked Requirement</p>
-                  <button onClick={() => req && setQuickViewRequirementId(req.id)} className="text-sm font-medium text-blue-600 hover:underline outline-none">{req?.title}</button>
+                  <p className="text-xs text-slate-500 mb-1">Linked Project</p>
+                  <button onClick={() => req && setQuickViewProjectId(req.id)} className="text-sm font-medium text-blue-600 hover:underline outline-none">{req?.title}</button>
                 </div>
               </div>
             </div>

@@ -13,8 +13,8 @@ interface JobFormModalProps {
 }
 
 export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps) {
-  const { updateJob, requirements, clients, jobs, applications } = useApp();
-  const req = requirements.find(r => r.id === job.requirementId);
+  const { updateJob, projects, clients, jobs, applications } = useApp();
+  const req = projects.find(r => r.id === job.projectId);
   const client = req ? clients.find(c => c.id === req.clientId) : null;
 
   // Headcount validation logic
@@ -48,7 +48,7 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
     if (openingValue < fulfilledPositions) {
       newErrors.openings = `This Job already has ${fulfilledPositions} fulfilled positions. Number of openings cannot be reduced below ${fulfilledPositions}.`;
     } else if (req && openingValue > maximumForEditedJob) {
-      newErrors.openings = `Only ${maximumForEditedJob} positions remain available for this Job. Reduce openings or update Requirement headcount.`;
+      newErrors.openings = `Only ${maximumForEditedJob} positions remain available for this Job. Reduce openings or update Project headcount.`;
     }
 
     setErrors(newErrors);
@@ -88,7 +88,7 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
         <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
           {req && (
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
-              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Requirement</span>
+              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Project</span>
               <p className="text-sm text-slate-700 font-medium">{client?.name} • {req.title}</p>
               <div className="flex gap-6 mt-1">
                 <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
@@ -134,7 +134,7 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
                     onChange={e => setFormData({...formData, openings: Number(e.target.value)})}
                     className={cn("w-full rounded-lg border p-2.5 text-sm", errors.openings ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Client Requirement.</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Project.</p>
                   {errors.openings && <p className="text-red-500 text-xs mt-1 flex items-start gap-1"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/> {errors.openings}</p>}
                 </div>
               </div>

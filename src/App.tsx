@@ -1,10 +1,10 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ClientsList from './components/ClientsList';
 import ClientDetail from './components/ClientDetail';
-import RequirementsList from './components/RequirementsList';
-import RequirementDetail from './components/RequirementDetail';
+import ProjectsList from './components/ProjectsList';
+import ProjectDetail from './components/ProjectDetail';
 import JobsList from './components/JobsList';
 import JobDetail from './components/JobDetail';
 import CandidatesList from './components/CandidatesList';
@@ -41,8 +41,10 @@ export default function App() {
         <Route path="clients" element={<ClientsList />} />
         <Route path="clients/:id" element={<ClientDetail />} />
         
-        <Route path="requirements" element={<RequirementsList />} />
-        <Route path="requirements/:id" element={<RequirementDetail />} />
+        <Route path="projects" element={<ProjectsList />} />
+        <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="requirements" element={<Navigate replace to="/projects" />} />
+        <Route path="requirements/:id" element={<Navigate replace to="/projects/:id" />} />
         
         <Route path="job-desk" element={<JobsList />} />
         <Route path="job-desk/:id" element={<JobDetail />} />

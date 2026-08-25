@@ -2,21 +2,21 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, Link2, Briefcase } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-interface LinkRequirementModalProps {
+interface LinkProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: string;
 }
 
-export default function LinkRequirementModal({ isOpen, onClose, clientId }: LinkRequirementModalProps) {
-  const { requirements, clients, updateRequirement } = useApp();
+export default function LinkProjectModal({ isOpen, onClose, clientId }: LinkProjectModalProps) {
+  const { projects, clients, updateProject } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Requirements that belong to OTHER clients
+  // Projects that belong to OTHER clients
   const availableRequirements = useMemo(() => {
-    return requirements.filter(r => r.clientId !== clientId);
-  }, [requirements, clientId]);
+    return projects.filter(r => r.clientId !== clientId);
+  }, [projects, clientId]);
 
   const filteredRequirements = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -29,11 +29,11 @@ export default function LinkRequirementModal({ isOpen, onClose, clientId }: Link
 
   if (!isOpen) return null;
 
-  const handleLink = async (reqId: string) => {
+  const handleLink = async (projectId: string) => {
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 400));
     const targetClient = clients.find(c => c.id === clientId);
-    updateRequirement(reqId, { clientId }, `Moved requirement to client ${targetClient?.name || clientId}`);
+    updateProject(projectId, { clientId }, `Moved requirement to client ${targetClient?.name || clientId}`);
     setIsSubmitting(false);
     onClose();
   };
@@ -46,7 +46,7 @@ export default function LinkRequirementModal({ isOpen, onClose, clientId }: Link
           <div>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Link2 className="w-5 h-5 text-blue-600" />
-              Link Existing Requirement
+              Link Existing Project
             </h2>
             <p className="text-sm text-slate-500 mt-1">Select a requirement from another client to move to this client.</p>
           </div>
@@ -101,7 +101,7 @@ export default function LinkRequirementModal({ isOpen, onClose, clientId }: Link
               <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-6 h-6 text-slate-400" />
               </div>
-              <p className="text-sm font-medium text-slate-700 mb-1">No requirements found</p>
+              <p className="text-sm font-medium text-slate-700 mb-1">No projects found</p>
               <p className="text-xs text-slate-500 max-w-sm">
                 {searchQuery ? "No requirements match your search." : "There are no requirements available to link."}
               </p>

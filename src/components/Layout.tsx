@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
-import RequirementQuickViewModal from './RequirementQuickViewModal';
+import ProjectQuickViewModal from './ProjectQuickViewModal';
 import ClientQuickViewModal from './ClientQuickViewModal';
 import JobQuickViewModal from './JobQuickViewModal';
 import CandidateQuickViewModal from './CandidateQuickViewModal';
@@ -52,7 +52,7 @@ const navigationConfig: NavModuleConfig[] = [
     items: [
       { title: 'Dashboard', path: '/', icon: LayoutGrid },
       { title: 'Clients', path: '/clients', icon: Building2 },
-      { title: 'Client Requirements', path: '/requirements', icon: ClipboardList },
+      { title: 'Projects', path: '/projects', icon: ClipboardList },
       { title: 'Jobs', path: '/job-desk', icon: Briefcase },
       { title: 'Candidates', path: '/candidates', icon: Users },
       { title: 'Interviews', path: '/interviews', icon: CalendarDays },
@@ -301,7 +301,7 @@ export default function Layout() {
         </main>
       </div>
 
-      <RequirementQuickViewModal />
+      <ProjectQuickViewModal />
       <ClientQuickViewModal />
       <JobQuickViewModal />
       <CandidateQuickViewModal />

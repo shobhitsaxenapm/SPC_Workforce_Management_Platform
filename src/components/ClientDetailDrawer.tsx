@@ -18,48 +18,48 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { useApp } from '../context/AppContext';
-import { Client, ClientRequirement } from '../types';
+import { Client, Project } from '../types';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
 import { Link } from 'react-router-dom';
 
 interface ClientDetailDrawerProps {
   clientId: string | null;
   onClose: () => void;
-  onCreateRequirement: (clientId: string) => void;
+  onCreateProject: (clientId: string) => void;
 }
 
-export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirement }: ClientDetailDrawerProps) {
-  const { clients, requirements, jobs, applications, setQuickViewRequirementId } = useApp();
-  const [activeTab, setActiveTab] = useState<'overview' | 'requirements' | 'activity'>('overview');
+export default function ClientDetailDrawer({ clientId, onClose, onCreateProject }: ClientDetailDrawerProps) {
+  const { clients, projects, jobs, applications, setQuickViewProjectId } = useApp();
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'activity'>('overview');
 
   if (!clientId) return null;
 
   const client = clients.find(c => c.id === clientId);
   if (!client) return null;
 
-  const clientReqs = requirements.filter(r => r.clientId === client.id);
+  const clientProjects = projects.filter(r => r.clientId === client.id);
 
-  const calculateFilled = (reqId: string) => {
-    return applications.filter(a => a.requirementId === reqId && a.currentStage === 'Joined').length;
+  const calculateFilled = (projectId: string) => {
+    return applications.filter(a => a.projectId === projectId && a.currentStage === 'Joined').length;
   };
 
-  const activeReqsCount = clientReqs.filter(r => r.status !== 'Closed').length;
-  const openPositionsCount = clientReqs.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
+  const activeProjectsCount = clientProjects.filter(r => r.status !== 'Closed').length;
+  const openPositionsCount = clientProjects.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
 
   // Generate dynamic activity timeline items for this client
   const activities: { id: string; title: string; details: string; date: string; icon: any; iconBg: string }[] = [];
 
-  clientReqs.forEach(req => {
+  clientProjects.forEach(req => {
     activities.push({
       id: `act_req_${req.id}`,
-      title: `Requirement Created`,
-      details: `Requirement "${req.title}" (${req.code}) created for ${req.totalRequestedHeadcount} positions.`,
+      title: `Project Created`,
+      details: `Project "${req.title}" (${req.code}) created for ${req.totalRequestedHeadcount} positions.`,
       date: req.createdAt,
       icon: ClipboardList,
       iconBg: 'bg-blue-50 text-blue-600 border-blue-200'
     });
 
-    const reqApps = applications.filter(a => a.requirementId === req.id);
+    const reqApps = applications.filter(a => a.projectId === req.id);
     reqApps.forEach(app => {
       if (app.currentStage === 'Joined') {
         activities.push({
@@ -123,11 +123,11 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => onCreateRequirement(client.id)}
+              onClick={() => onCreateProject(client.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
-              Create Requirement
+              Create Project
             </button>
             <button
               onClick={onClose}
@@ -145,8 +145,8 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
           {/* Top Metric Bar */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-              <p className="text-xs font-medium text-gray-500 mb-1">Active Requirements</p>
-              <p className="text-2xl font-bold text-gray-900">{activeReqsCount}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Active Projects</p>
+              <p className="text-2xl font-bold text-gray-900">{activeProjectsCount}</p>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
               <p className="text-xs font-medium text-gray-500 mb-1">Open Positions</p>
@@ -206,17 +206,17 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                 Overview
               </button>
               <button
-                onClick={() => setActiveTab('requirements')}
+                onClick={() => setActiveTab('projects')}
                 className={cn(
                   "pb-2.5 text-sm transition-all capitalize font-medium border-b-2 flex items-center gap-2",
-                  activeTab === 'requirements'
+                  activeTab === 'projects'
                     ? "border-blue-600 text-blue-600 font-semibold"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 )}
               >
-                Linked Requirements
+                Linked Projects
                 <span className="px-1.5 py-0.2 rounded-full text-xs bg-slate-100 text-slate-600 font-medium">
-                  {clientReqs.length}
+                  {clientProjects.length}
                 </span>
               </button>
               <button
@@ -252,19 +252,19 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                       <span className="font-medium text-gray-900">{formatDate(client.lastActivity)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Total Requirements Logged:</span>
-                      <span className="font-medium text-gray-900">{clientReqs.length}</span>
+                      <span className="text-slate-500">Total Projects Logged:</span>
+                      <span className="font-medium text-gray-900">{clientProjects.length}</span>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* TAB 2: LINKED REQUIREMENTS */}
-              {activeTab === 'requirements' && (
+              {activeTab === 'projects' && (
                 <div className="space-y-3">
-                  {clientReqs.length > 0 ? (
+                  {clientProjects.length > 0 ? (
                     <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                      {clientReqs.map(req => {
+                      {clientProjects.map(req => {
                         const filled = calculateFilled(req.id);
                         const progress = (filled / req.totalRequestedHeadcount) * 100;
                         return (
@@ -273,7 +273,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                               <div>
                                 <div className="flex items-center gap-2">
                                   <button 
-                                    onClick={() => setQuickViewRequirementId(req.id)}
+                                    onClick={() => setQuickViewProjectId(req.id)}
                                     className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline"
                                   >
                                     {req.title}
@@ -321,7 +321,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateRequirem
                   ) : (
                     <div className="p-8 text-center text-slate-500 border border-dashed border-slate-200 rounded-xl">
                       <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm font-medium">No linked requirements for this client.</p>
+                      <p className="text-sm font-medium">No linked projects for this client.</p>
                     </div>
                   )}
                 </div>

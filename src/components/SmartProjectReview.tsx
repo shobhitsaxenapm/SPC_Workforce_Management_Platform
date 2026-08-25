@@ -4,7 +4,7 @@ import { ExtractedRequirementData, RequirementSourceMetadata, Priority, Client }
 import { AlertTriangle, CheckCircle, Info, Plus, Trash2, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-interface SmartRequirementReviewProps {
+interface SmartProjectReviewProps {
   extractedDataArray: ExtractedRequirementData[];
   sourceText: string;
   metadata: RequirementSourceMetadata;
@@ -12,8 +12,8 @@ interface SmartRequirementReviewProps {
   onDiscard: () => void;
 }
 
-export default function SmartRequirementReview({ extractedDataArray, sourceText, metadata, onSaveAsDraft, onDiscard }: SmartRequirementReviewProps) {
-  const { clients, currentUser, createRequirement, createClient } = useApp();
+export default function SmartProjectReview({ extractedDataArray, sourceText, metadata, onSaveAsDraft, onDiscard }: SmartProjectReviewProps) {
+  const { clients, currentUser, createProject, createClient } = useApp();
 
   // Roles State
   const [roles, setRoles] = useState(
@@ -103,7 +103,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
 
     selectedRoles.forEach((r, idx) => {
       if (!r.clientId) newErrors[`${r.id}_clientId`] = 'Client is required';
-      if (!r.title) newErrors[`${r.id}_title`] = 'Requirement Name is required';
+      if (!r.title) newErrors[`${r.id}_title`] = 'Project Name is required';
       if (!r.targetJoiningDate) newErrors[`${r.id}_targetJoiningDate`] = 'Target Date is required';
       if (r.totalRequestedHeadcount < 1) newErrors[`${r.id}_totalRequestedHeadcount`] = 'Headcount must be >= 1';
     });
@@ -133,7 +133,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
     }));
 
     // Atomic creation support in AppContext
-    createRequirement(reqsToCreate);
+    createProject(reqsToCreate);
     onSaveAsDraft();
   };
 
@@ -158,7 +158,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white">
           <div>
             <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-              Review Requirements
+              Review Projects
               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{roles.length} Roles Detected</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">Select and verify the roles you want to create.</p>
@@ -180,7 +180,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
             <h4 className="font-semibold text-slate-800 mb-2">Global Client Resolution</h4>
-            <p className="text-sm text-slate-600 mb-4">Select the client for these requirements. The AI detected: <span className="font-semibold text-slate-900">"{roles[0]?._extractedClientName || 'Unknown'}"</span></p>
+            <p className="text-sm text-slate-600 mb-4">Select the client for these projects. The AI detected: <span className="font-semibold text-slate-900">"{roles[0]?._extractedClientName || 'Unknown'}"</span></p>
             
             {!showNewClientForm ? (
               <div className="flex items-center gap-3">
@@ -253,7 +253,7 @@ export default function SmartRequirementReview({ extractedDataArray, sourceText,
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Requirement Name <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Project Name <span className="text-red-500">*</span></label>
                       <input 
                         type="text" 
                         value={role.title} 

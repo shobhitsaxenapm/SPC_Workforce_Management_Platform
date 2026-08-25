@@ -17,7 +17,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
 
   const [formData, setFormData] = useState({
     title: extractedData.title || '',
-    requirementId: extractedData.linkedClientRequirement || '',
+    projectId: extractedData.linkedClientRequirement || '',
     clientId: '',
     projectName: '',
     location: extractedData.location || '',
@@ -38,43 +38,43 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
 
   useEffect(() => {
     // Attempt to auto-map client requirement if provided by AI
-    if (formData.requirementId) {
+    if (formData.projectId) {
       const match = requirements.find(r => 
-        r.id === formData.requirementId || 
-        r.code.toLowerCase() === formData.requirementId.toLowerCase() || 
-        r.title.toLowerCase().includes(formData.requirementId.toLowerCase())
+        r.id === formData.projectId || 
+        r.code.toLowerCase() === formData.projectId.toLowerCase() || 
+        r.title.toLowerCase().includes(formData.projectId.toLowerCase())
       );
       if (match) {
         setFormData(prev => ({ 
           ...prev, 
-          requirementId: match.id,
+          projectId: match.id,
           clientId: match.clientId,
           projectName: match.projectName
         }));
       } else {
-        setFormData(prev => ({ ...prev, requirementId: '' }));
+        setFormData(prev => ({ ...prev, projectId: '' }));
       }
     }
   }, []);
 
-  const handleRequirementChange = (reqId: string) => {
-    const req = requirements.find(r => r.id === reqId);
+  const handleRequirementChange = (projectId: string) => {
+    const req = requirements.find(r => r.id === projectId);
     if (req) {
       setFormData(prev => ({
         ...prev,
-        requirementId: reqId,
+        projectId: projectId,
         clientId: req.clientId,
         projectName: req.projectName
       }));
     } else {
-      setFormData(prev => ({ ...prev, requirementId: '', clientId: '', projectName: '' }));
+      setFormData(prev => ({ ...prev, projectId: '', clientId: '', projectName: '' }));
     }
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = 'Title is required';
-    if (!formData.requirementId) newErrors.requirementId = 'Linked Requirement is required';
+    if (!formData.projectId) newErrors.projectId = 'Linked Requirement is required';
     if (!formData.location) newErrors.location = 'Location is required';
     if (!formData.summary) newErrors.summary = 'Summary is required';
     setErrors(newErrors);
@@ -86,7 +86,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
     
     createJob({
       title: formData.title,
-      requirementId: formData.requirementId,
+      projectId: formData.projectId,
       clientId: formData.clientId,
       projectName: formData.projectName,
       location: formData.location,
@@ -105,7 +105,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       status: status,
       publishedAt: status === 'Published' ? new Date().toISOString() : undefined,
       sourceMetadata: metadata,
-    }, formData.requirementId);
+    }, formData.projectId);
 
     onSaveAsDraft();
   };
@@ -171,9 +171,9 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
                     Linked Requirement <span className="text-red-500">*</span>
                   </label>
                   <select 
-                    value={formData.requirementId}
+                    value={formData.projectId}
                     onChange={(e) => handleRequirementChange(e.target.value)}
-                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.requirementId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.projectId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   >
                     <option value="">-- Select Client Requirement --</option>
                     {requirements.map(r => {
@@ -185,7 +185,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
                       );
                     })}
                   </select>
-                  {errors.requirementId && <p className="text-red-500 text-xs mt-1">{errors.requirementId}</p>}
+                  {errors.projectId && <p className="text-red-500 text-xs mt-1">{errors.projectId}</p>}
                 </div>
 
                 <div>

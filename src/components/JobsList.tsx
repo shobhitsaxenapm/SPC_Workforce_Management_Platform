@@ -14,7 +14,7 @@ import { AlertTriangle } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
-  const { jobs, requirements, clients, createJob } = useApp();
+  const { jobs, projects, clients, createJob } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilters, setJobFilters] = useState<Record<string, string>>({ status: '', clientId: '', employmentType: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,11 +50,11 @@ export default function JobsList() {
     visibility: 'Public' as JobVisibility,
   });
 
-  const handleReqChange = (reqId: string) => {
-    setSelectedReqId(reqId);
+  const handleReqChange = (projectId: string) => {
+    setSelectedReqId(projectId);
     setValidationError(null);
 
-    if (reqId === 'none') {
+    if (projectId === 'none') {
       setFormData(prev => ({
         ...prev,
         title: '',
@@ -65,7 +65,7 @@ export default function JobsList() {
         employmentType: 'Contract',
       }));
     } else {
-      const req = requirements.find(r => r.id === reqId);
+      const req = projects.find(r => r.id === projectId);
       if (req) {
         setFormData(prev => ({
           ...prev,
@@ -80,7 +80,7 @@ export default function JobsList() {
     }
   };
 
-  const req = requirements.find(r => r.id === selectedReqId);
+  const req = projects.find(r => r.id === selectedReqId);
   const clientForReq = req ? clients.find(c => c.id === req.clientId) : null;
   
   const totalRequested = req?.totalRequestedHeadcount || 0;
@@ -104,10 +104,10 @@ export default function JobsList() {
       return;
     }
 
-    // Validation against selected requirement slots
+    // Validation against selected project slots
     if (selectedReqId !== 'none') {
       if (openings > availableToAllocate) {
-        setValidationError(`Only ${availableToAllocate} positions remain available under this Client Requirement. Reduce this Job's openings or update the Requirement headcount.`);
+        setValidationError(`Only ${availableToAllocate} positions remain available under this Project. Reduce this Job's openings or update the Project headcount.`);
         return;
       }
     }
@@ -188,7 +188,7 @@ export default function JobsList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <p className="text-slate-600">Manage client-facing job openings linked to approved client requirements.</p>
+        <p className="text-slate-600">Manage client-facing job openings linked to approved client projects.</p>
         <button 
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -359,7 +359,7 @@ export default function JobsList() {
                     <Briefcase className="w-6 h-6" />
                   </div>
                   <h3 className="font-semibold text-slate-800 text-lg mb-2">Create Manually</h3>
-                  <p className="text-sm text-slate-500">Fill out the standard form manually or from a linked requirement.</p>
+                  <p className="text-sm text-slate-500">Fill out the standard form manually or from a linked project.</p>
                 </div>
 
                 <div 
@@ -449,7 +449,7 @@ export default function JobsList() {
 
                   {req && (
                     <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
-                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Requirement</span>
+                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Project</span>
                       <p className="text-sm text-slate-700 font-medium">{clientForReq?.name} • {req.title}</p>
                       <div className="flex gap-6 mt-1">
                         <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
@@ -459,16 +459,16 @@ export default function JobsList() {
                       
                       {availableToAllocate === 0 && (
                         <div className="mt-2 text-xs text-red-600 font-medium bg-white p-2 rounded border border-red-100">
-                          All requested headcount has already been allocated to Jobs. Increase the Requirement headcount or adjust an existing Job before creating another Job.
+                          All requested headcount has already been allocated to Jobs. Increase the Project headcount or adjust an existing Job before creating another Job.
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Link Requirement (Optional) */}
+                  {/* Link Project (Optional) */}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      Link Client Requirement (Optional)
+                      Link Project (Optional)
                     </label>
                     <select
                       value={selectedReqId}
@@ -476,7 +476,7 @@ export default function JobsList() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                     >
                       <option value="none">-- None (Independent Job Posting) --</option>
-                      {requirements.map(r => {
+                      {projects.map(r => {
                         const client = clients.find(c => c.id === r.clientId);
                         return (
                           <option key={r.id} value={r.id}>
@@ -556,7 +556,7 @@ export default function JobsList() {
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400" 
                         />
                         {req && (
-                          <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Client Requirement.</p>
+                          <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Project.</p>
                         )}
                       </div>
                       <div>
@@ -575,7 +575,7 @@ export default function JobsList() {
 
                   <div className="space-y-4 pt-2">
                     <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">
-                      Requirements & Skills
+                      Projects & Skills
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>

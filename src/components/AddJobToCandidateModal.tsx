@@ -25,7 +25,7 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     const client = clients.find(c => c.id === j.clientId);
-    const req = requirements.find(r => r.id === j.requirementId);
+    const req = requirements.find(r => r.id === j.projectId);
     
     return (
       j.title.toLowerCase().includes(term) ||

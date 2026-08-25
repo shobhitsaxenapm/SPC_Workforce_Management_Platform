@@ -1,6 +1,8 @@
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
-export type RequirementLifecycleStatus = 'Draft' | 'Open' | 'Fully Allocated' | 'Partially Fulfilled' | 'Fulfilled' | 'On Hold' | 'Closed' | 'Cancelled';
-export type RequirementFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
+export type ProjectStatus = 'Draft' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
+export type EngagementType = 'Direct Recruitment' | 'Staffing – SPC Payroll';
+export type AgreementStatus = 'Draft' | 'Signed';
+export type ProjectFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
@@ -54,35 +56,46 @@ export interface Client {
   primaryContactEmail: string;
   primaryContactPhone: string;
   locations: string[];
-  activeRequirementsCount: number;
+  activeProjectsCount: number;
   openPositionsCount: number;
   lastActivity: string;
 }
 
-export interface ClientRequirement {
+export interface Project {
   id: string;
   code: string;
   clientId: string;
-  title: string;
   projectName: string;
+  engagementType: EngagementType;
+  projectDescription?: string;
+  agreementReference?: string;
+  agreementStartDate?: string;
+  agreementEndDate?: string;
+  agreementStatus?: AgreementStatus;
   locations: string[];
   totalRequestedHeadcount: number;
-  positionsFilled: number;
   targetJoiningDate: string;
-  priority: Priority;
-  assignedRecruiterId: string;
-  lifecycleStatus: RequirementLifecycleStatus;
+  projectOwner?: string;
+  clientContactPerson?: string;
+  payrollEmployerModel?: string;
+  agreementDocumentMetadata?: {
+    filename: string;
+    fileType: string;
+    size: number;
+    uploadDate: string;
+  };
+  status: ProjectStatus;
   version: number;
-  revisions?: RequirementRevision[];
+  revisions?: ProjectRevision[];
   createdAt: string;
   updatedAt: string;
   notes?: string;
-  sourceMetadata?: RequirementSourceMetadata;
+  sourceMetadata?: ProjectSourceMetadata;
 }
 
-export interface RequirementRevision {
+export interface ProjectRevision {
   id: string;
-  requirementId: string;
+  projectId: string;
   version: number;
   changedFields: string[];
   previousValues: Record<string, any>;
@@ -98,7 +111,11 @@ export interface RequirementRevision {
   };
 }
 
-export interface RequirementSourceMetadata {
+export interface ProjectSourceMetadata {
+  originalFilename: string;
+  mimeType: string;
+  size: number;
+export interface ProjectSourceMetadata {
   originalFilename: string;
   mimeType: string;
   size: number;
@@ -108,7 +125,14 @@ export interface RequirementSourceMetadata {
   parserVersion: string;
 }
 
-export interface ExtractedRequirementData {
+export interface ExtractedProjectData {
+  projectName?: string;
+  locations?: string[];
+  totalRequestedHeadcount?: number;
+  targetJoiningDate?: string;
+}
+
+export interface ExtractedProjectData {
   clientName?: string;
   businessUnit?: string;
   projectName?: string;
@@ -150,19 +174,20 @@ export interface ExtractedJobData {
   contractDuration?: string;
   applicationDeadline?: string;
   targetJoiningDate?: string;
-  linkedClientRequirement?: string;
+  linkedClientProject?: string;
 }
 
 export interface Job {
   id: string;
   code: string;
-  requirementId: string;
+  projectId: string;
   clientId: string;
   title: string;
   projectName: string;
   location: string;
   openings: number;
   filled: number;
+  engagementType: EngagementType;
   employmentType: string;
   experienceRange: string;
   requiredSkills: string[];
@@ -272,7 +297,7 @@ export interface Application {
   id: string;
   candidateId: string;
   jobId: string;
-  requirementId: string;
+  projectId: string;
   currentStage: ApplicationStage;
   currentSubstate?: ApplicationSubstate;
   appliedDate: string;
@@ -403,7 +428,7 @@ export interface Onboarding {
   id: string;
   candidateId: string;
   clientId: string;
-  requirementId: string;
+  projectId: string;
   jobId: string;
   role: string;
   proposedJoiningDate: string;

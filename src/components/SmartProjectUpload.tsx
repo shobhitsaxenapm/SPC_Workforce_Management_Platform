@@ -5,7 +5,7 @@ import { ExtractedRequirementData } from '../types';
 
 export type ProcessingState = 'Idle' | 'Uploading' | 'Processing' | 'Failed';
 
-interface SmartRequirementUploadProps {
+interface SmartProjectUploadProps {
   onExtractionSuccess: (
     data: ExtractedRequirementData[], 
     sourceText: string, 
@@ -14,7 +14,7 @@ interface SmartRequirementUploadProps {
   onCancel: () => void;
 }
 
-export default function SmartRequirementUpload({ onExtractionSuccess, onCancel }: SmartRequirementUploadProps) {
+export default function SmartProjectUpload({ onExtractionSuccess, onCancel }: SmartProjectUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<ProcessingState>('Idle');
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export default function SmartRequirementUpload({ onExtractionSuccess, onCancel }
       
       if (!res.ok || json.error) {
         // Fallback to static mock data for the prototype
-        console.warn('Using static mock fallback for Requirement Extraction due to:', json.error || 'API Error');
+        console.warn('Using static mock fallback for Project Extraction due to:', json.error || 'API Error');
         
         // Simulate processing delay
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -145,7 +145,7 @@ export default function SmartRequirementUpload({ onExtractionSuccess, onCancel }
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] w-full max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-800">Smart Requirement Creation</h2>
+        <h2 className="text-2xl font-bold text-slate-800">Smart Project Creation</h2>
         <p className="text-slate-500 mt-2">Upload a client requirement document to auto-extract the details. Supports multiple roles.</p>
       </div>
 

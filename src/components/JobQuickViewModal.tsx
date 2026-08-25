@@ -5,7 +5,7 @@ import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 
 export default function JobQuickViewModal() {
-  const { quickViewJobId, setQuickViewJobId, quickViewCandidateId, jobs, requirements, clients, matchRuns } = useApp();
+  const { quickViewJobId, setQuickViewJobId, quickViewCandidateId, jobs, projects, clients, matchRuns } = useApp();
   const modalRef = useRef<HTMLDivElement>(null);
   
   // Close on Escape key
@@ -41,7 +41,7 @@ export default function JobQuickViewModal() {
     );
   }
 
-  const req = requirements.find(r => r.id === job.requirementId);
+  const req = projects.find(r => r.id === job.projectId);
   const client = clients.find(c => c.id === req?.clientId);
 
   // If opened from candidate context, try to find match info

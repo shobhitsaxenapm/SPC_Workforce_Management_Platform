@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ExtractedRequirementData, RequirementLifecycleStatus, RequirementFulfilmentStatus, ClientRequirement } from '../types';
+import { ExtractedRequirementData, ProjectStatus, RequirementFulfilmentStatus, Project } from '../types';
 
 describe('Smart Requirement Data Validation', () => {
   it('should correctly type the ExtractedRequirementData interface', () => {
@@ -32,11 +32,11 @@ describe('Smart Requirement Data Validation', () => {
 
 describe('Requirement Lifecycle and Fulfilment', () => {
   it('validates lifecycle statuses', () => {
-    const draftStatus: RequirementLifecycleStatus = 'Draft';
-    const openStatus: RequirementLifecycleStatus = 'Open';
-    const holdStatus: RequirementLifecycleStatus = 'On Hold';
-    const closedStatus: RequirementLifecycleStatus = 'Closed';
-    const cancelledStatus: RequirementLifecycleStatus = 'Cancelled';
+    const draftStatus: ProjectStatus = 'Draft';
+    const openStatus: ProjectStatus = 'Open';
+    const holdStatus: ProjectStatus = 'On Hold';
+    const closedStatus: ProjectStatus = 'Closed';
+    const cancelledStatus: ProjectStatus = 'Cancelled';
 
     expect(draftStatus).toBe('Draft');
     expect(openStatus).toBe('Open');
@@ -56,13 +56,13 @@ describe('Requirement Lifecycle and Fulfilment', () => {
   });
 
   it('validates requirement revisions tracking', () => {
-    const req: Partial<ClientRequirement> = {
+    const req: Partial<Project> = {
       id: 'req_1',
       version: 2,
       revisions: [
         {
           id: 'rev_1',
-          requirementId: 'req_1',
+          projectId: 'req_1',
           version: 1,
           changedFields: [],
           previousValues: {},
@@ -73,7 +73,7 @@ describe('Requirement Lifecycle and Fulfilment', () => {
         },
         {
           id: 'rev_2',
-          requirementId: 'req_1',
+          projectId: 'req_1',
           version: 2,
           changedFields: [],
           previousValues: {},

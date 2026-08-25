@@ -4,17 +4,17 @@ import { Application, Job, RequirementLifecycleStatus } from '../types';
  * Calculates the total number of openings allocated to non-cancelled jobs for a given requirement.
  * We include Draft, Published, Paused, Filled, and Closed jobs since they still represent allocated demand.
  */
-export function getAllocatedOpenings(requirementId: string, jobs: Job[]): number {
+export function getAllocatedOpenings(projectId: string, jobs: Job[]): number {
   return jobs
-    .filter(job => job.requirementId === requirementId)
+    .filter(job => job.projectId === projectId)
     .reduce((total, job) => total + (job.openings || 0), 0);
 }
 
 /**
  * Calculates the remaining unallocated positions for a requirement.
  */
-export function getUnallocatedPositions(requirementId: string, totalRequestedHeadcount: number, jobs: Job[]): number {
-  return totalRequestedHeadcount - getAllocatedOpenings(requirementId, jobs);
+export function getUnallocatedPositions(projectId: string, totalRequestedHeadcount: number, jobs: Job[]): number {
+  return totalRequestedHeadcount - getAllocatedOpenings(projectId, jobs);
 }
 
 /**
@@ -34,24 +34,24 @@ export function getFulfilledPositionsForJob(jobId: string, applications: Applica
 /**
  * Calculates fulfilled positions across all jobs for a requirement.
  */
-export function getFulfilledPositions(requirementId: string, jobs: Job[], applications: Application[]): number {
-  const reqJobIds = new Set(jobs.filter(j => j.requirementId === requirementId).map(j => j.id));
+export function getFulfilledPositions(projectId: string, jobs: Job[], applications: Application[]): number {
+  const reqJobIds = new Set(jobs.filter(j => j.projectId === projectId).map(j => j.id));
   return applications.filter(app => reqJobIds.has(app.jobId) && isStageFulfilled(app.currentStage)).length;
 }
 
 /**
  * Calculates the number of joined positions across all jobs for a requirement.
  */
-export function getJoinedPositions(requirementId: string, jobs: Job[], applications: Application[]): number {
-  const reqJobIds = new Set(jobs.filter(j => j.requirementId === requirementId).map(j => j.id));
+export function getJoinedPositions(projectId: string, jobs: Job[], applications: Application[]): number {
+  const reqJobIds = new Set(jobs.filter(j => j.projectId === projectId).map(j => j.id));
   return applications.filter(app => reqJobIds.has(app.jobId) && app.currentStage === 'Joined').length;
 }
 
 /**
  * Calculates the remaining headcount to fulfil for a requirement.
  */
-export function getRemainingToFulfil(requirementId: string, totalRequestedHeadcount: number, jobs: Job[], applications: Application[]): number {
-  return totalRequestedHeadcount - getFulfilledPositions(requirementId, jobs, applications);
+export function getRemainingToFulfil(projectId: string, totalRequestedHeadcount: number, jobs: Job[], applications: Application[]): number {
+  return totalRequestedHeadcount - getFulfilledPositions(projectId, jobs, applications);
 }
 
 /**

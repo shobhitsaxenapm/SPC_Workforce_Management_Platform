@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, ClientRequirement, Client, ApplicationStage, Priority, RequirementLifecycleStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
-import { mockUsers, mockJobs, mockCandidates, mockApplications, mockRequirements, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
+import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
 
@@ -9,15 +9,15 @@ interface AppContextType {
   jobs: Job[];
   candidates: Candidate[];
   applications: Application[];
-  requirements: ClientRequirement[];
+  projects: Project[];
   clients: Client[];
   interviews: Interview[];
   offers: Offer[];
   onboardings: Onboarding[];
   matchRuns: JobMatchRun[];
   informationRequests: InformationRequest[];
-  quickViewRequirementId: string | null;
-  setQuickViewRequirementId: (id: string | null) => void;
+  quickViewProjectId: string | null;
+  setQuickViewProjectId: (id: string | null) => void;
   quickViewClientId: string | null;
   setQuickViewClientId: (id: string | null) => void;
   quickViewJobId: string | null;
@@ -29,11 +29,11 @@ interface AppContextType {
   createClient: (clientData: Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>) => { success: boolean; error?: string };
   updateClient: (clientId: string, clientData: Partial<Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>>) => { success: boolean; error?: string };
   deleteClient: (clientId: string) => void;
-  deleteRequirement: (reqId: string) => void;
-  createRequirement: (reqData: Omit<ClientRequirement, 'id' | 'code' | 'positionsFilled' | 'lifecycleStatus' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'>) => void;
+  deleteProject: (projectId: string) => void;
+  createProject: (projectData: Omit<Project, 'id' | 'code' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'>) => void;
   createCandidate: (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => { success: boolean; error?: string; candidateId?: string };
   updateCandidate: (candidateId: string, updates: Partial<Candidate>) => void;
-  createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled'>, requirementId?: string) => void;
+  createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled' | 'engagementType'>, projectId?: string) => void;
   updateJob: (jobId: string, updates: Partial<Job>) => void;
   updateJobStatus: (jobId: string, status: JobStatus) => void;
   submitApplication: (
@@ -43,18 +43,18 @@ interface AppContextType {
   updateApplicationStage: (appId: string, stage: ApplicationStage, substate?: ApplicationSubstate, rejectionReason?: string) => void;
   updateApplicationScreening: (appId: string, data: any) => void;
   createInformationRequest: (reqData: Omit<InformationRequest, 'id' | 'status' | 'responses'>) => void;
-  recordInformationResponse: (reqId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => void;
-  updateInformationRequestStatus: (reqId: string, status: InformationRequest['status'], reason?: string) => void;
-  resolveInformationRequest: (reqId: string) => void;
-  cancelInformationRequest: (reqId: string, reason?: string) => void;
+  recordInformationResponse: (projectId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => void;
+  updateInformationRequestStatus: (projectId: string, status: InformationRequest['status'], reason?: string) => void;
+  resolveInformationRequest: (projectId: string) => void;
+  cancelInformationRequest: (projectId: string, reason?: string) => void;
   createOffer: (offerData: Omit<Offer, 'id' | 'status'>) => string;
   updateOffer: (offerId: string, updates: Partial<Offer>) => void;
   submitOfferForApproval: (offerId: string) => void;
   approveOffer: (offerId: string) => void;
   issueOffer: (offerId: string) => void;
   recordOfferResponse: (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => void;
-  updateRequirementLifecycle: (reqId: string, status: RequirementLifecycleStatus, reason?: string) => { success: boolean; error?: string };
-  updateRequirement: (reqId: string, updates: Partial<ClientRequirement>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
+  updateProjectStatus: (projectId: string, status: ProjectStatus, reason?: string) => { success: boolean; error?: string };
+  updateProject: (projectId: string, updates: Partial<Project>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
   scheduleInterview: (interviewDetails: Omit<Interview, 'id' | 'status' | 'feedbackStatus'>) => { success: boolean; error?: string };
   rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
@@ -106,7 +106,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return null;
   });
 
-  const [quickViewRequirementId, setQuickViewRequirementId] = useState<string | null>(null);
+  const [quickViewProjectId, setQuickViewProjectId] = useState<string | null>(null);
   const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [quickViewJobId, setQuickViewJobId] = useState<string | null>(null);
   const [quickViewCandidateId, setQuickViewCandidateId] = useState<string | null>(null);
@@ -119,7 +119,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const storedClients = safeParse<Client[]>('spc_clients', mockClients);
     
     // Migrate to requirement-driven status
-    const initialReqs = safeParse<ClientRequirement[]>('spc_requirements', mockRequirements);
+    const initialReqs = safeParse<Project[]>('spc_requirements', mockProjects);
     let changed = false;
     const syncedClients = storedClients.map(client => {
       // Legacy industry mapping
@@ -156,13 +156,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return syncedClients;
   });
 
-  const [requirements, setRequirements] = useState<ClientRequirement[]>(() => {
+  const [projects, setProjects] = useState<Project[]>(() => {
     let reqs: any[] = [];
     if (localStorage.getItem('spc_requirements') === null) {
-      reqs = mockRequirements;
-      localStorage.setItem('spc_requirements', JSON.stringify(mockRequirements));
+      reqs = mockProjects;
+      localStorage.setItem('spc_requirements', JSON.stringify(mockProjects));
     } else {
-      reqs = safeParse<any[]>('spc_requirements', mockRequirements);
+      reqs = safeParse<any[]>('spc_requirements', mockProjects);
     }
 
     let changed = false;
@@ -182,7 +182,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         r.version = 1;
         r.revisions = [];
       }
-      return r as ClientRequirement;
+      return r as Project;
     });
 
     if (changed) {
@@ -231,13 +231,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [applications, setApplications] = useState<Application[]>(() => {
     let base = safeParse<Application[]>('spc_applications', mockApplications);
     const appSeeds: Application[] = [
-      { id: 'app_seed_1', candidateId: 'can_seed_1', jobId: 'j1', requirementId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-08T10:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 85, matchStrengths: ['Good typing speed', 'Excel knowledge'], matchGaps: [], lastActivity: '2026-07-08T10:15:00Z' },
-      { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', requirementId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-09T11:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },
-      { id: 'app_seed_3', candidateId: 'can_seed_3', jobId: 'j1', requirementId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-10T12:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 72, matchStrengths: ['Immediate availability'], matchGaps: [], lastActivity: '2026-07-10T12:15:00Z' },
-      { id: 'app_seed_4', candidateId: 'can_seed_4', jobId: 'j1', requirementId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T13:45:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 90, matchStrengths: ['Direct experience matching requirements'], matchGaps: [], lastActivity: '2026-07-11T13:45:00Z' },
-      { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', requirementId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T14:30:00Z', source: 'Job Portal', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
-      { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', requirementId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
-      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', requirementId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
+      { id: 'app_seed_1', candidateId: 'can_seed_1', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-08T10:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 85, matchStrengths: ['Good typing speed', 'Excel knowledge'], matchGaps: [], lastActivity: '2026-07-08T10:15:00Z' },
+      { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', projectId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-09T11:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },
+      { id: 'app_seed_3', candidateId: 'can_seed_3', jobId: 'j1', projectId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-10T12:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 72, matchStrengths: ['Immediate availability'], matchGaps: [], lastActivity: '2026-07-10T12:15:00Z' },
+      { id: 'app_seed_4', candidateId: 'can_seed_4', jobId: 'j1', projectId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T13:45:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 90, matchStrengths: ['Direct experience matching requirements'], matchGaps: [], lastActivity: '2026-07-11T13:45:00Z' },
+      { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', projectId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T14:30:00Z', source: 'Job Portal', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
+      { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', projectId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
+      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', projectId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
     ];
     let changed = false;
     appSeeds.forEach(seed => {
@@ -305,8 +305,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     localStorage.setItem('spc_clients', JSON.stringify(newClients));
   };
 
-  const persistRequirements = (newReqs: ClientRequirement[]) => {
-    setRequirements(newReqs);
+  const persistProjects = (newReqs: Project[]) => {
+    setProjects(newReqs);
     localStorage.setItem('spc_requirements', JSON.stringify(newReqs));
     
     // Atomically recalculate client statuses based on requirement relationships
@@ -394,7 +394,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ...clientData,
       id: 'cl_' + Math.random().toString(36).substr(2, 9),
       status: 'Inactive', 
-      activeRequirementsCount: 0,
+      activeProjectsCount: 0,
       openPositionsCount: 0,
       lastActivity: new Date().toISOString()
     };
@@ -446,18 +446,18 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistClients(updatedClients);
   };
 
-  const deleteRequirement = (reqId: string) => {
-    const updatedReqs = requirements.filter(r => r.id !== reqId);
-    persistRequirements(updatedReqs);
+  const deleteProject = (projectId: string) => {
+    const updatedReqs = projects.filter(r => r.id !== projectId);
+    persistProjects(updatedReqs);
   };
 
-  type CreateReqData = Omit<ClientRequirement, 'id' | 'code' | 'positionsFilled' | 'lifecycleStatus' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'> & { lifecycleStatus?: RequirementLifecycleStatus };
+  type CreateReqData = Omit<Project, 'id' | 'code' | 'positionsFilled' | 'lifecycleStatus' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'> & { lifecycleStatus?: ProjectStatus };
 
-  const createRequirement = (reqData: CreateReqData | CreateReqData[]) => {
+  const createProject = (reqData: CreateReqData | CreateReqData[]) => {
     const dataArray = Array.isArray(reqData) ? reqData : [reqData];
     const now = new Date().toISOString();
     
-    const newReqs: ClientRequirement[] = dataArray.map(data => ({
+    const newReqs: Project[] = dataArray.map(data => ({
       ...data,
       id: 'req_' + Math.random().toString(36).substr(2, 9),
       code: 'REQ-26-' + Math.floor(100 + Math.random() * 900),
@@ -477,14 +477,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updatedClients[clientIndex] = {
           ...updatedClients[clientIndex],
           status: 'Active',
-          activeRequirementsCount: updatedClients[clientIndex].activeRequirementsCount + 1,
+          activeProjectsCount: updatedClients[clientIndex].activeProjectsCount + 1,
           openPositionsCount: updatedClients[clientIndex].openPositionsCount + req.totalRequestedHeadcount
         };
       }
     });
 
     persistClients(updatedClients);
-    persistRequirements([...newReqs, ...requirements]);
+    persistProjects([...newReqs, ...projects]);
   };
 
   const createCandidate = (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => {
@@ -518,15 +518,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistCandidates(updatedCandidates);
   };
 
-  const createJob = (jobData: Omit<Job, 'id' | 'code' | 'filled'>, requirementId?: string) => {
+  const createJob = (jobData: Omit<Job, 'id' | 'code' | 'filled'>, projectId?: string) => {
     const jobId = 'j_' + Math.random().toString(36).substr(2, 9);
     const jobCode = 'JOB-26-' + Math.floor(100 + Math.random() * 900);
     
     let clientId = jobData.clientId;
     let projectName = jobData.projectName;
     
-    if (requirementId && requirementId !== 'none') {
-      const req = requirements.find(r => r.id === requirementId);
+    if (projectId && projectId !== 'none') {
+      const req = projects.find(r => r.id === projectId);
       if (req) {
         clientId = req.clientId;
         projectName = req.projectName;
@@ -537,7 +537,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ...jobData,
       id: jobId,
       code: jobCode,
-      requirementId: requirementId || 'none',
+      projectId: projectId || 'none',
       clientId,
       projectName,
       filled: 0,
@@ -618,7 +618,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       id: applicationId,
       candidateId: finalCandidate.id,
       jobId: jobId,
-      requirementId: targetJob ? targetJob.requirementId : 'none',
+      projectId: targetJob ? targetJob.projectId : 'none',
       currentStage: 'Applied',
       appliedDate: new Date().toISOString(),
       source: 'Careers Portal',
@@ -670,14 +670,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistInformationRequests([newReq, ...informationRequests]);
   };
 
-  const recordInformationResponse = (reqId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => {
+  const recordInformationResponse = (projectId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => {
     const newResponse: RequestResponse = {
       ...response,
       id: 'resp_' + Math.random().toString(36).substr(2, 9),
-      requestId: reqId
+      requestId: projectId
     };
     const updated = informationRequests.map(r => {
-      if (r.id === reqId) {
+      if (r.id === projectId) {
         return { 
           ...r, 
           status: 'Response Received' as const, 
@@ -689,9 +689,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistInformationRequests(updated);
   };
 
-  const updateInformationRequestStatus = (reqId: string, status: InformationRequest['status'], reason?: string) => {
+  const updateInformationRequestStatus = (projectId: string, status: InformationRequest['status'], reason?: string) => {
     const updated = informationRequests.map(r => {
-      if (r.id === reqId) {
+      if (r.id === projectId) {
         return { ...r, status, cancellationReason: reason };
       }
       return r;
@@ -699,23 +699,23 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistInformationRequests(updated);
   };
 
-  const resolveInformationRequest = (reqId: string) => {
-    updateInformationRequestStatus(reqId, 'Resolved');
+  const resolveInformationRequest = (projectId: string) => {
+    updateInformationRequestStatus(projectId, 'Resolved');
   };
 
-  const cancelInformationRequest = (reqId: string, reason?: string) => {
-    updateInformationRequestStatus(reqId, 'Cancelled', reason);
+  const cancelInformationRequest = (projectId: string, reason?: string) => {
+    updateInformationRequestStatus(projectId, 'Cancelled', reason);
   };
 
-  const updateRequirementLifecycle = (reqId: string, status: RequirementLifecycleStatus, reason?: string) => {
-    const req = requirements.find(r => r.id === reqId);
+  const updateProjectStatus = (projectId: string, status: ProjectStatus, reason?: string) => {
+    const req = projects.find(r => r.id === projectId);
     if (!req) return { success: false, error: 'Requirement not found' };
 
-    const updated = requirements.map(r => {
-      if (r.id === reqId) {
+    const updated = projects.map(r => {
+      if (r.id === projectId) {
         const rev = {
           id: 'rev_' + Math.random().toString(36).substr(2, 9),
-          requirementId: r.id,
+          projectId: r.id,
           version: r.version + 1,
           changedFields: ['lifecycleStatus'],
           previousValues: { lifecycleStatus: r.lifecycleStatus },
@@ -734,12 +734,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return r;
     });
-    persistRequirements(updated);
+    persistProjects(updated);
     return { success: true };
   };
 
-  const updateRequirement = (reqId: string, updates: Partial<ClientRequirement>, reason?: string, impactSnapshot?: any) => {
-    const req = requirements.find(r => r.id === reqId);
+  const updateProject = (projectId: string, updates: Partial<Project>, reason?: string, impactSnapshot?: any) => {
+    const req = projects.find(r => r.id === projectId);
     if (!req) return { success: false, error: 'Requirement not found' };
     
     if (updates.version && updates.version !== req.version) {
@@ -749,8 +749,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const changedFields = Object.keys(updates).filter(k => k !== 'version' && k !== 'revisions' && k !== 'updatedAt');
     const isMaterial = reason && changedFields.length > 0;
 
-    const updated = requirements.map(r => {
-      if (r.id === reqId) {
+    const updated = projects.map(r => {
+      if (r.id === projectId) {
         let revs = r.revisions || [];
         let nextVersion = r.version;
         if (isMaterial) {
@@ -763,7 +763,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           });
           revs = [...revs, {
             id: 'rev_' + Math.random().toString(36).substr(2, 9),
-            requirementId: r.id,
+            projectId: r.id,
             version: nextVersion,
             changedFields,
             previousValues: prevValues,
@@ -784,7 +784,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return r;
     });
-    persistRequirements(updated);
+    persistProjects(updated);
     return { success: true };
   };
 
@@ -960,7 +960,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     const job = jobs.find(j => j.id === targetOffer.jobId);
-    const requirementId = job ? job.requirementId : '';
+    const projectId = job ? job.projectId : '';
     const recruiterId = job ? job.assignedRecruiterId : 'u3';
 
     const newOnboarding: Onboarding = {
@@ -968,7 +968,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       candidateId: targetOffer.candidateId,
       offerId: targetOffer.id,
       clientId: targetOffer.clientId,
-      requirementId: requirementId,
+      projectId: projectId,
       jobId: targetOffer.jobId,
       role: targetOffer.offeredRole,
       proposedJoiningDate: targetOffer.proposedJoiningDate,
@@ -1080,7 +1080,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       candidateId,
       jobId,
-      requirementId: job.requirementId,
+      projectId: job.projectId,
       currentStage: 'Sourced',
       appliedDate: new Date().toISOString(),
       source: candidate?.source || 'Internal Match',
@@ -1105,15 +1105,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         jobs,
         candidates,
         applications,
-        requirements,
+        projects,
         clients,
         interviews,
         offers,
         onboardings,
         matchRuns,
         informationRequests,
-        quickViewRequirementId,
-        setQuickViewRequirementId,
+        quickViewProjectId,
+        setQuickViewProjectId,
         quickViewClientId,
         setQuickViewClientId,
         quickViewJobId,
@@ -1125,8 +1125,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         createClient,
         updateClient,
         deleteClient,
-        deleteRequirement,
-        createRequirement,
+        deleteProject,
+        createProject,
         createCandidate,
         updateCandidate,
         createJob,
@@ -1140,8 +1140,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateInformationRequestStatus,
         resolveInformationRequest,
         cancelInformationRequest,
-        updateRequirementLifecycle,
-        updateRequirement,
+        updateProjectStatus,
+        updateProject,
         submitInterviewFeedback,
         scheduleInterview,
         rescheduleInterview,

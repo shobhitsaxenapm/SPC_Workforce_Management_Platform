@@ -5,14 +5,14 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import FilterPanel, { FilterField } from './FilterPanel';
 import ClientDetailDrawer from './ClientDetailDrawer';
-import ClientRequirementFormModal from './ClientRequirementFormModal';
+import ProjectFormModal from './ProjectFormModal';
 import ClientFormModal from './ClientFormModal';
 import { Client, PrimaryIndustry } from '../types';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
 import SearchableSelect from './SearchableSelect';
 
 export default function ClientsList() {
-  const { clients, requirements, applications, currentUser, createClient, deleteClient } = useApp();
+  const { clients, projects, applications, currentUser, createClient, deleteClient } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
@@ -77,11 +77,11 @@ export default function ClientsList() {
       <div className="grid grid-cols-1 gap-4">
         {filteredClients.map(client => {
           const isSelected = selectedClientId === client.id;
-          const clientReqs = requirements.filter(r => r.clientId === client.id);
-          const activeReqsCount = clientReqs.filter(r => r.status !== 'Closed').length;
-          const openPositionsCount = clientReqs.reduce((acc, r) => {
-            const filled = applications.filter(a => a.requirementId === r.id && a.currentStage === 'Joined').length;
-            return acc + Math.max(r.totalRequestedHeadcount - filled, 0);
+          const clientProjects = projects.filter(p => p.clientId === client.id);
+          const activeProjectsCount = clientProjects.filter(p => p.status !== 'Closed').length;
+          const openPositionsCount = clientProjects.reduce((acc, p) => {
+            const filled = applications.filter(a => a.projectId === p.id && a.currentStage === 'Joined').length;
+            return acc + Math.max(p.totalRequestedHeadcount - filled, 0);
           }, 0);
           
           return (
@@ -126,7 +126,7 @@ export default function ClientsList() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Briefcase className="w-4 h-4 text-slate-400" />
-                        {activeReqsCount} Active {activeReqsCount === 1 ? 'Req' : 'Reqs'}
+                        {activeProjectsCount} Active {activeProjectsCount === 1 ? 'Project' : 'Projects'}
                       </div>
                       <div className="px-2 py-0.5 bg-slate-100 rounded text-xs font-medium text-slate-600">
                         {openPositionsCount} Open Positions
@@ -310,7 +310,7 @@ export default function ClientsList() {
 
       {/* CREATE REQUIREMENT MODAL (TRIGGERED FROM DRAWER CTA) */}
       {createReqClientId && (
-        <ClientRequirementFormModal 
+        <ProjectFormModal 
           isOpen={!!createReqClientId}
           onClose={() => setCreateReqClientId(null)}
           defaultClientId={createReqClientId}
