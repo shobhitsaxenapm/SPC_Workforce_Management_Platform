@@ -176,7 +176,7 @@ export default function JobsList() {
     const titleMatch = job.title.toLowerCase().includes(searchLower);
     const codeMatch = job.code.toLowerCase().includes(searchLower);
     const client = clients.find(c => c.id === job.clientId);
-    const clientMatch = client?.name.toLowerCase().includes(searchLower);
+    const clientMatch = client?.name?.toLowerCase().includes(searchLower) || false;
     const matchSearch = !searchTerm || titleMatch || codeMatch || clientMatch;
     const matchStatus = !jobFilters.status || job.status === jobFilters.status;
     const matchClient = !jobFilters.clientId || job.clientId === jobFilters.clientId;
