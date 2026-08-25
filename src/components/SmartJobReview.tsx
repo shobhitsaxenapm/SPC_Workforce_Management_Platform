@@ -13,7 +13,7 @@ interface SmartJobReviewProps {
 }
 
 export default function SmartJobReview({ extractedData, sourceText, metadata, onSaveAsDraft, onDiscard }: SmartJobReviewProps) {
-  const { requirements, clients, currentUser, createJob } = useApp();
+  const { projects, clients, currentUser, createJob } = useApp();
 
   const [formData, setFormData] = useState({
     title: extractedData.title || '',
@@ -39,10 +39,10 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
   useEffect(() => {
     // Attempt to auto-map client requirement if provided by AI
     if (formData.projectId) {
-      const match = requirements.find(r => 
+      const match = projects.find(r => 
         r.id === formData.projectId || 
         r.code.toLowerCase() === formData.projectId.toLowerCase() || 
-        r.title.toLowerCase().includes(formData.projectId.toLowerCase())
+        r.projectName.toLowerCase().includes(formData.projectId.toLowerCase())
       );
       if (match) {
         setFormData(prev => ({ 
@@ -58,7 +58,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
   }, []);
 
   const handleRequirementChange = (projectId: string) => {
-    const req = requirements.find(r => r.id === projectId);
+    const req = projects.find(r => r.id === projectId);
     if (req) {
       setFormData(prev => ({
         ...prev,
@@ -74,7 +74,6 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = 'Title is required';
-    if (!formData.projectId) newErrors.projectId = 'Linked Requirement is required';
     if (!formData.location) newErrors.location = 'Location is required';
     if (!formData.summary) newErrors.summary = 'Summary is required';
     setErrors(newErrors);
@@ -168,19 +167,19 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Linked Requirement <span className="text-red-500">*</span>
+                    Linked Project (Optional)
                   </label>
                   <select 
                     value={formData.projectId}
                     onChange={(e) => handleRequirementChange(e.target.value)}
                     className={cn("w-full rounded-lg border p-2.5 text-sm", errors.projectId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   >
-                    <option value="">-- Select Client Requirement --</option>
-                    {requirements.map(r => {
-                      const client = clients.find(c => c.id === r.clientId);
+                    <option value="">-- Select Project --</option>
+                    {projects.map(p => {
+                      const client = clients.find(c => c.id === p.clientId);
                       return (
-                        <option key={r.id} value={r.id}>
-                          {client?.name} - {r.title} ({r.code})
+                        <option key={p.id} value={p.id}>
+                          {client?.name} - {p.projectName} ({p.code})
                         </option>
                       );
                     })}

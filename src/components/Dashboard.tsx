@@ -212,19 +212,19 @@ export default function Dashboard() {
             </div>
 
             <div className="divide-y divide-gray-100">
-              {topReqs.map(req => {
-                const client = clients.find(c => c.id === req.clientId);
-                const filled = calculateFilled(req.id);
-                const progress = (filled / req.totalRequestedHeadcount) * 100;
-                const daysLeft = daysUntilTarget(req.targetJoiningDate);
-                const isContractType = req.employmentType === 'Contract' || req.employmentType === 'Contractual';
+              {topProjects.map(project => {
+                const client = clients.find(c => c.id === project.clientId);
+                const filled = calculateFilled(project.id);
+                const progress = (filled / project.totalRequestedHeadcount) * 100;
+                const daysLeft = daysUntilTarget(project.targetJoiningDate);
+                const isContractType = project.engagementType === 'Staffing – SPC Payroll';
 
                 return (
-                  <div key={req.id} className="px-5 py-4">
+                  <div key={project.id} className="px-5 py-4">
                     <div className="flex items-start justify-between mb-2.5">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setQuickViewProjectId(req.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
-                          {req.title} — {client?.name}
+                        <button onClick={() => setQuickViewProjectId(project.id)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline">
+                          {project.projectName} — {client?.name}
                         </button>
                         <span className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
@@ -258,7 +258,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <span className="text-xs font-medium text-gray-500 shrink-0 w-16 text-right">
-                        {filled}/{req.totalRequestedHeadcount} filled
+                        {filled}/{project.totalRequestedHeadcount} filled
                       </span>
                     </div>
                   </div>
