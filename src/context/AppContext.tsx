@@ -165,26 +165,33 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       reqs = safeParse<any[]>('spc_requirements', mockProjects);
     }
 
+    const parsedProjects = safeParse<Project[]>('spc_requirements', mockProjects);
     let changed = false;
-    const migratedReqs = reqs.map(r => {
-      if ('status' in r) {
-        changed = true;
-        const legacyStatus = r.status as string;
-        let lifecycleStatus = 'Open';
-        
-        if (legacyStatus === 'Draft') lifecycleStatus = 'Draft';
-        else if (legacyStatus === 'On Hold') lifecycleStatus = 'On Hold';
-        else if (legacyStatus === 'Closed') lifecycleStatus = 'Closed';
-        else if (legacyStatus === 'Cancelled') lifecycleStatus = 'Cancelled';
-        
-        delete r.status;
-        r.lifecycleStatus = lifecycleStatus;
-        r.version = 1;
-        r.revisions = [];
+
+    const migratedReqs = parsedProjects.map(p => {
+      let proj = { ...p };
+      
+      // Map legacy statuses if needed
+      if ((proj as any).status) {
+         const legacyStatus = (proj as any).status as string;
+         if (legacyStatus === 'Draft') proj.status = 'Draft' as ProjectStatus;
+         else if (legacyStatus === 'On Hold') proj.status = 'On Hold' as ProjectStatus;
+         else if (legacyStatus === 'Closed') proj.status = 'Completed' as ProjectStatus;
+         else if (legacyStatus === 'Cancelled') proj.status = 'Cancelled' as ProjectStatus;
+         else if (legacyStatus === 'Open') proj.status = 'Active' as ProjectStatus;
       }
-      return r as Project;
+
+      // Ensure new fields exist
+      if (!('version' in proj)) (proj as any).version = 1;
+      if (!('revisions' in proj)) (proj as any).revisions = [];
+      
+      return proj;
     });
 
+    if (migratedReqs.some((r, i) => r.status !== parsedProjects[i].status || !('version' in parsedProjects[i]))) {
+      changed = true;
+    }
+    
     if (changed) {
       localStorage.setItem('spc_requirements', JSON.stringify(migratedReqs));
     }
@@ -195,7 +202,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (localStorage.getItem('spc_jobs') === null) {
       localStorage.setItem('spc_jobs', JSON.stringify(mockJobs));
     }
-    return safeParse<Job[]>('spc_jobs', mockJobs);
+    const parsedJobs = safeParse<Job[]>('spc_jobs', mockJobs);
+    const healedJobs = parsedJobs.map(j => ({ ...j, title: j.title || j.projectName || '' }));
+    // If any were healed, save back to storage so they persist
+    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title)) {
+      localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
+    }
+    return healedJobs;
   });
 
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
