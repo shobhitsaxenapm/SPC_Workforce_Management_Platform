@@ -13,7 +13,6 @@ interface JobMatchesTabProps {
 export default function JobMatchesTab({ job }: JobMatchesTabProps) {
   const { matchRuns, candidates, addMatchToPipeline, dismissMatch, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [minScore, setMinScore] = useState(70);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   
   const run = matchRuns.find(r => r.jobId === job.id);
@@ -25,8 +24,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
   const filteredMatches = activeMatches.filter(m => {
     const candidate = candidates.find(c => c.id === m.candidateId);
     if (!candidate) return false;
-    
-    if (m.score < minScore) return false;
     
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -69,18 +66,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
-        </div>
-        
-        <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
-          <span className="text-sm text-gray-600">Min Score:</span>
-          <input 
-            type="number" 
-            min="0" max="100" step="5"
-            value={minScore}
-            onChange={e => setMinScore(parseInt(e.target.value) || 0)}
-            className="w-16 p-1 text-sm outline-none font-medium"
-          />
-          <span className="text-gray-500">%</span>
         </div>
       </div>
 

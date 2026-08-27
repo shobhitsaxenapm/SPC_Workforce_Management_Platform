@@ -50,7 +50,6 @@ export default function CandidateDetail() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
   // Filters for Matching Jobs
-  const [minScore, setMinScore] = useState<number>(70);
   const [locationFilter, setLocationFilter] = useState('');
   const [employmentFilter, setEmploymentFilter] = useState('');
 
@@ -77,7 +76,6 @@ export default function CandidateDetail() {
     if (job.status !== 'Published') return false; 
     if (job.openings - job.filled <= 0) return false;
 
-    if (minScore > 70 && insight.matchScore < minScore) return false;
     if (locationFilter && job.location !== locationFilter) return false;
     if (employmentFilter && job.employmentType !== employmentFilter) return false;
 
@@ -482,14 +480,7 @@ export default function CandidateDetail() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4 flex-wrap">
              <div className="flex gap-4 flex-1">
-               <label className="flex items-center gap-2 text-sm text-slate-600">
-                 Min Score:
-                 <select value={minScore} onChange={(e) => setMinScore(Number(e.target.value))} className="border-slate-300 rounded px-2 py-1">
-                   <option value={70}>70%</option>
-                   <option value={80}>80%</option>
-                   <option value={90}>90%</option>
-                 </select>
-               </label>
+
                <label className="flex items-center gap-2 text-sm text-slate-600">
                  Location:
                  <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border-slate-300 rounded px-2 py-1">

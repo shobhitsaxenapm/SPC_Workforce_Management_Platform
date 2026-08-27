@@ -65,15 +65,15 @@ export default function CandidateQuickViewModal() {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
               <div className="w-full h-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg">
-                {candidate.name.split(' ').map(n => n[0]).join('')}
+                {candidate.fullName.split(' ').map(n => n[0]).join('')}
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{candidate.code}</span>
               </div>
-              <h2 id="candidate-modal-title" className="text-xl font-bold text-slate-900">{candidate.name}</h2>
-              <p className="text-sm text-slate-600 mt-0.5">{candidate.currentRole} • {candidate.location}</p>
+              <h2 id="candidate-modal-title" className="text-xl font-bold text-slate-900">{candidate.fullName}</h2>
+              <p className="text-sm text-slate-600 mt-0.5">{candidate.currentRole} • {candidate.currentLocation}</p>
             </div>
           </div>
           <button 
