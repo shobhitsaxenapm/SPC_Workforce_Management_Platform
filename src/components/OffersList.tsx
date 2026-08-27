@@ -81,7 +81,7 @@ export default function OffersList() {
   const uniqueJobs = Array.from(new Set(offers.map(o => o.jobId))).map(id => jobs.find(j => j.id === id)).filter(Boolean);
 
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Offer Status', options: ['Draft', 'Approval Pending', 'Approved', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Offer Status', options: ['Offer Draft', 'Approval Pending', 'Approved', 'Offer Issued', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
     { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) },
     { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expired', 'Expiring in 7 Days', 'Expiring in 30 Days', 'No Immediate Risk'].map(r => ({ value: r, label: r })) }
@@ -141,11 +141,11 @@ export default function OffersList() {
 
   // Reopen Offer Handler
   const handleReopenOffer = (offerId: string) => {
-    updateOfferStatus(offerId, 'Draft');
+    updateOfferStatus(offerId, 'Offer Draft');
     triggerToast('Offer status reverted to Draft.');
     
     if (selectedOffer && selectedOffer.id === offerId) {
-      setSelectedOffer(prev => prev ? { ...prev, status: 'Draft' } : null);
+      setSelectedOffer(prev => prev ? { ...prev, status: 'Offer Draft' } : null);
     }
   };
 
@@ -497,7 +497,7 @@ export default function OffersList() {
 
               {/* Status Action Buttons */}
               <div className="pt-6 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-white">
-                {selectedOffer.status === 'Draft' && (
+                {selectedOffer.status === 'Offer Draft' && (
                   <button 
                     onClick={() => {
                       submitOfferForApproval(selectedOffer.id);

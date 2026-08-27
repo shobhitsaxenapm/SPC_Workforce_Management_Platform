@@ -49,7 +49,7 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
     if (!isOpen) return;
 
     // Load existing draft if exists
-    const existingOffer = offers.find(o => o.applicationId === applicationId && (o.status === 'Draft' || o.status === 'Approval Pending'));
+    const existingOffer = offers.find(o => o.applicationId === applicationId && (o.status === 'Offer Draft' || o.status === 'Approval Pending'));
     if (existingOffer) {
       setDraftId(existingOffer.id);
       setEmployingEntity(existingOffer.employingEntity || 'SPC');
@@ -140,8 +140,12 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
 
   const handleSubmitForApproval = () => {
     if (draftId) {
+      console.log('Submitting for approval with draftId:', draftId);
       submitOfferForApproval(draftId);
       onClose();
+    } else {
+      console.error('Submit failed: draftId is null');
+      alert('Cannot submit: Offer draft is missing.');
     }
   };
 
