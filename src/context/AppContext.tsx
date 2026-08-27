@@ -940,7 +940,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
        deliveryStatus: 'Delivery Pending' 
     });
     const offer = offers.find(o => o.id === offerId);
-    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Issued (Delivery Pending)');
+    if (offer) updateApplicationStage(offer.applicationId, 'Offered', '');
   };
 
   const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => {

@@ -64,9 +64,17 @@ export default function JobDetail() {
      console.warn(`Pipeline mismatch: Job ${job.id} has ${jobApplications.length} apps, but grouped ${groupedCount}`);
   }
 
-  const selectableStages: ApplicationStage[] = [
-    'Sourced', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'
-  ];
+  // Dynamic selectable stages based on current stage
+  const getSelectableStages = (currentStage: ApplicationStage): ApplicationStage[] => {
+    switch (currentStage) {
+      case 'Offered': return ['Offered', 'Hired', 'Rejected', 'Withdrawn'];
+      case 'Hired': return ['Hired', 'Joined', 'Rejected', 'Withdrawn'];
+      case 'Joined': return ['Joined'];
+      case 'Rejected':
+      case 'Withdrawn': return [currentStage, 'Sourced']; // Allow reopening
+      default: return ['Sourced', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'];
+    }
+  };
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
     if (newStage === 'Rejected' || newStage === 'Withdrawn') {
@@ -414,9 +422,11 @@ export default function JobDetail() {
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
                         <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
                         
-                        <div className="mb-3">
-                          <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate || app.currentStage}</span>
-                        </div>
+                        {app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && (
+                          <div className="mb-3">
+                            <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
+                          </div>
+                        )}
                         
                         {(() => {
                            const existingOffer = offers.find(o => o.applicationId === app.id);
@@ -440,31 +450,25 @@ export default function JobDetail() {
                             >
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
-                            {['Offered', 'Hired', 'Joined'].includes(app.currentStage) ? (
-                              <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
-                                {app.currentStage}
-                              </span>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {app.currentStage === 'Selected' && (
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
-                                    className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
-                                    title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                    {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                  </button>
-                                )}
-                                <select 
-                                  className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                                  value={app.currentStage}
-                                  onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                            <div className="flex items-center gap-2">
+                              {app.currentStage === 'Selected' && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
+                                  className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
+                                  title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
                                 >
-                                  {selectableStages.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                              </div>
-                            )}
+                                  <FileText className="w-3 h-3" />
+                                  {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
+                                </button>
+                              )}
+                              <select 
+                                className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                value={app.currentStage}
+                                onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                              >
+                                {getSelectableStages(app.currentStage).map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       </div>
