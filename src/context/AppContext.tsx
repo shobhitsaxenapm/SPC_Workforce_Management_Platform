@@ -926,17 +926,21 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const submitOfferForApproval = (offerId: string) => {
-    updateOffer(offerId, { status: 'Offer Ready for Review' });
+    updateOffer(offerId, { status: 'Approval Pending' });
   };
 
   const approveOffer = (offerId: string) => {
-    updateOffer(offerId, { status: 'Sent', approvedBy: currentUser?.name || 'Admin' });
+    updateOffer(offerId, { status: 'Approved', approvedBy: currentUser?.name || 'Admin' });
   };
 
   const issueOffer = (offerId: string) => {
-    updateOfferStatus(offerId, 'Sent', { sentDate: new Date().toISOString(), deliveryStatus: 'Sent' });
+    updateOffer(offerId, { 
+       status: 'Offer Issued', 
+       sentDate: new Date().toISOString(), 
+       deliveryStatus: 'Delivery Pending' 
+    });
     const offer = offers.find(o => o.id === offerId);
-    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Sent');
+    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Issued (Delivery Pending)');
   };
 
   const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => {

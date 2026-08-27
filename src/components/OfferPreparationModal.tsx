@@ -9,11 +9,14 @@ interface OfferPreparationModalProps {
 }
 
 export default function OfferPreparationModal({ applicationId, isOpen, onClose }: OfferPreparationModalProps) {
-  const { applications, candidates, jobs, clients, offers, createOffer, updateOffer, submitOfferForApproval, issueOffer } = useApp();
+  const { applications, candidates, jobs, clients, offers, createOffer, updateOffer, submitOfferForApproval, issueOffer, updateApplicationStage } = useApp();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // State
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [approvalRequired, setApprovalRequired] = useState(true);
+  const [showIssueConfirm, setShowIssueConfirm] = useState(false);
+  const [issueState, setIssueState] = useState<'pending' | 'issued'>('pending');
 
   // Form State
   const [employingEntity, setEmployingEntity] = useState<'SPC' | 'Client'>('SPC');
@@ -69,6 +72,7 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
       setAuthorizedSignatoryName(existingOffer.authorizedSignatoryName || 'Aditi Sharma');
       setAuthorizedSignatoryDesignation(existingOffer.authorizedSignatoryDesignation || 'HR Director');
       if (existingOffer.expiryDate) setOfferValidUntil(existingOffer.expiryDate.split('T')[0]);
+      if (existingOffer.approvalRequired !== undefined) setApprovalRequired(existingOffer.approvalRequired);
     } else {
       setDraftId(null);
       // Pre-fill
@@ -91,7 +95,7 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
       offeredCompensation: annualCTC,
       proposedJoiningDate: joiningDate,
       contractDuration: employmentType,
-      approvalRequired: true, // configurable later
+      approvalRequired,
       employingEntity,
       employingEntityName,
       registeredOfficeAddress,
@@ -141,11 +145,26 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
     }
   };
 
-  const handleIssueOffer = () => {
+  const handleIssueOfferClick = () => {
+    setShowIssueConfirm(true);
+  };
+
+  const handleConfirmIssue = () => {
     if (draftId) {
       issueOffer(draftId);
-      onClose();
+      setIssueState('issued');
     }
+  };
+
+  const handleMarkAsShared = () => {
+    if (draftId) {
+      updateOffer(draftId, { deliveryStatus: 'Sent' });
+      const currentOffer = offers.find(o => o.id === draftId);
+      if (currentOffer) {
+         updateApplicationStage(currentOffer.applicationId, 'Offered', 'Offer Sent Manually');
+      }
+    }
+    onClose();
   };
 
   // Replace tokens in template
@@ -329,6 +348,10 @@ Date: ____________________
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-2 gap-4">
+                <div className="col-span-2 flex items-center gap-2 mb-2">
+                  <input type="checkbox" id="approvalRequired" checked={approvalRequired} onChange={e => setApprovalRequired(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                  <label htmlFor="approvalRequired" className="text-sm font-medium text-slate-700 cursor-pointer">Requires Internal Approval Before Issuing</label>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Signatory Name</label>
                   <input type="text" value={authorizedSignatoryName} onChange={e => setAuthorizedSignatoryName(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none" />
@@ -384,59 +407,123 @@ Date: ____________________
 
           {step === 4 && (
             <div className="max-w-md mx-auto py-12 text-center space-y-6">
-              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
-                <Send className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Ready to Issue Offer</h3>
-                <p className="text-slate-500">
-                  Issuing will freeze this offer version and make it the official offer shared with {candidate.fullName}.
-                </p>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-4 text-left text-sm space-y-2">
-                <div className="flex justify-between"><span className="text-slate-500">Candidate:</span> <span className="font-medium">{candidate.fullName}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Role:</span> <span className="font-medium">{job.title}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Employing Entity:</span> <span className="font-medium">{employingEntityName}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Annual CTC:</span> <span className="font-medium">{annualCTC}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Valid Until:</span> <span className="font-medium">{offerValidUntil}</span></div>
-              </div>
-
+              {issueState === 'issued' ? (
+                 <div className="animate-in fade-in zoom-in duration-200">
+                   <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <Check className="w-8 h-8" />
+                   </div>
+                   <h3 className="text-xl font-bold text-slate-800 mb-2">Offer Issued</h3>
+                   
+                   <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium mb-4">
+                     <AlertCircle className="w-4 h-4" /> Issued — Delivery Pending
+                   </div>
+                   
+                   <p className="text-slate-500 mb-6 text-sm">
+                     Real email delivery is not configured for this demo environment. Please download the offer document and share it with {candidate.fullName} manually.
+                   </p>
+                   
+                   <div className="flex gap-3 justify-center mt-8">
+                      <button className="px-5 py-2.5 font-medium bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg transition-colors flex items-center gap-2" onClick={() => alert('Downloading PDF...')}>
+                        <FileText className="w-4 h-4" /> Download Offer
+                      </button>
+                      <button onClick={handleMarkAsShared} className="px-5 py-2.5 font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                        <Check className="w-4 h-4" /> Mark as Shared
+                      </button>
+                   </div>
+                 </div>
+              ) : showIssueConfirm ? (
+                 <div className="animate-in fade-in zoom-in duration-200">
+                    <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Confirm Issue & Send Offer</h3>
+                    <p className="text-slate-500 mb-6">
+                      Are you sure you want to issue this offer? The offer version will be frozen and {candidate.fullName} will be moved to the Offered stage.
+                    </p>
+                    <div className="flex gap-3 justify-center mt-8">
+                       <button onClick={() => setShowIssueConfirm(false)} className="px-5 py-2.5 font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors">Cancel</button>
+                       <button onClick={handleConfirmIssue} className="px-5 py-2.5 font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                         <Send className="w-4 h-4" /> Issue Offer
+                       </button>
+                    </div>
+                 </div>
+              ) : (
+                 <>
+                   <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                     <Send className="w-8 h-8" />
+                   </div>
+                   <div>
+                     <h3 className="text-xl font-bold text-slate-800 mb-2">Ready to Issue Offer</h3>
+                     <p className="text-slate-500">
+                       Issuing will freeze this offer version and make it the official offer shared with {candidate.fullName}.
+                     </p>
+                   </div>
+     
+                   <div className="bg-white border border-slate-200 rounded-xl p-4 text-left text-sm space-y-2">
+                     <div className="flex justify-between"><span className="text-slate-500">Candidate:</span> <span className="font-medium">{candidate.fullName}</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">Role:</span> <span className="font-medium">{job.title}</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">Employing Entity:</span> <span className="font-medium">{employingEntityName}</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">Annual CTC:</span> <span className="font-medium">{annualCTC}</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">Valid Until:</span> <span className="font-medium">{offerValidUntil}</span></div>
+                   </div>
+                 </>
+              )}
             </div>
           )}
 
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center">
-          <div className="flex gap-2">
-             <button onClick={handleSaveDraft} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
-                Save Draft
-             </button>
+        {(!showIssueConfirm && issueState !== 'issued') && (
+          <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center">
+            <div className="flex gap-2">
+               <button onClick={handleSaveDraft} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
+                  Save Draft
+               </button>
+            </div>
+            <div className="flex gap-3">
+              {step > 1 && (
+                <button onClick={handleBack} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-1">
+                  <ChevronLeft className="w-4 h-4" /> Back
+                </button>
+              )}
+              
+              {step < 4 ? (
+                <button onClick={handleNext} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-1">
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (() => {
+                 const currentOffer = offers.find(o => o.id === draftId);
+                 const isApproved = currentOffer?.status === 'Approved' || currentOffer?.status === 'Offer Issued';
+                 const isPendingApproval = currentOffer?.status === 'Approval Pending';
+                 
+                 return (
+                   <div className="flex gap-2">
+                      {approvalRequired ? (
+                         isApproved ? (
+                           <button onClick={handleIssueOfferClick} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                              Issue & Send Offer
+                           </button>
+                         ) : isPendingApproval ? (
+                           <button disabled className="px-5 py-2 text-sm font-medium text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed">
+                              Pending Approval...
+                           </button>
+                         ) : (
+                           <button onClick={handleSubmitForApproval} className="px-5 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg">
+                              Submit for Approval
+                           </button>
+                         )
+                      ) : (
+                         <button onClick={handleIssueOfferClick} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                            Issue & Send Offer
+                         </button>
+                      )}
+                   </div>
+                 );
+              })()}
+            </div>
           </div>
-          <div className="flex gap-3">
-            {step > 1 && (
-              <button onClick={handleBack} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-1">
-                <ChevronLeft className="w-4 h-4" /> Back
-              </button>
-            )}
-            
-            {step < 4 ? (
-              <button onClick={handleNext} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-1">
-                Next <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                 <button onClick={handleSubmitForApproval} className="px-5 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg">
-                    Submit for Approval
-                 </button>
-                 <button onClick={handleIssueOffer} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
-                    Issue Offer
-                 </button>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
