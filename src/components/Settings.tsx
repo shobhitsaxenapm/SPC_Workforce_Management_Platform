@@ -44,7 +44,7 @@ export default function Settings() {
             </div>
             <p className="text-sm text-slate-500 mb-4">Pipeline stages are standardised for the current version.</p>
             <div className="flex flex-wrap gap-2">
-              {['Applied', 'Under Review', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interview Completed', 'Selected', 'Offer Sent', 'Offer Accepted', 'Ready for Onboarding'].map((s, i) => (
+              {['Sourced', 'Interviewing', 'Offered', 'Hired', 'Joined'].map((s, i) => (
                 <span key={s} className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-md border border-blue-100">
                   {i+1}. {s}
                 </span>

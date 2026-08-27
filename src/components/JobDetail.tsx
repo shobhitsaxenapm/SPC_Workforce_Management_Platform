@@ -37,7 +37,7 @@ export default function JobDetail() {
   const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
+  const canonicalStages = ['Sourced', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
@@ -63,7 +63,7 @@ export default function JobDetail() {
   }
 
   const pipelineStages: ApplicationStage[] = [
-    'Sourced', 'Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'
+    'Sourced', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'
   ];
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {

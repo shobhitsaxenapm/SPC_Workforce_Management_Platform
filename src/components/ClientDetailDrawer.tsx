@@ -70,7 +70,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
           icon: CheckCircle2,
           iconBg: 'bg-green-50 text-green-600 border-green-200'
         });
-      } else if (app.currentStage === 'Applied' || app.currentStage === 'Sourced') {
+      } else if (app.currentStage === 'Sourced') {
         activities.push({
           id: `act_app_src_${app.id}`,
           title: `Candidate Shortlisted`,

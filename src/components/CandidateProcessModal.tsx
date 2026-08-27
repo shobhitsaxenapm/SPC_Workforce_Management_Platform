@@ -17,7 +17,7 @@ interface CandidateProcessModalProps {
 }
 
 const STAGES = [
-  'Sourced', 'Applied', 'Screening', 'Interviewing', 
+  'Sourced', 'Interviewing', 
   'Offered', 'Hired', 'Joined'
 ];
 const TERMINAL_STAGES = ['Rejected', 'Withdrawn'];

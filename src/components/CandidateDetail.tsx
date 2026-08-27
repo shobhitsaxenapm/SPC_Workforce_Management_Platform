@@ -96,10 +96,7 @@ export default function CandidateDetail() {
 
     switch (stage) {
       case 'Sourced':
-      case 'Applied':
-        return { primary: 'Begin Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
-      case 'Screening':
-        return { primary: 'Complete Screening', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+        return { primary: 'Schedule Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
       case 'Interviewing':
         if (substate.includes('Scheduled')) {
           return { primary: 'View Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };

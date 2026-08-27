@@ -7,8 +7,6 @@ export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
   | 'Sourced'
-  | 'Applied'
-  | 'Screening'
   | 'Interviewing'
   | 'Offered'
   | 'Hired'
