@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage } from '../types';
 import { useApp } from '../context/AppContext';
@@ -119,27 +119,27 @@ export default function JobDetail() {
       <div className="flex border-b border-gray-200">
         <button 
           onClick={() => setActiveTab('Overview')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Overview' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Overview' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          Job Overview
+          <FileText className="w-4 h-4" /> Job Overview
         </button>
         <button 
           onClick={() => setActiveTab('Matches')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Matches' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Matches' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          Matches ({activeMatches.length})
+          <Users className="w-4 h-4" /> Matches ({activeMatches.length})
         </button>
         <button 
           onClick={() => setActiveTab('Pipeline')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Pipeline' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Pipeline' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          Pipeline ({jobApplications.length})
+          <LayoutGrid className="w-4 h-4" /> Pipeline ({jobApplications.length})
         </button>
         <button 
           onClick={() => setActiveTab('Activity')} 
-          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors", activeTab === 'Activity' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Activity' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          Activity
+          <Activity className="w-4 h-4" /> Activity
         </button>
       </div>
 
