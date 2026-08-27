@@ -10,6 +10,10 @@ import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
+import OfferPreparationModal from './OfferPreparationModal';
+import ConfirmSelectionModal from './ConfirmSelectionModal';
+import CandidateProcessModal from './CandidateProcessModal';
+import RejectWithdrawModal from './RejectWithdrawModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -22,6 +26,12 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   
+  // New modal states for pipeline actions
+  const [showConfirmSelectionModal, setShowConfirmSelectionModal] = useState<string | null>(null); // appId
+  const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
+  const [showProcessModal, setShowProcessModal] = useState<string | null>(null); // appId
+  const [rejectWithdrawTarget, setRejectWithdrawTarget] = useState<{ appId: string; action: 'Rejected' | 'Withdrawn' } | null>(null);
+
   if (!job) return <div>Job not found</div>;
 
   const req = projects.find(r => r.id === job.projectId);
@@ -62,17 +72,13 @@ export default function JobDetail() {
      console.warn(`Pipeline mismatch: Job ${job.id} has ${jobApplications.length} apps, but grouped ${groupedCount}`);
   }
 
-  const selectableStages: ApplicationStage[] = [
-    'Sourced', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'
-  ];
-
-  const updateStage = (appId: string, newStage: ApplicationStage) => {
-    if (newStage === 'Rejected' || newStage === 'Withdrawn') {
-       const reason = window.prompt(`Please provide a reason for marking as ${newStage}:`);
-       if (reason === null) return; // Cancelled
-       updateApplicationStage(appId, newStage, undefined, reason);
-    } else {
-       updateApplicationStage(appId, newStage);
+  const handleSecondaryAction = (appId: string, action: string) => {
+    if (action === 'view_process') {
+      setShowProcessModal(appId);
+    } else if (action === 'reject') {
+      setRejectWithdrawTarget({ appId, action: 'Rejected' });
+    } else if (action === 'withdraw') {
+      setRejectWithdrawTarget({ appId, action: 'Withdrawn' });
     }
   };
 
@@ -430,28 +436,61 @@ export default function JobDetail() {
 
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => setScheduleCandidateId(candidate.id)}
-                              className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
-                              title="Schedule Interview"
+                          <div className="flex items-center gap-1.5">
+                            {/* Status Badge */}
+                            <span className="text-[10px] font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
+                              {app.currentStage}
+                            </span>
+                            
+                            {/* Secondary Menu */}
+                            <select 
+                              className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none px-1 py-1 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-blue-100 transition-colors w-6 cursor-pointer"
+                              value=""
+                              onChange={(e) => handleSecondaryAction(app.id, e.target.value)}
+                              title="More Actions"
                             >
-                              <Calendar className="w-3.5 h-3.5" />
-                            </button>
-                            {['Offered', 'Hired', 'Joined'].includes(app.currentStage) ? (
-                              <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
-                                {app.currentStage}
-                              </span>
-                            ) : (
-                              <select 
-                                className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                                value={app.currentStage}
-                                onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
-                              >
-                                {selectableStages.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                            )}
+                              <option value="" disabled hidden>⋮</option>
+                              <option value="view_process">View Process</option>
+                              <option value="reject">Reject Candidate</option>
+                              <option value="withdraw">Withdraw Candidate</option>
+                            </select>
                           </div>
+
+                        {/* Primary CTA */}
+                        {(() => {
+                           if (['Rejected', 'Withdrawn', 'Hired', 'Joined'].includes(app.currentStage)) return null;
+                           
+                           let ctaLabel = '';
+                           let ctaAction = () => {};
+                           
+                           if (app.currentStage === 'Sourced') {
+                             ctaLabel = 'Schedule Interview';
+                             ctaAction = () => setScheduleCandidateId(candidate.id);
+                           } else if (app.currentStage === 'Interviewing') {
+                             ctaLabel = 'Confirm Selection';
+                             ctaAction = () => setShowConfirmSelectionModal(app.id);
+                           } else if (app.currentStage === 'Selected') {
+                             const hasDraft = offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft');
+                             ctaLabel = hasDraft ? 'Continue Offer' : 'Prepare Offer';
+                             ctaAction = () => setShowOfferPreparationModal(app.id);
+                           } else if (app.currentStage === 'Offered') {
+                             ctaLabel = 'Record Response';
+                             ctaAction = () => setShowProcessModal(app.id);
+                           }
+                           
+                           if (!ctaLabel) return null;
+                           
+                           return (
+                             <div className="mt-3">
+                               <button 
+                                 onClick={ctaAction}
+                                 className="w-full py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
+                               >
+                                 {ctaLabel}
+                               </button>
+                             </div>
+                           );
+                        })()}
                         </div>
                       </div>
                     );
@@ -501,6 +540,42 @@ export default function JobDetail() {
           jobId={job.id} 
           isOpen={showAddCandidateModal} 
           onClose={() => setShowAddCandidateModal(false)} 
+        />
+      )}
+
+      {/* Pipeline Action Modals */}
+      {showConfirmSelectionModal && (
+        <ConfirmSelectionModal 
+          isOpen={!!showConfirmSelectionModal}
+          onClose={() => setShowConfirmSelectionModal(null)}
+          applicationId={showConfirmSelectionModal}
+        />
+      )}
+
+      {showOfferPreparationModal && (
+        <OfferPreparationModal 
+          isOpen={!!showOfferPreparationModal}
+          onClose={() => setShowOfferPreparationModal(null)}
+          applicationId={showOfferPreparationModal}
+        />
+      )}
+
+      {showProcessModal && (
+        <CandidateProcessModal 
+          isOpen={!!showProcessModal}
+          onClose={() => setShowProcessModal(null)}
+          applicationId={showProcessModal}
+          onAction={() => {}}
+          actionConfig={{ secondary: [], moreActions: [] }}
+        />
+      )}
+
+      {rejectWithdrawTarget && (
+        <RejectWithdrawModal 
+          isOpen={!!rejectWithdrawTarget}
+          onClose={() => setRejectWithdrawTarget(null)}
+          applicationId={rejectWithdrawTarget.appId}
+          action={rejectWithdrawTarget.action}
         />
       )}
     </div>
