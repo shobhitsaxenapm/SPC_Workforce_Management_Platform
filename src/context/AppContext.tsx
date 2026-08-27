@@ -243,6 +243,23 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [applications, setApplications] = useState<Application[]>(() => {
     let base = safeParse<Application[]>('spc_applications', mockApplications);
+    
+    // Repair invalid Offered records
+    let repaired = false;
+    const parsedOffers = safeParse<Offer[]>('spc_offers', mockOffers);
+    base = base.map(app => {
+      if (app.currentStage === 'Offered') {
+        const hasIssuedOffer = parsedOffers.some(o => o.applicationId === app.id && o.status === 'Sent');
+        if (!hasIssuedOffer) {
+          repaired = true;
+          return { ...app, currentStage: 'Interviewing', currentSubstate: undefined };
+        }
+      }
+      return app;
+    });
+    if (repaired) {
+       localStorage.setItem('spc_applications', JSON.stringify(base));
+    }
     const appSeeds: Application[] = [
       { id: 'app_seed_1', candidateId: 'can_seed_1', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-08T10:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 85, matchStrengths: ['Good typing speed', 'Excel knowledge'], matchGaps: [], lastActivity: '2026-07-08T10:15:00Z' },
       { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-09T11:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },

@@ -12,6 +12,7 @@ import MatchInsightModal from './MatchInsightModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import CandidateScreeningModal from './CandidateScreeningModal';
 import OfferPreparationModal from './OfferPreparationModal';
+import ConfirmSelectionModal from './ConfirmSelectionModal';
 import ViewInterviewModal from './ViewInterviewModal';
 import AddJobToCandidateModal from './AddJobToCandidateModal';
 import CandidateProcessModal from './CandidateProcessModal';
@@ -43,9 +44,10 @@ export default function CandidateDetail() {
   const [showMatchModal, setShowMatchModal] = useState<{jobId: string, candidateId: string} | null>(null);
   const [showPipelineConfirmModal, setShowPipelineConfirmModal] = useState<string | null>(null);
   const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null); // appId
-  const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<{jobId: string} | null>(null);
+  const [showScheduleInterviewModal, setShowScheduleInterviewModal] = useState<{jobId: string, candidateId?: string} | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState<{jobId: string} | null>(null);
   const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
+  const [showConfirmSelectionModal, setShowConfirmSelectionModal] = useState<string | null>(null); // appId
   const [showRecordFeedbackModal, setShowRecordFeedbackModal] = useState<string | null>(null); // interviewId
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
@@ -98,19 +100,9 @@ export default function CandidateDetail() {
       case 'Sourced':
         return { primary: 'Schedule Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
       case 'Interviewing':
-        if (substate.includes('Scheduled')) {
-          return { primary: 'View Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
-        }
-        if (substate.includes('Feedback Pending')) {
-          return { primary: 'Record Feedback', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
-        }
-        if (substate.includes('To Schedule')) {
-          return { primary: substate.includes('Next Round') ? 'Schedule Next Round' : 'Schedule Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
-        }
-        if (substate === 'Interview Completed') {
-          return { primary: 'Prepare Offer', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
-        }
-        return { primary: 'View Process', secondary: baseSecondary, moreActions: [] };
+        return { primary: 'Confirm Selection', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
+      case 'Selected':
+        return { primary: 'Prepare Offer', secondary: baseSecondary, moreActions: [] };
       case 'Offered':
         if (substate === 'Offer Draft') return { primary: 'Review Offer', secondary: baseSecondary, moreActions: [] };
         if (substate === 'Offer Ready for Review') return { primary: 'Review and Send Offer', secondary: baseSecondary, moreActions: [] };
@@ -140,9 +132,7 @@ export default function CandidateDetail() {
         setShowScheduleInterviewModal({ jobId });
         break;
       case 'Confirm Selection':
-        useApp().updateApplicationStage(app.id, 'Selected');
-        setToast({ message: 'Candidate selection confirmed. Ready for Offer.', type: 'success' });
-        setTimeout(() => setToast(null), 3000);
+        setShowConfirmSelectionModal(app.id);
         break;
       case 'Prepare Offer':
       case 'Continue Offer':
@@ -736,9 +726,17 @@ export default function CandidateDetail() {
 
       {showOfferPreparationModal && (
         <OfferPreparationModal 
-          isOpen={true}
+          isOpen={!!showOfferPreparationModal}
           onClose={() => setShowOfferPreparationModal(null)}
           applicationId={showOfferPreparationModal}
+        />
+      )}
+
+      {showConfirmSelectionModal && (
+        <ConfirmSelectionModal 
+          isOpen={!!showConfirmSelectionModal}
+          onClose={() => setShowConfirmSelectionModal(null)}
+          applicationId={showConfirmSelectionModal}
         />
       )}
 

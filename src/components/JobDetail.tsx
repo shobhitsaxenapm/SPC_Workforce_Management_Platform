@@ -37,7 +37,7 @@ export default function JobDetail() {
   const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
+  const canonicalStages = ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
@@ -62,12 +62,18 @@ export default function JobDetail() {
      console.warn(`Pipeline mismatch: Job ${job.id} has ${jobApplications.length} apps, but grouped ${groupedCount}`);
   }
 
-  const pipelineStages: ApplicationStage[] = [
-    'Sourced', 'Interviewing', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'
+  const selectableStages: ApplicationStage[] = [
+    'Sourced', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'
   ];
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
-    updateApplicationStage(appId, newStage);
+    if (newStage === 'Rejected' || newStage === 'Withdrawn') {
+       const reason = window.prompt(`Please provide a reason for marking as ${newStage}:`);
+       if (reason === null) return; // Cancelled
+       updateApplicationStage(appId, newStage, undefined, reason);
+    } else {
+       updateApplicationStage(appId, newStage);
+    }
   };
 
   const handleRefreshMatches = () => {
@@ -432,13 +438,19 @@ export default function JobDetail() {
                             >
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
-                            <select 
-                              className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                              value={app.currentStage}
-                              onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
-                            >
-                              {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            {['Offered', 'Hired', 'Joined'].includes(app.currentStage) ? (
+                              <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
+                                {app.currentStage}
+                              </span>
+                            ) : (
+                              <select 
+                                className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                value={app.currentStage}
+                                onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                              >
+                                {selectableStages.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            )}
                           </div>
                         </div>
                       </div>

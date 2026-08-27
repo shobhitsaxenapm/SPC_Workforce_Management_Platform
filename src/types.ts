@@ -8,6 +8,7 @@ export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
   | 'Sourced'
   | 'Interviewing'
+  | 'Selected'
   | 'Offered'
   | 'Hired'
   | 'Joined'
