@@ -918,7 +918,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       deliveryStatus: 'Not Sent'
     };
     persistOffers([newOffer, ...offers]);
-    updateApplicationStage(offerData.applicationId, 'Offered', 'Offer Draft');
     return newOffer.id;
   };
 
@@ -932,8 +931,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const approveOffer = (offerId: string) => {
     updateOffer(offerId, { status: 'Sent', approvedBy: currentUser?.name || 'Admin' });
-    const offer = offers.find(o => o.id === offerId);
-    if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Ready for Review');
   };
 
   const issueOffer = (offerId: string) => {

@@ -14,7 +14,7 @@ interface RecordInterviewFeedbackModalProps {
 export default function RecordInterviewFeedbackModal({ isOpen, onClose, interview, candidateName }: RecordInterviewFeedbackModalProps) {
   const { updateApplicationStage, submitInterviewFeedback } = useApp();
   
-  const [outcome, setOutcome] = useState<'Proceed to Next Round' | 'Move to Offer' | 'Keep on Hold' | 'Reject Candidate' | null>(null);
+  const [outcome, setOutcome] = useState<'Proceed to Next Round' | 'Recommend Hire' | 'Keep on Hold' | 'Reject Candidate' | null>(null);
   const [feedback, setFeedback] = useState({
     rating: 0,
     strengths: '',
@@ -49,8 +49,8 @@ export default function RecordInterviewFeedbackModal({ isOpen, onClose, intervie
       case 'Proceed to Next Round':
         updateApplicationStage(interview.applicationId, 'Interviewing', 'Next Round To Schedule');
         break;
-      case 'Move to Offer':
-        updateApplicationStage(interview.applicationId, 'Offered', 'Offer Draft');
+      case 'Recommend Hire':
+        updateApplicationStage(interview.applicationId, 'Interviewing', 'Interview Completed');
         break;
       case 'Keep on Hold':
         updateApplicationStage(interview.applicationId, 'Interviewing', 'On Hold', holdReason);
@@ -150,7 +150,7 @@ export default function RecordInterviewFeedbackModal({ isOpen, onClose, intervie
           <div className="border-t border-slate-200 pt-6">
             <h3 className="font-medium text-slate-800 mb-4">Outcome Decision</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {(['Proceed to Next Round', 'Move to Offer', 'Keep on Hold', 'Reject Candidate'] as const).map(option => (
+              {(['Proceed to Next Round', 'Recommend Hire', 'Keep on Hold', 'Reject Candidate'] as const).map(option => (
                 <button
                   key={option}
                   onClick={() => setOutcome(option)}
