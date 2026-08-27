@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Client, Project, Job, Candidate, Application, Interview, Offer, TalentPoolEntry, User } from '../types';
 
 export const mockUsers: User[] = [

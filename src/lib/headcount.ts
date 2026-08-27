@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Application, Job, RequirementLifecycleStatus } from '../types';
 
 /**

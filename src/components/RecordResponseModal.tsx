@@ -55,7 +55,7 @@ export default function RecordResponseModal({ isOpen, onClose, request, onSucces
     // Check if any mapped fields have responses
     const possibleUpdates: Record<string, string> = {};
     Object.entries(responses).forEach(([q, ans]) => {
-      if (ans.trim() && FIELD_MAPPING[q]) {
+      if (ans && typeof ans === 'string' && ans.trim() && FIELD_MAPPING[q]) {
         possibleUpdates[FIELD_MAPPING[q]] = ans.trim();
       }
     });

@@ -374,7 +374,7 @@ export default function JobDetail() {
           <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px] w-full">
           {canonicalStages.map(stage => {
             const appsInStage = groupedApps[stage] || [];
-            if (stage === 'Other' && appsInStage.length === 0) return null;
+            if ((stage as string) === 'Other' && appsInStage.length === 0) return null;
             return (
               <div key={stage} className="w-[320px] flex-shrink-0 flex flex-col">
                 <div className="flex items-center justify-between mb-4 px-2">

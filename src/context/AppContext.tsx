@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
@@ -236,8 +236,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       { id: 'app_seed_3', candidateId: 'can_seed_3', jobId: 'j1', projectId: 'r1', currentStage: 'Applied', appliedDate: '2026-07-10T12:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 72, matchStrengths: ['Immediate availability'], matchGaps: [], lastActivity: '2026-07-10T12:15:00Z' },
       { id: 'app_seed_4', candidateId: 'can_seed_4', jobId: 'j1', projectId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T13:45:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 90, matchStrengths: ['Direct experience matching requirements'], matchGaps: [], lastActivity: '2026-07-11T13:45:00Z' },
       { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', projectId: 'r1', currentStage: 'Screening', appliedDate: '2026-07-11T14:30:00Z', source: 'Job Portal', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
-      { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', projectId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
-      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', projectId: 'r1', currentStage: 'Interview Round 1', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
+      { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
+      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
     ];
     let changed = false;
     appSeeds.forEach(seed => {
@@ -867,7 +867,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const result = { ...o, status, ...metadata };
         if (status === 'Accepted') {
           result.acceptedAt = new Date().toISOString();
-        } else if (status === 'Rejected' || status === 'Declined') {
+        } else if (status === 'Declined') {
           result.rejectedAt = new Date().toISOString();
         } else if (status === 'Withdrawn') {
           result.withdrawnAt = new Date().toISOString();
@@ -883,7 +883,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const newOffer: Offer = {
       ...offerData,
       id: `off_gen_${Date.now()}`,
-      status: 'Draft',
+      status: 'Offer Draft',
       version: 1,
       deliveryStatus: 'Not Sent'
     };
@@ -897,11 +897,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const submitOfferForApproval = (offerId: string) => {
-    updateOfferStatus(offerId, 'Approval Pending');
+    updateOffer(offerId, { status: 'Offer Ready for Review' });
   };
 
   const approveOffer = (offerId: string) => {
-    updateOfferStatus(offerId, 'Approved', { approvedBy: currentUser?.name || 'Admin' });
+    updateOffer(offerId, { status: 'Sent', approvedBy: currentUser?.name || 'Admin' });
     const offer = offers.find(o => o.id === offerId);
     if (offer) updateApplicationStage(offer.applicationId, 'Offered', 'Offer Ready for Review');
   };

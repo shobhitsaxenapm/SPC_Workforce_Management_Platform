@@ -643,39 +643,23 @@ export default function ProjectDetail() {
 
       {isCreateJobOpen && creationMode === 'smart' && smartJobStep === 'upload' && (
         <SmartJobUpload
-          isOpen={true}
-          onClose={handleCloseCreateJobModal}
-          onExtracted={(data, text, metadata) => {
+          onCancel={handleCloseCreateJobModal}
+          onExtractionSuccess={(data, text, metadata) => {
             setExtractedData(data);
             setSourceText(text);
             setSourceMetadata(metadata);
             setSmartJobStep('review');
           }}
-          contextProjectId={proj.id}
         />
       )}
 
       {isCreateJobOpen && creationMode === 'smart' && smartJobStep === 'review' && extractedData && (
         <SmartJobReview
-          isOpen={true}
-          onClose={handleCloseCreateJobModal}
           extractedData={extractedData}
           sourceText={sourceText}
-          sourceMetadata={sourceMetadata!}
-          onConfirm={(finalData) => {
-            setJobFormData({
-              ...jobFormData,
-              title: finalData.title || jobFormData.title,
-              location: finalData.location || jobFormData.location,
-              openings: finalData.openings || jobFormData.openings,
-              experienceRange: finalData.experienceRange || '',
-              requiredSkills: finalData.requiredSkills?.join(', ') || '',
-              preferredSkills: finalData.preferredSkills?.join(', ') || '',
-              summary: finalData.summary || ''
-            });
-            setCreationMode('manual');
-          }}
-          onBack={() => setSmartJobStep('upload')}
+          metadata={sourceMetadata!}
+          onSaveAsDraft={handleCloseCreateJobModal}
+          onDiscard={handleCloseCreateJobModal}
         />
       )}
 

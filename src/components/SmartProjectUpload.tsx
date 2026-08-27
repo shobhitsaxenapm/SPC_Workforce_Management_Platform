@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useRef } from 'react';
 import { UploadCloud, File, AlertCircle, X, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';

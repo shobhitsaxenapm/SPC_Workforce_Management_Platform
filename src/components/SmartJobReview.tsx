@@ -17,7 +17,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
 
   const [formData, setFormData] = useState({
     title: extractedData.title || '',
-    projectId: extractedData.linkedClientRequirement || '',
+    projectId: extractedData.linkedClientProject || '',
     clientId: '',
     projectName: '',
     location: extractedData.location || '',

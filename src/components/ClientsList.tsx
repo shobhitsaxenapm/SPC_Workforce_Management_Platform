@@ -305,7 +305,7 @@ export default function ClientsList() {
       <ClientDetailDrawer 
         clientId={selectedClientId}
         onClose={() => setSelectedClientId(null)}
-        onCreateRequirement={(cId) => setCreateReqClientId(cId)}
+        onCreateProject={(cId) => setCreateReqClientId(cId)}
       />
 
       {/* CREATE REQUIREMENT MODAL (TRIGGERED FROM DRAWER CTA) */}

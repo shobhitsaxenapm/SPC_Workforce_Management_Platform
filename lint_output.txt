@@ -1,0 +1,41 @@
+
+> react-example@0.0.0 lint
+> tsc --noEmit
+
+src/components/ClientsList.tsx(308,9): error TS2322: Type '{ clientId: any; onClose: () => any; onCreateRequirement: (cId: any) => any; }' is not assignable to type 'ClientDetailDrawerProps'.
+  Property 'onCreateRequirement' does not exist on type 'ClientDetailDrawerProps'.
+src/components/JobDetail.tsx(377,17): error TS2367: This comparison appears to be unintentional because the types '"Hired" | "Interviewing" | "Screening" | "Sourced" | "Applied" | "Joined" | "Offered" | "Rejected" | "Withdrawn"' and '"Other"' have no overlap.
+src/components/ProjectDetail.tsx(646,11): error TS2322: Type '{ onClose: () => void; onExtracted: (data: any, text: any, metadata: any) => void; contextProjectId: any; }' is not assignable to type 'SmartJobUploadProps'.
+  Property 'onClose' does not exist on type 'SmartJobUploadProps'.
+src/components/ProjectDetail.tsx(659,11): error TS2322: Type '{ onClose: () => void; extractedData: any; sourceText: any; sourceMetadata: any; onConfirm: (finalData: any) => void; onBack: () => any; }' is not assignable to type 'SmartJobReviewProps'.
+  Property 'onClose' does not exist on type 'SmartJobReviewProps'.
+src/components/SmartProjectReview.tsx(3,10): error TS2305: Module '"../types"' has no exported member 'ExtractedRequirementData'.
+src/components/SmartProjectReview.tsx(3,36): error TS2305: Module '"../types"' has no exported member 'RequirementSourceMetadata'.
+src/components/SmartProjectUpload.tsx(4,10): error TS2305: Module '"../types"' has no exported member 'ExtractedRequirementData'.
+src/context/AppContext.tsx(43,79): error TS2304: Cannot find name 'ApplicationSubstate'.
+src/context/AppContext.tsx(239,84): error TS2322: Type '"Interview Round 1"' is not assignable to type 'ApplicationStage'.
+src/context/AppContext.tsx(240,84): error TS2322: Type '"Interview Round 1"' is not assignable to type 'ApplicationStage'.
+src/context/AppContext.tsx(634,86): error TS2304: Cannot find name 'ApplicationSubstate'.
+src/context/AppContext.tsx(870,20): error TS2367: This comparison appears to be unintentional because the types '"Sent" | "Withdrawn" | "Offer Draft" | "Offer Ready for Review" | "Viewed" | "Declined" | "Expired"' and '"Rejected"' have no overlap.
+src/context/AppContext.tsx(886,7): error TS2322: Type '"Draft"' is not assignable to type 'OfferStatus'.
+src/context/AppContext.tsx(900,32): error TS2345: Argument of type '"Approval Pending"' is not assignable to parameter of type 'OfferStatus'.
+src/context/AppContext.tsx(904,32): error TS2345: Argument of type '"Approved"' is not assignable to parameter of type 'OfferStatus'.
+src/data/mockData.ts(129,3): error TS2739: Type '{ id: string; code: string; projectId: string; clientId: string; projectName: string; engagementType: "Direct Recruitment"; location: string; openings: number; filled: number; employmentType: string; ... 10 more ...; publishedAt: string; }' is missing the following properties from type 'Job': title, assignedRecruiterId
+src/data/mockData.ts(152,3): error TS2739: Type '{ id: string; code: string; projectId: string; clientId: string; projectName: string; engagementType: "Direct Recruitment"; location: string; openings: number; filled: number; employmentType: string; ... 9 more ...; status: "Published"; }' is missing the following properties from type 'Job': title, assignedRecruiterId
+src/data/mockData.ts(174,3): error TS2739: Type '{ id: string; code: string; projectId: string; clientId: string; projectName: string; engagementType: "Direct Recruitment"; location: string; openings: number; filled: number; employmentType: string; ... 9 more ...; status: "Published"; }' is missing the following properties from type 'Job': title, assignedRecruiterId
+src/data/mockData.ts(196,3): error TS2739: Type '{ id: string; code: string; projectId: string; clientId: string; projectName: string; engagementType: "Direct Recruitment"; location: string; openings: number; filled: number; employmentType: string; ... 9 more ...; status: "Published"; }' is missing the following properties from type 'Job': title, assignedRecruiterId
+src/data/mockData.ts(440,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Hired"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: string[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(454,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Hired"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: undefined[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(468,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Interviewing"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: string[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(482,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Interviewing"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: undefined[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(496,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Screening"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: string[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(510,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Sourced"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: string[]; lastActivity: string; }' but required in type 'Application'.
+src/data/mockData.ts(524,3): error TS2741: Property 'assignedRecruiterId' is missing in type '{ id: string; candidateId: string; jobId: string; projectId: string; currentStage: "Applied"; currentSubstate: string; appliedDate: string; source: string; matchScore: number; matchStrengths: string[]; matchGaps: string[]; lastActivity: string; }' but required in type 'Application'.
+src/lib/client.test.ts(16,89): error TS2353: Object literal may only specify known properties, and 'activeRequirementsCount' does not exist in type 'Client'.
+src/lib/headcount.ts(1,28): error TS2305: Module '"../types"' has no exported member 'RequirementLifecycleStatus'.
+src/lib/smartJob.test.ts(10,7): error TS2353: Object literal may only specify known properties, and 'linkedClientRequirement' does not exist in type 'ExtractedJobData'.
+src/lib/smartJob.test.ts(16,17): error TS2339: Property 'linkedClientRequirement' does not exist on type 'ExtractedJobData'.
+src/lib/smartProject.test.ts(2,10): error TS2305: Module '"../types"' has no exported member 'ExtractedRequirementData'.
+src/lib/smartProject.test.ts(2,51): error TS2305: Module '"../types"' has no exported member 'RequirementFulfilmentStatus'.
+src/lib/smartProject.test.ts(36,11): error TS2322: Type '"Open"' is not assignable to type 'ProjectStatus'.
+src/lib/smartProject.test.ts(38,11): error TS2322: Type '"Closed"' is not assignable to type 'ProjectStatus'.
