@@ -10,6 +10,7 @@ import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
+import OfferPreparationModal from './OfferPreparationModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function JobDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
+  const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
   
   if (!job) return <div>Job not found</div>;
 
@@ -443,13 +445,25 @@ export default function JobDetail() {
                                 {app.currentStage}
                               </span>
                             ) : (
-                              <select 
-                                className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                                value={app.currentStage}
-                                onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
-                              >
-                                {selectableStages.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
+                              <div className="flex items-center gap-2">
+                                {app.currentStage === 'Selected' && (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
+                                    className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
+                                    title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
+                                  </button>
+                                )}
+                                <select 
+                                  className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                  value={app.currentStage}
+                                  onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                                >
+                                  {selectableStages.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -501,6 +515,14 @@ export default function JobDetail() {
           jobId={job.id} 
           isOpen={showAddCandidateModal} 
           onClose={() => setShowAddCandidateModal(false)} 
+        />
+      )}
+
+      {showOfferPreparationModal && (
+        <OfferPreparationModal 
+          isOpen={!!showOfferPreparationModal}
+          onClose={() => setShowOfferPreparationModal(null)}
+          applicationId={showOfferPreparationModal}
         />
       )}
     </div>
