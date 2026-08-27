@@ -68,7 +68,8 @@ export const mockProjects: Project[] = [
     id: 'r1',
     code: 'PRJ-2026-001',
     clientId: 'c1',
-    projectName: 'Data Entry Operations - North India', // mapped from title
+    title: 'Data Entry Operations - North India',
+    projectName: 'Data Entry Operations - North India',
     engagementType: 'Direct Recruitment',
     locations: ['Delhi', 'Noida'],
     totalRequestedHeadcount: 25,
@@ -83,7 +84,8 @@ export const mockProjects: Project[] = [
     id: 'r2',
     code: 'PRJ-2026-002',
     clientId: 'c2',
-    projectName: 'Gurugram Hub Expansion', // mapped from title
+    title: 'Gurugram Hub Expansion',
+    projectName: 'Gurugram Hub Expansion',
     engagementType: 'Direct Recruitment',
     locations: ['Gurugram'],
     totalRequestedHeadcount: 15,
@@ -98,7 +100,8 @@ export const mockProjects: Project[] = [
     id: 'r3',
     code: 'PRJ-2026-003',
     clientId: 'c3',
-    projectName: 'Rural Education Initiative', // mapped from title
+    title: 'Rural Education Initiative',
+    projectName: 'Rural Education Initiative',
     engagementType: 'Direct Recruitment',
     locations: ['Jaipur', 'Ajmer'],
     totalRequestedHeadcount: 12,
@@ -113,7 +116,8 @@ export const mockProjects: Project[] = [
     id: 'r4',
     code: 'PRJ-2026-004',
     clientId: 'c4',
-    projectName: 'Patient Support Desk', // mapped from title
+    title: 'Patient Support Desk',
+    projectName: 'Patient Support Desk',
     engagementType: 'Direct Recruitment',
     locations: ['Delhi'],
     totalRequestedHeadcount: 8,
@@ -132,7 +136,8 @@ export const mockJobs: Job[] = [
     code: 'JOB-26-001',
     projectId: 'r1',
     clientId: 'c1',
-    projectName: 'Data Entry Operator', // mapped from title
+    title: 'Data Entry Operator',
+    projectName: 'Data Entry Operator',
     engagementType: 'Direct Recruitment',
     location: 'Delhi',
     openings: 15,
@@ -155,7 +160,8 @@ export const mockJobs: Job[] = [
     code: 'JOB-26-002',
     projectId: 'r1',
     clientId: 'c1',
-    projectName: 'Data Entry Operator', // mapped from title
+    title: 'Data Entry Operator',
+    projectName: 'Data Entry Operator',
     engagementType: 'Direct Recruitment',
     location: 'Noida',
     openings: 10,
@@ -177,7 +183,8 @@ export const mockJobs: Job[] = [
     code: 'JOB-26-003',
     projectId: 'r2',
     clientId: 'c2',
-    projectName: 'Warehouse Associate', // mapped from title
+    title: 'Warehouse Associate',
+    projectName: 'Warehouse Associate',
     engagementType: 'Direct Recruitment',
     location: 'Gurugram',
     openings: 15,
@@ -199,7 +206,8 @@ export const mockJobs: Job[] = [
     code: 'JOB-26-004',
     projectId: 'r4',
     clientId: 'c4',
-    projectName: 'Patient Support Executive', // mapped from title
+    title: 'Patient Support Executive',
+    projectName: 'Patient Support Executive',
     engagementType: 'Direct Recruitment',
     location: 'Delhi',
     openings: 8,

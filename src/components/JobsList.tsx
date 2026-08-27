@@ -173,7 +173,8 @@ export default function JobsList() {
 
   const filteredJobs = jobs.filter(job => {
     const searchLower = searchTerm.toLowerCase();
-    const titleMatch = job.title.toLowerCase().includes(searchLower);
+    const jobTitle = job.title || job.projectName || '';
+    const titleMatch = jobTitle.toLowerCase().includes(searchLower);
     const codeMatch = job.code.toLowerCase().includes(searchLower);
     const client = clients.find(c => c.id === job.clientId);
     const clientMatch = client?.name?.toLowerCase().includes(searchLower) || false;
