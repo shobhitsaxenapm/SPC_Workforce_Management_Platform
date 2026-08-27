@@ -585,13 +585,9 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
                     <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Job / Client</span>
                     <span className="font-medium text-slate-800 flex flex-col items-start gap-1">
                       <span>{selectedJob?.title} <span className="text-slate-400 font-normal">at {selectedClient?.name}</span></span>
-                      {isNewlyLinked ? (
+                      {isNewlyLinked && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           <LinkIcon className="w-3 h-3" /> Will be newly linked on schedule
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                          <Check className="w-3 h-3" /> Already linked
                         </span>
                       )}
                     </span>

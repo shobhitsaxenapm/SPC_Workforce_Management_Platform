@@ -115,21 +115,10 @@ export interface ProjectSourceMetadata {
   originalFilename: string;
   mimeType: string;
   size: number;
-export interface ProjectSourceMetadata {
-  originalFilename: string;
-  mimeType: string;
-  size: number;
   uploadedBy: string;
   uploadedAt: string;
   extractionStatus: 'Success' | 'Partial' | 'Failed';
   parserVersion: string;
-}
-
-export interface ExtractedProjectData {
-  projectName?: string;
-  locations?: string[];
-  totalRequestedHeadcount?: number;
-  targetJoiningDate?: string;
 }
 
 export interface ExtractedProjectData {
