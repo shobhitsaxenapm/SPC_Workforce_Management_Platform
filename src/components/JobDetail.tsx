@@ -11,6 +11,7 @@ import JobFormModal from './JobFormModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
 import OfferPreparationModal from './OfferPreparationModal';
+import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
+  const [confirmHiredAppId, setConfirmHiredAppId] = useState<string | null>(null);
   
   if (!job) return <div>Job not found</div>;
 
@@ -77,6 +79,16 @@ export default function JobDetail() {
   };
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
+    if (newStage === 'Hired') {
+       const existingOffer = offers.find(o => o.applicationId === appId && (o.status === 'Offer Issued' || o.status === 'Sent'));
+       if (!existingOffer) {
+          alert('Cannot mark as Hired: No issued offer found for this candidate.');
+          return;
+       }
+       setConfirmHiredAppId(appId);
+       return;
+    }
+
     if (newStage === 'Rejected' || newStage === 'Withdrawn') {
        const reason = window.prompt(`Please provide a reason for marking as ${newStage}:`);
        if (reason === null) return; // Cancelled
@@ -527,6 +539,14 @@ export default function JobDetail() {
           isOpen={!!showOfferPreparationModal}
           onClose={() => setShowOfferPreparationModal(null)}
           applicationId={showOfferPreparationModal}
+        />
+      )}
+
+      {confirmHiredAppId && (
+        <ConfirmOfferAcceptanceModal 
+          isOpen={!!confirmHiredAppId}
+          onClose={() => setConfirmHiredAppId(null)}
+          applicationId={confirmHiredAppId}
         />
       )}
     </div>
