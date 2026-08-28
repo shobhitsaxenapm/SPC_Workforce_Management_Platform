@@ -28,7 +28,7 @@ interface ActionConfig {
 
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications, interviews, offers, onboardings, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, matchRuns, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
@@ -65,14 +65,24 @@ export default function CandidateDetail() {
   const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId)];
   const combinedApplications = [...existingCandidateApps];
 
-  // All Candidate Match Insights
-  const candidateInsights = getMatchingJobsForCandidate(candidate.id);
+  // All Candidate Match Insights from actual match runs
+  const candidateInsights = matchRuns.flatMap(run => {
+    const match = run.matches.find(m => m.candidateId === candidate.id);
+    if (!match) return [];
+    return [{ 
+      jobId: run.jobId, 
+      matchScore: match.score, 
+      breakdown: match.breakdown,
+      strengths: match.matchStrengths,
+      missingCriteria: match.missingRequirements,
+      explanation: match.mismatchReasons.join(' ') || 'Candidate is a good match based on required skills and experience.',
+    }];
+  });
 
   // Eligible Matching Jobs List
   const matchingJobs = candidateInsights.filter(insight => {
     if (insight.matchScore < 70) return false;
     if (dismissedMatches.includes(insight.jobId)) return false;
-    if (allAssociatedJobIds.includes(insight.jobId)) return false;
     
     const job = mockJobs.find(j => j.id === insight.jobId);
     if (!job) return false;
@@ -85,7 +95,9 @@ export default function CandidateDetail() {
     return true;
   }).sort((a, b) => b.matchScore - a.matchScore);
 
-  const topMatches = matchingJobs.slice(0, 3);
+  const topMatches = matchingJobs
+    .filter(insight => !allAssociatedJobIds.includes(insight.jobId))
+    .slice(0, 3);
 
   const getActionsForApplication = (app: Application): ActionConfig => {
     const stage = app.currentStage;
@@ -542,34 +554,50 @@ export default function CandidateDetail() {
                       <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-2">Score</span>
                    </div>
                    
-                   <div className="flex-1 space-y-3">
+                   <div className="flex-1 space-y-4">
                      <div>
                        <button onClick={() => setQuickViewJobId(job.id)} className="font-bold text-lg text-slate-800 hover:text-blue-600 outline-none text-left">
-                        {job.title}
+                        {job.title} <span className="text-sm font-normal text-slate-500 ml-2">{job.code}</span>
                       </button>
                        <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
                          <span className="font-medium text-slate-700 flex items-center gap-1.5"><Building2 className="w-4 h-4"/> {client.name}</span>
                          <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> {job.location}</span>
                          <span className="flex items-center gap-1.5"><Briefcase className="w-4 h-4"/> {job.employmentType}</span>
                          <span className="text-slate-400">•</span>
+                         <span className="font-medium text-slate-700">{job.status}</span>
+                         <span className="text-slate-400">•</span>
                          <span className="font-medium text-blue-600">{job.openings - job.filled} Openings</span>
                        </div>
+                     </div>
+                     
+                     <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Skills: {insight.breakdown?.skills || 0}/40</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Exp: {insight.breakdown?.experience || 0}/20</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Location: {insight.breakdown?.location || 0}/15</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Edu: {insight.breakdown?.education || 0}/10</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Avail: {insight.breakdown?.availability || 0}/10</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">Type: {insight.breakdown?.employmentType || 0}/5</span>
                      </div>
                      
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
                         <div>
                           <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Strengths</p>
                           <ul className="text-sm text-slate-600 space-y-1">
-                            {insight.strengths.slice(0,3).map((s, i) => <li key={i} className="flex items-start gap-1"><span className="text-green-500 mt-0.5">•</span> {s}</li>)}
+                            {insight.strengths.slice(0,3).map((s: string, i: number) => <li key={i} className="flex items-start gap-1"><span className="text-green-500 mt-0.5">•</span> {s}</li>)}
                           </ul>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Missing / Unverified</p>
                           <ul className="text-sm text-slate-600 space-y-1">
-                            {insight.missingCriteria.slice(0,3).map((g, i) => <li key={i} className="flex items-start gap-1"><span className="text-amber-500 mt-0.5">•</span> {g}</li>)}
+                            {insight.missingCriteria.slice(0,3).map((g: string, i: number) => <li key={i} className="flex items-start gap-1"><span className="text-amber-500 mt-0.5">•</span> {g}</li>)}
                             {insight.missingCriteria.length === 0 && <li className="text-slate-400 italic">None</li>}
                           </ul>
                         </div>
+                     </div>
+                     
+                     <div className="text-sm text-slate-600 bg-blue-50/50 p-3 rounded-lg border border-blue-100/50">
+                       <span className="font-semibold text-slate-700 mr-2">Explanation:</span>
+                       {insight.explanation}
                      </div>
                    </div>
                    
@@ -586,7 +614,7 @@ export default function CandidateDetail() {
                        </button>
                      )}
                      <button onClick={() => setSelectedInsight({ job, client, insight })} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center">
-                       View Match
+                       View Match Details
                      </button>
                      <button onClick={() => setQuickViewJobId(job.id)} className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors text-center block outline-none">
                       View Job
