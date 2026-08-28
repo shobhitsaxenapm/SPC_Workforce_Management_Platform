@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Search, AlertTriangle, Plus, X, CheckCircle2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { mockUsers } from '../data/mockData';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
@@ -21,7 +22,13 @@ export default function CandidatesList() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({ source: '', experience: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({ 
+    source: '', 
+    stage: '', 
+    location: '', 
+    availability: '', 
+    recruiter: '' 
+  });
 
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
@@ -70,23 +77,50 @@ export default function CandidatesList() {
   };
 
   const sources = [...new Set(candidates.map(c => c.source).filter(Boolean))] as string[];
-  const experiences = [...new Set(candidates.map(c => c.totalExperience).filter(Boolean))] as string[];
+  const locations = [...new Set(candidates.map(c => c.currentLocation).filter(Boolean))] as string[];
+  const availabilities = [...new Set(candidates.map(c => c.noticePeriod).filter(Boolean))] as string[];
+  
+  const canonicalStages = ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
+  
+  // Get all unique recruiter IDs assigned to active jobs
+  const activeJobs = jobs.filter(j => j.status !== 'Closed' && j.status !== 'Cancelled');
+  const recruiterIds = [...new Set(activeJobs.map(j => j.assignedRecruiterId).filter(Boolean))] as string[];
+  const recruiters = recruiterIds.map(id => {
+    const user = mockUsers.find(u => u.id === id);
+    return { value: id, label: user?.name || id };
+  });
 
   const filterFields: FilterField[] = [
+    { key: 'stage', label: 'Stage', options: canonicalStages.map(s => ({ value: s, label: s })) },
     { key: 'source', label: 'Source', options: sources.map(s => ({ value: s, label: s })) },
-    { key: 'experience', label: 'Experience', options: experiences.map(e => ({ value: e, label: e })) },
+    { key: 'location', label: 'Location', options: locations.map(l => ({ value: l, label: l })) },
+    { key: 'availability', label: 'Availability', options: availabilities.map(a => ({ value: a, label: a })) },
+    { key: 'recruiter', label: 'Recruiter', options: recruiters },
   ];
 
   const filteredCandidates = candidates.filter(c => {
+    const candidateApps = applications.filter(a => a.candidateId === c.id);
+    const activeCandidateApps = candidateApps.filter(a => !['Rejected', 'Withdrawn'].includes(a.currentStage));
+    const assignedRecruiterIds = activeCandidateApps.map(a => {
+      const job = jobs.find(j => j.id === a.jobId);
+      return job?.assignedRecruiterId;
+    }).filter(Boolean);
+
     const matchSearch = !searchTerm ||
       c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
       c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
+      
     const matchSource = !filters.source || c.source === filters.source;
-    const matchExp = !filters.experience || c.totalExperience === filters.experience;
+    const matchLocation = !filters.location || c.currentLocation === filters.location;
+    const matchAvailability = !filters.availability || c.noticePeriod === filters.availability;
+    const matchStage = !filters.stage || candidateApps.some(a => a.currentStage === filters.stage);
+    const matchRecruiter = !filters.recruiter || assignedRecruiterIds.includes(filters.recruiter);
+    
     const matchDate = isDateInPreset(c.createdAt || '2026-07-11T12:00:00Z', datePreset, customStart, customEnd);
-    return matchSearch && matchSource && matchExp && matchDate;
+    
+    return matchSearch && matchSource && matchLocation && matchAvailability && matchStage && matchRecruiter && matchDate;
   });
 
   return (
@@ -126,7 +160,7 @@ export default function CandidatesList() {
             values={filters}
             onChange={(k, v) => setFilters({ ...filters, [k]: v })}
             onClear={() => {
-              setFilters({ source: '', experience: '' });
+              setFilters({ source: '', stage: '', location: '', availability: '', recruiter: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
@@ -161,15 +195,25 @@ export default function CandidatesList() {
                 <th className="px-6 py-4">Candidate</th>
                 <th className="px-6 py-4">Role & Experience</th>
                 <th className="px-6 py-4">Top Skills</th>
-                <th className="px-6 py-4">Current Application</th>
+                <th className="px-6 py-4">Active Jobs</th>
                 <th className="px-6 py-4">Stage</th>
                 <th className="px-6 py-4">Source</th>
+                <th className="px-6 py-4">Last Activity</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCandidates.map(candidate => {
-                const activeApp = applications.find(a => a.candidateId === candidate.id);
-                const activeJob = activeApp ? jobs.find(j => j.id === activeApp.jobId) : null;
+                const candidateApps = applications.filter(a => a.candidateId === candidate.id);
+                const activeCandidateApps = candidateApps.filter(a => !['Rejected', 'Withdrawn'].includes(a.currentStage));
+                
+                // Sort to find latest active app, fallback to latest overall
+                const sortedApps = (activeCandidateApps.length > 0 ? activeCandidateApps : candidateApps).sort((a, b) => 
+                  new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+                );
+                
+                const latestApp = sortedApps[0];
+                const latestJob = latestApp ? jobs.find(j => j.id === latestApp.jobId) : null;
+                const additionalActiveCount = activeCandidateApps.length > 1 ? activeCandidateApps.length - 1 : 0;
                 
                 return (
                   <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
@@ -204,19 +248,27 @@ export default function CandidatesList() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {activeJob ? (
+                      {latestJob ? (
                         <div>
-                          <p className="font-medium text-slate-700">{activeJob.title}</p>
-                          <p className="text-xs text-slate-500 mt-1">{activeJob.code}</p>
+                          <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600 truncate max-w-[180px] block">
+                            {latestJob.title}
+                          </Link>
+                          {additionalActiveCount > 0 ? (
+                            <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="text-xs font-semibold text-blue-600 mt-1 inline-block hover:underline">
+                              +{additionalActiveCount} more
+                            </Link>
+                          ) : (
+                            <p className="text-xs text-slate-500 mt-1">{latestJob.code}</p>
+                          )}
                         </div>
                       ) : (
                         <span className="text-slate-400">No active application</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {activeApp ? (
+                      {latestApp ? (
                         <span className="px-2.5 py-1 rounded-md text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">
-                          {activeApp.currentStage}
+                          {latestApp.currentStage}
                         </span>
                       ) : (
                         <span className="text-slate-400">-</span>
@@ -224,6 +276,9 @@ export default function CandidatesList() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-600 text-xs">{candidate.source}</span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {latestApp ? formatDate(latestApp.lastActivity) : '-'}
                     </td>
                   </tr>
                 );
