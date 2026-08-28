@@ -243,7 +243,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹3.0 LPA',
     noticePeriod: '15 Days',
     source: 'SPC Careers Website',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2023-11-15T10:30:00Z',
+    resumeUrl: 'https://example.com/resume/riya_sharma.pdf',
+    professionalSummary: 'Detail-oriented Data Executive with 2 years of experience in managing high-volume data entry and ensuring data integrity.',
+    employmentHistory: [
+      { company: 'DataPro Services', role: 'Data Executive', location: 'Delhi', startDate: '2022-01', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-05-01T00:00:00Z',
+    preferredLocation: 'Delhi NCR'
   },
   {
     id: 'can2',
@@ -261,7 +270,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹2.5 LPA',
     noticePeriod: 'Immediate',
     source: 'Referral',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2023-12-01T14:15:00Z',
+    resumeUrl: 'https://example.com/resume/aman_verma.pdf',
+    professionalSummary: 'Efficient Store Keeper adept at maintaining accurate inventory records and coordinating dispatch operations.',
+    employmentHistory: [
+      { company: 'FastTrack Logistics', role: 'Store Keeper', location: 'Gurugram', startDate: '2020-05', endDate: 'Present' }
+    ],
+    languages: ['Hindi'],
+    availableFrom: '2024-04-10T00:00:00Z',
+    preferredLocation: 'Gurugram'
   },
   {
     id: 'can3',
@@ -279,7 +297,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹2.5 LPA',
     noticePeriod: '30 Days',
     source: 'SPC Careers Website',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-01-10T09:45:00Z',
+    resumeUrl: 'https://example.com/resume/sana_khan.pdf',
+    professionalSummary: 'Dedicated Process Associate with a strong foundation in data management and administrative support.',
+    employmentHistory: [
+      { company: 'InfoSysTech', role: 'Process Associate', location: 'Noida', startDate: '2023-02', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi', 'Urdu'],
+    availableFrom: '2024-05-15T00:00:00Z',
+    preferredLocation: 'Noida'
   },
   {
     id: 'can4',
@@ -297,7 +324,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹4.5 LPA',
     noticePeriod: '15 Days',
     source: 'Bulk Resume Upload',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-02-20T11:20:00Z',
+    resumeUrl: 'https://example.com/resume/jatin_singh.pdf',
+    professionalSummary: 'Experienced Warehouse Supervisor skilled in overseeing large-scale logistics and managing operational teams.',
+    employmentHistory: [
+      { company: 'Global Warehousing', role: 'Warehouse Supervisor', location: 'Delhi', startDate: '2019-08', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-04-25T00:00:00Z',
+    preferredLocation: 'Delhi'
   },
   {
     id: 'can5',
@@ -315,7 +351,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹5.0 LPA',
     noticePeriod: '30 Days',
     source: 'WhatsApp',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-05T16:00:00Z',
+    resumeUrl: 'https://example.com/resume/mehul_jain.pdf',
+    professionalSummary: 'Passionate Community Organizer with 5 years of experience in executing social impact initiatives and field campaigns.',
+    employmentHistory: [
+      { company: 'Social Impact NGO', role: 'Community Organizer', location: 'Jaipur', startDate: '2019-01', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi', 'Marwari'],
+    availableFrom: '2024-06-01T00:00:00Z',
+    preferredLocation: 'Jaipur'
   },
   {
     id: 'can6',
@@ -333,7 +378,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹4.0 LPA',
     noticePeriod: '15 Days',
     source: 'SPC Careers Website',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-12T13:45:00Z',
+    resumeUrl: 'https://example.com/resume/pooja_saini.pdf',
+    professionalSummary: 'Empathetic Customer Support Executive specializing in healthcare BPO with excellent communication and CRM skills.',
+    employmentHistory: [
+      { company: 'HealthCare BPO', role: 'Customer Support Executive', location: 'Delhi', startDate: '2021-03', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-04-28T00:00:00Z',
+    preferredLocation: 'Delhi NCR'
   },
   {
     id: 'can7',
@@ -351,7 +405,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹3.5 LPA',
     noticePeriod: '15 Days',
     source: 'Existing Talent Pool',
-    duplicateStatus: 'Possible Duplicate'
+    duplicateStatus: 'Possible Duplicate',
+    createdAt: '2024-03-15T09:30:00Z',
+    resumeUrl: 'https://example.com/resume/neha_arora.pdf',
+    professionalSummary: 'Customer Executive with strong interpersonal skills and experience resolving client issues efficiently.',
+    employmentHistory: [
+      { company: 'TechSupport Inc', role: 'Customer Executive', location: 'Delhi', startDate: '2022-06', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-05-10T00:00:00Z',
+    preferredLocation: 'Delhi'
   },
   {
     id: 'can8',
@@ -369,7 +432,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹3.5 LPA',
     noticePeriod: '15 Days',
     source: 'SPC Careers Website',
-    duplicateStatus: 'Possible Duplicate'
+    duplicateStatus: 'Possible Duplicate',
+    createdAt: '2024-03-16T10:15:00Z',
+    resumeUrl: undefined,
+    professionalSummary: 'Experienced Support Executive focused on providing rapid responses to customer queries.',
+    employmentHistory: [
+      { company: 'TechSupport', role: 'Support Executive', location: 'New Delhi', startDate: '2022-07', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-05-10T00:00:00Z',
+    preferredLocation: 'Delhi'
   },
   {
     id: 'can9',
@@ -387,7 +459,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹2.2 LPA',
     noticePeriod: 'Immediate',
     source: 'Referral',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-20T08:50:00Z',
+    resumeUrl: undefined,
+    professionalSummary: 'Diligent Packer with experience in fast-paced retail logistics environments.',
+    employmentHistory: [
+      { company: 'Retail Logistics', role: 'Packer', location: 'Gurugram', startDate: '2022-09', endDate: 'Present' }
+    ],
+    languages: ['Hindi'],
+    availableFrom: '2024-04-05T00:00:00Z',
+    preferredLocation: 'Gurugram'
   },
   {
     id: 'can10',
@@ -405,7 +486,14 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹2.0 LPA',
     noticePeriod: 'Immediate',
     source: 'SPC Careers Website',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-22T12:10:00Z',
+    resumeUrl: 'https://example.com/resume/devansh_rawat.pdf',
+    professionalSummary: 'Motivated fresher with a strong foundation in computer basics and quick typing speed, eager to start a career in data entry.',
+    employmentHistory: [],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-04-01T00:00:00Z',
+    preferredLocation: 'Delhi'
   },
   {
     id: 'can11',
@@ -423,7 +511,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹3.0 LPA',
     noticePeriod: '30 Days',
     source: 'Email',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-25T14:40:00Z',
+    resumeUrl: 'https://example.com/resume/mohit_yadav.pdf',
+    professionalSummary: 'Detail-oriented Data Entry Operator with expertise in Excel and Tally, ensuring accurate record keeping.',
+    employmentHistory: [
+      { company: 'Data Entries Ltd', role: 'DEO', location: 'Noida', startDate: '2021-08', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi'],
+    availableFrom: '2024-05-20T00:00:00Z',
+    preferredLocation: 'Noida'
   },
   {
     id: 'can12',
@@ -441,7 +538,16 @@ export const mockCandidates: Candidate[] = [
     expectedSalary: '₹4.5 LPA',
     noticePeriod: '15 Days',
     source: 'SPC Careers Website',
-    duplicateStatus: 'None'
+    duplicateStatus: 'None',
+    createdAt: '2024-03-28T09:20:00Z',
+    resumeUrl: 'https://example.com/resume/ishita_bose.pdf',
+    professionalSummary: 'Senior Support Agent with deep experience in healthcare BPO voice support and efficient query resolution.',
+    employmentHistory: [
+      { company: 'MedCare BPO', role: 'Senior Support Agent', location: 'Delhi', startDate: '2021-01', endDate: 'Present' }
+    ],
+    languages: ['English', 'Hindi', 'Bengali'],
+    availableFrom: '2024-04-15T00:00:00Z',
+    preferredLocation: 'Delhi NCR'
   }
 ];
 
