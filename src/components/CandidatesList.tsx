@@ -12,7 +12,7 @@ import CandidateFormModal from './CandidateFormModal';
 import { FileText, UserPlus, FileCheck } from 'lucide-react';
 
 export default function CandidatesList() {
-  const { candidates, applications, jobs, createCandidate } = useApp();
+  const { candidates, applications, jobs, clients, createCandidate } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCreationMethodModal, setShowCreationMethodModal] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -21,6 +21,7 @@ export default function CandidatesList() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activePopoverId, setActivePopoverId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ 
     source: '', 
@@ -195,8 +196,7 @@ export default function CandidatesList() {
                 <th className="px-6 py-4">Candidate</th>
                 <th className="px-6 py-4">Role & Experience</th>
                 <th className="px-6 py-4">Top Skills</th>
-                <th className="px-6 py-4">Active Jobs</th>
-                <th className="px-6 py-4">Stage</th>
+                <th className="px-6 py-4">Active Jobs & Stages</th>
                 <th className="px-6 py-4">Source</th>
                 <th className="px-6 py-4">Last Activity</th>
               </tr>
@@ -249,29 +249,83 @@ export default function CandidatesList() {
                     </td>
                     <td className="px-6 py-4">
                       {latestJob ? (
-                        <div>
-                          <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600 truncate max-w-[180px] block">
-                            {latestJob.title}
-                          </Link>
-                          {additionalActiveCount > 0 ? (
-                            <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="text-xs font-semibold text-blue-600 mt-1 inline-block hover:underline">
-                              +{additionalActiveCount} more
+                        <div className="relative">
+                          <div className="flex items-center gap-2">
+                            <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600 truncate max-w-[200px]">
+                              {latestJob.title}
                             </Link>
-                          ) : (
-                            <p className="text-xs text-slate-500 mt-1">{latestJob.code}</p>
+                            <span className="text-slate-400 font-mono text-xs">·</span>
+                            <span className="text-xs text-slate-500 font-mono">{latestJob.code}</span>
+                            <span className="text-slate-400 font-mono text-xs">·</span>
+                            {latestApp && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-medium border bg-blue-50 text-blue-700 border-blue-200">
+                                {latestApp.currentStage}
+                              </span>
+                            )}
+                          </div>
+                          {additionalActiveCount > 0 && (
+                            <div>
+                              <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setActivePopoverId(activePopoverId === candidate.id ? null : candidate.id);
+                                }}
+                                className="text-xs font-semibold text-blue-600 mt-1 inline-block hover:underline focus:outline-none"
+                              >
+                                +{additionalActiveCount} more
+                              </button>
+                              
+                              {activePopoverId === candidate.id && (
+                                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                  <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+                                    <span className="text-xs font-semibold text-slate-700">Other Active Jobs</span>
+                                    <button 
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePopoverId(null); }}
+                                      className="text-slate-400 hover:text-slate-600"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                  <div className="max-h-60 overflow-y-auto p-2">
+                                    {sortedApps.slice(1).map(app => {
+                                      const j = jobs.find(jb => jb.id === app.jobId);
+                                      const client = j ? clients.find(c => c.id === j.clientId) : null;
+                                      if (!j) return null;
+                                      
+                                      return (
+                                        <Link key={app.id} to={`/candidates/${candidate.id}?tab=Jobs`} className="block p-2 hover:bg-slate-50 rounded-lg transition-colors group">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0 flex-1">
+                                              <p className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">{j.title}</p>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-xs text-slate-500 font-mono">{j.code}</span>
+                                                {client && (
+                                                  <>
+                                                    <span className="text-slate-300">·</span>
+                                                    <span className="text-xs text-slate-600 truncate">{client.name}</span>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium border bg-slate-100 text-slate-700 border-slate-200 whitespace-nowrap">
+                                              {app.currentStage}
+                                            </span>
+                                          </div>
+                                        </Link>
+                                      );
+                                    })}
+                                  </div>
+                                  <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="block text-center text-xs font-medium text-blue-600 bg-blue-50 py-2 hover:bg-blue-100 transition-colors border-t border-slate-100">
+                                    View all hiring progress
+                                  </Link>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       ) : (
                         <span className="text-slate-400">No active application</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {latestApp ? (
-                        <span className="px-2.5 py-1 rounded-md text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">
-                          {latestApp.currentStage}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
