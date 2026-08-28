@@ -21,8 +21,8 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
   if (!isOpen || !application || !candidate || !job || !client) return null;
 
   const appInterviews = interviews.filter(i => i.applicationId === applicationId);
-  const isFeedbackComplete = appInterviews.length > 0 && appInterviews.every(i => i.feedback);
   const missingFeedbackCount = appInterviews.filter(i => !i.feedback).length;
+  const isFeedbackComplete = missingFeedbackCount === 0;
 
   const handleConfirm = () => {
     updateApplicationStage(application.id, 'Selected');
