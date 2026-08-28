@@ -101,35 +101,30 @@ export default function CandidateDetail() {
 
   const getActionsForApplication = (app: Application): ActionConfig => {
     const stage = app.currentStage;
-    const hasApp = stage !== 'Sourced';
     const hasOffer = offers.some(o => o.applicationId === app.id);
-    const hasOnboarding = onboardings.some(o => o.applicationId === app.id);
-    const hasInterview = interviews.some(i => i.applicationId === app.id);
-
-    const baseSecondary = ['View Process', 'View Job'];
     const substate = app.currentSubstate || '';
+
+    const viewProcess = 'View Hiring Process';
+    const viewJob = 'View Job';
 
     switch (stage) {
       case 'Sourced':
-        return { primary: 'Schedule Interview', secondary: baseSecondary, moreActions: ['Add Internal Note'] };
+        return { primary: 'Begin Screening', secondary: [viewProcess, viewJob], moreActions: [] };
       case 'Interviewing':
-        return { primary: 'Confirm Selection', secondary: ['Review Feedback', ...baseSecondary], moreActions: [] };
+        return { primary: 'Confirm Selection', secondary: ['View Interview', viewProcess, viewJob], moreActions: [] };
       case 'Selected':
-        return { primary: 'Prepare Offer', secondary: baseSecondary, moreActions: [] };
+        return { primary: hasOffer ? 'Continue Offer' : 'Prepare Offer', secondary: [viewProcess, viewJob], moreActions: [] };
       case 'Offered':
-        if (substate === 'Offer Draft') return { primary: 'Review Offer', secondary: baseSecondary, moreActions: [] };
-        if (substate === 'Offer Ready for Review') return { primary: 'Review and Send Offer', secondary: baseSecondary, moreActions: [] };
-        if (substate === 'Offer Sent') return { primary: 'Record Response', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
-        if (substate === 'Offer Accepted') return { primary: 'Start Onboarding', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
-        return { primary: 'View Process', secondary: baseSecondary, moreActions: [] };
+        if (substate === 'Offer Accepted') return { primary: 'Start Onboarding', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
+        return { primary: 'Record Response', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
       case 'Hired':
       case 'Joined':
-        return { primary: 'Open Onboarding', secondary: ['View Offer', ...baseSecondary], moreActions: [] };
+        return { primary: 'Start Onboarding', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
       case 'Rejected':
       case 'Withdrawn':
-        return { primary: 'View History', secondary: baseSecondary, moreActions: [] };
+        return { primary: 'View History', secondary: [viewProcess, viewJob], moreActions: [] };
       default:
-        return { primary: null, secondary: baseSecondary, moreActions: [] };
+        return { primary: null, secondary: [viewProcess, viewJob], moreActions: [] };
     }
   };
 
@@ -173,6 +168,8 @@ export default function CandidateDetail() {
       case 'Review Feedback':
       case 'Start Onboarding Handover':
       case 'View Process':
+      case 'View Hiring Process':
+      case 'View History':
         setShowProcessModal(app.id);
         break;
       case 'View Interview':
@@ -667,14 +664,18 @@ export default function CandidateDetail() {
             const currentStage = app.currentStage || 'Unknown';
             const actionConfig = getActionsForApplication(app);
 
+            const appInterview = interviews.find(i => i.applicationId === app.id);
+            const appOffer = offers.find(o => o.applicationId === app.id);
+            const lastActivity = app.updatedAt || appOffer?.createdAt || appInterview?.createdAt || app.appliedDate;
+
             return (
               <div key={'id' in app ? app.id : `app-${app.jobId}`} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
                 {'isLocal' in app && app.isLocal && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>}
-                <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <button onClick={() => job && setQuickViewJobId(job.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-lg outline-none text-left">
-                        {job?.title || 'Unknown Job'}
+                        {job?.title || 'Unknown Job'} <span className="text-sm font-normal text-slate-500 ml-1">{job?.code}</span>
                       </button>
                       <span className="text-slate-400">•</span>
                       <button onClick={() => client && setQuickViewClientId(client.id)} className="text-sm text-slate-600 hover:text-blue-600 outline-none">
@@ -682,14 +683,24 @@ export default function CandidateDetail() {
                       </button>
                     </div>
                     <div className="text-xs text-slate-500 space-y-1">
-                      <p><span className="font-medium text-slate-700">{relationshipLabel}</span> • Since {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
-                      <p>Origin: {originLabel}</p>
+                      <p><span className="font-medium text-slate-700">Origin: {originLabel}</span> • Since {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
+                      <p>Last Activity: {formatDate(lastActivity)}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
                       {currentStage}
                     </span>
+                    {appInterview && (
+                      <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
+                        Interview: {appInterview.status}
+                      </span>
+                    )}
+                    {appOffer && (
+                      <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
+                        Offer: {appOffer.status}
+                      </span>
+                    )}
                   </div>
                 </div>
                 

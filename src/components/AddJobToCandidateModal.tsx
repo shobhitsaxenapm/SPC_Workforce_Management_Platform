@@ -22,6 +22,7 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
   if (!isOpen || !candidate) return null;
 
   const filteredJobs = jobs.filter(j => {
+    if (applications.some(a => a.jobId === j.id && a.candidateId === candidateId)) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     const client = clients.find(c => c.id === j.clientId);
