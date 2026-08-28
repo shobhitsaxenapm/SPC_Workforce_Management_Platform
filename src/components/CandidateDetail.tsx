@@ -72,6 +72,7 @@ export default function CandidateDetail() {
   const matchingJobs = candidateInsights.filter(insight => {
     if (insight.matchScore < 70) return false;
     if (dismissedMatches.includes(insight.jobId)) return false;
+    if (allAssociatedJobIds.includes(insight.jobId)) return false;
     
     const job = mockJobs.find(j => j.id === insight.jobId);
     if (!job) return false;
@@ -256,14 +257,22 @@ export default function CandidateDetail() {
             <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
               Edit Profile
             </button>
-            <button 
-              className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-2", candidate.resumeUrl ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-400 cursor-not-allowed")}
-              disabled={!candidate.resumeUrl}
-              title={!candidate.resumeUrl ? "No resume uploaded" : "View Resume"}
-            >
-              <FileText className="w-4 h-4" />
-              {candidate.resumeUrl ? "View Resume" : "No Resume"}
-            </button>
+            {candidate.resumeUrl ? (
+              <>
+                <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
+                  Download Resume
+                </button>
+                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  View Resume
+                </button>
+              </>
+            ) : (
+              <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Upload Resume
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -318,58 +327,95 @@ export default function CandidateDetail() {
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Total Experience</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.totalExperience}</p>
+                  <p className="text-sm font-medium text-slate-800">{candidate.totalExperience || 'Not provided'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Current CTC</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentSalary}</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.currentSalary || 'Not provided'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Expected CTC</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.expectedSalary}</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.expectedSalary || 'Not provided'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Notice Period</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.noticePeriod}</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.noticePeriod || 'Not provided'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Availability</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.availableFrom ? formatDate(candidate.availableFrom) : '-'}</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.availableFrom ? formatDate(candidate.availableFrom) : 'Not provided'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Current Company</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.currentCompany || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Current Role</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.currentRole || 'Not provided'}</p>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Candidate Source</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.source}</p>
+                  <p className="text-sm font-medium text-slate-800">{candidate.source || 'Not provided'}</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-4">Skills & Languages</h3>
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-2">
-                  {candidate.skills.map((skill, index) => (
-                    <span key={index} className="px-3 py-1 bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200">
-                      {skill}
-                    </span>
-                  ))}
+              <h3 className="font-semibold text-slate-800 mb-4">Skills & Education</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Skills</p>
+                  {candidate.skills && candidate.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {candidate.skills.map((skill, index) => (
+                        <span key={index} className="px-3 py-1 bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-slate-800">Not provided</p>
+                  )}
                 </div>
-              </div>
-              {candidate.languages && candidate.languages.length > 0 && (
                 <div>
                   <p className="text-xs text-slate-500 mb-2">Languages</p>
-                  <div className="flex flex-wrap gap-2">
-                    {candidate.languages.map((lang, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg border border-blue-200">
-                        {lang}
-                      </span>
-                    ))}
-                  </div>
+                  {candidate.languages && candidate.languages.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {candidate.languages.map((lang, index) => (
+                        <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg border border-blue-200">
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-slate-800">Not provided</p>
+                  )}
                 </div>
-              )}
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Education / Qualification</p>
+                  <p className="text-sm font-medium text-slate-800">{candidate.education || 'Not provided'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="font-semibold text-slate-800 mb-4">System Metadata</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Profile Created Date</p>
+                  <p className="text-sm font-medium text-slate-800">{candidate.createdAt ? formatDate(candidate.createdAt) : 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Resume Last Updated</p>
+                  <p className="text-sm font-medium text-slate-800">{candidate.resumeUrl ? 'Recently updated' : 'Not provided'}</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -424,9 +470,10 @@ export default function CandidateDetail() {
                    })}
                  </div>
                ) : (
-                 <div className="bg-white/60 p-6 rounded-lg text-center text-slate-600 text-sm">
-                   No new matching jobs found for this candidate.
-                 </div>
+                  <div className="bg-white/60 p-6 rounded-lg text-center text-slate-600 text-sm">
+                    <p>No new eligible matching jobs found.</p>
+                    <p className="text-xs mt-1 text-slate-500">The candidate may already be in the pipeline for all their strong matches.</p>
+                  </div>
                )}
             </div>
 
