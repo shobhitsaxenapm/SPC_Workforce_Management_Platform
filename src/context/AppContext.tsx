@@ -213,6 +213,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
     let base = safeParse<Candidate[]>('spc_candidates', mockCandidates);
+    
+    // Merge latest mock data fields if they are missing in cache
+    base = base.map(cached => {
+      const mock = mockCandidates.find(m => m.id === cached.id);
+      if (mock && !cached.professionalSummary) {
+        return { ...cached, ...mock };
+      }
+      return cached;
+    });
     const pipelineSeeds: Candidate[] = [
       { id: 'can_seed_1', code: 'CAN-9001', fullName: 'Rohan Mehta', email: 'rohan.mehta@email.com', phone: '+91 98333 44556', currentLocation: 'Delhi', totalExperience: '1 Year', currentCompany: 'Apex Digitizing', currentRole: 'Data Typist', skills: ['Typing Speed > 40 WPM', 'Excel'], education: 'B.A, Delhi University', currentSalary: '₹2.0 LPA', expectedSalary: '₹2.6 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-08T10:00:00Z' },
       { id: 'can_seed_2', code: 'CAN-9002', fullName: 'Vikram Malhotra', email: 'vikram.m@email.com', phone: '+91 98444 55667', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'Info Services', currentRole: 'Office Assistant', skills: ['Data Entry', 'Excel'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.8 LPA', noticePeriod: '15 Days', source: 'Referral', duplicateStatus: 'None', createdAt: '2026-07-09T11:00:00Z' },
