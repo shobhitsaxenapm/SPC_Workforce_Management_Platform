@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import AIInsightCard from './AIInsightCard';
@@ -198,8 +198,8 @@ export default function CandidateDetail() {
         setShowOnboardingModal({ jobId });
         break;
       case 'View Match':
-        const job = mockJobs.find(j => j.id === app.jobId);
-        const client = mockClients.find(c => c.id === job?.clientId);
+        const job = jobs.find(j => j.id === app.jobId);
+        const client = clients.find(c => c.id === job?.clientId);
         const insight = candidateInsights.find(i => i.jobId === app.jobId);
         if (job && client && insight) {
           setSelectedInsight({ job, client, insight });
@@ -242,7 +242,7 @@ export default function CandidateDetail() {
     const res = addMatchToPipeline(jobId, candidate.id, 'Added from Candidate Match');
     setIsAddingToPipeline(false);
     if (res.success) {
-      setToast({ message: `${candidate.fullName} was added to the ${mockJobs.find(j => j.id === jobId)?.title} pipeline at Sourced.`, type: 'success' });
+      setToast({ message: `${candidate.fullName} was added to the ${jobs.find(j => j.id === jobId)?.title} pipeline at Sourced.`, type: 'success' });
       setShowPipelineConfirmModal(null);
       setActiveTab('Jobs & Hiring Progress');
       setTimeout(() => setToast(null), 3000);
@@ -402,8 +402,8 @@ export default function CandidateDetail() {
   }
 
   const renderAppCard = (app: Application) => {
-    const job = mockJobs.find(j => j.id === app.jobId);
-    const client = mockClients.find(c => c.id === job?.clientId);
+    const job = jobs.find(j => j.id === app.jobId);
+    const client = clients.find(c => c.id === job?.clientId);
     const recruiter = mockUsers.find(u => u.id === app.assignedRecruiterId);
     
     let originLabel = 'Applied directly';
@@ -505,6 +505,17 @@ export default function CandidateDetail() {
             </button>
           )}
 
+          {actionConfig.moreActions.includes('Schedule Next Round') && (
+            <button 
+              onClick={() => handleAction('Schedule Next Round', app)}
+              disabled={isProcessing === app.jobId}
+              className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors mr-auto"
+              title="Schedule Next Round"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          )}
+
           {actionConfig.secondary.map((action, idx) => (
             <button 
               key={idx} 
@@ -526,13 +537,13 @@ export default function CandidateDetail() {
             </button>
           )}
           
-          {actionConfig.moreActions.length > 0 && (
+          {actionConfig.moreActions.filter(ma => ma !== 'Schedule Next Round').length > 0 && (
             <div className="relative group">
               <button disabled={isProcessing === app.jobId} className="px-2 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
                 <MoreHorizontal className="w-5 h-5" />
               </button>
               <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
-                {actionConfig.moreActions.map((ma, idx) => (
+                {actionConfig.moreActions.filter(ma => ma !== 'Schedule Next Round').map((ma, idx) => (
                    <button 
                      key={idx} 
                      onClick={() => handleAction(ma, app)}
