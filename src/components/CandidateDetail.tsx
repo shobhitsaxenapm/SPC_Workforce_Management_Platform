@@ -241,18 +241,18 @@ export default function CandidateDetail() {
     candidateActivities.push({
       id: `act-app-${app.id}-start`,
       action: app.currentStage === 'Applied' ? 'Applied for Job' : 'Added to Job Pipeline',
-      date: app.appliedDate,
+      date: app.appliedDate || app.lastActivity || candidate.createdAt || new Date().toISOString(),
       actor: app.currentStage === 'Applied' ? candidate.fullName : 'Recruiter',
       jobId: job?.id,
       jobTitle: relatedStr,
       stage: 'Sourced'
     });
 
-    if (app.currentStage !== 'Sourced' && app.updatedAt) {
+    if (app.currentStage !== 'Sourced' && app.lastActivity) {
       candidateActivities.push({
         id: `act-app-${app.id}-update`,
         action: `Moved to ${app.currentStage}`,
-        date: app.updatedAt,
+        date: app.lastActivity || app.appliedDate || candidate.createdAt || new Date().toISOString(),
         actor: 'Recruiter',
         jobId: job?.id,
         jobTitle: relatedStr,
@@ -265,7 +265,7 @@ export default function CandidateDetail() {
       candidateActivities.push({
         id: `act-iv-${iv.id}-sched`,
         action: `Interview Scheduled (${iv.interviewType})`,
-        date: iv.createdAt || iv.scheduledAt,
+        date: iv.scheduledAt || app.lastActivity || candidate.createdAt || new Date().toISOString(),
         actor: 'Recruiter',
         jobId: job?.id,
         jobTitle: relatedStr,
@@ -275,7 +275,7 @@ export default function CandidateDetail() {
         candidateActivities.push({
           id: `act-iv-${iv.id}-end`,
           action: `Interview ${iv.status} (${iv.interviewType})`,
-          date: iv.updatedAt || iv.scheduledAt,
+          date: iv.cancelledAt || iv.rescheduledAt || iv.scheduledAt || app.lastActivity || candidate.createdAt || new Date().toISOString(),
           actor: iv.status === 'Cancelled' ? 'Recruiter' : 'Interviewer',
           jobId: job?.id,
           jobTitle: relatedStr,
@@ -289,7 +289,7 @@ export default function CandidateDetail() {
       candidateActivities.push({
         id: `act-off-${o.id}-draft`,
         action: `Offer Drafted`,
-        date: o.createdAt || app.updatedAt,
+        date: o.offerDate || o.sentDate || app.lastActivity || candidate.createdAt || new Date().toISOString(),
         actor: 'Recruiter',
         jobId: job?.id,
         jobTitle: relatedStr,
@@ -299,7 +299,7 @@ export default function CandidateDetail() {
         candidateActivities.push({
           id: `act-off-${o.id}-issue`,
           action: `Offer Issued to Candidate`,
-          date: o.updatedAt || app.updatedAt,
+          date: o.sentDate || o.offerDate || app.lastActivity || candidate.createdAt || new Date().toISOString(),
           actor: 'Recruiter',
           jobId: job?.id,
           jobTitle: relatedStr,
@@ -309,7 +309,7 @@ export default function CandidateDetail() {
         candidateActivities.push({
           id: `act-off-${o.id}-resp`,
           action: `Offer ${o.status}`,
-          date: o.updatedAt || app.updatedAt,
+          date: o.acceptedAt || o.rejectedAt || o.sentDate || app.lastActivity || candidate.createdAt || new Date().toISOString(),
           actor: candidate.fullName,
           jobId: job?.id,
           jobTitle: relatedStr,
@@ -323,7 +323,7 @@ export default function CandidateDetail() {
       candidateActivities.push({
         id: `act-onb-${appOnboarding.id}`,
         action: `Onboarding Handover Created`,
-        date: appOnboarding.createdAt || app.updatedAt,
+        date: appOnboarding.proposedJoiningDate || appOnboarding.plannedJoiningDate || app.lastActivity || candidate.createdAt || new Date().toISOString(),
         actor: 'Recruiter',
         jobId: job?.id,
         jobTitle: relatedStr,
