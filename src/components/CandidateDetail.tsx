@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import AIInsightCard from './AIInsightCard';
@@ -28,7 +28,7 @@ interface ActionConfig {
 
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications, interviews, offers, onboardings, matchRuns, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
@@ -215,6 +215,141 @@ export default function CandidateDetail() {
     }, 800);
   };
 
+  // Build Activities Timeline
+  const candidateActivities = [];
+  candidateActivities.push({
+    id: `act-create`,
+    action: 'Candidate profile created',
+    date: candidate.createdAt || '2026-07-10T10:00:00Z',
+    actor: 'System Import',
+  });
+  if (candidate.resumeUrl) {
+    candidateActivities.push({
+      id: `act-resume`,
+      action: 'Resume uploaded',
+      date: candidate.updatedAt || candidate.createdAt || '2026-07-10T10:30:00Z',
+      actor: candidate.source === 'Applied' ? candidate.fullName : 'Recruiter',
+    });
+  }
+  
+  const candidateApps = applications.filter(a => a.candidateId === candidate.id);
+  candidateApps.forEach(app => {
+    const job = jobs.find(j => j.id === app.jobId);
+    const client = job ? clients.find(c => c.id === job.clientId) : null;
+    const relatedStr = job ? `${job.title} — ${client?.name}` : '';
+    
+    candidateActivities.push({
+      id: `act-app-${app.id}-start`,
+      action: app.currentStage === 'Applied' ? 'Applied for Job' : 'Added to Job Pipeline',
+      date: app.appliedDate,
+      actor: app.currentStage === 'Applied' ? candidate.fullName : 'Recruiter',
+      jobId: job?.id,
+      jobTitle: relatedStr,
+      stage: 'Sourced'
+    });
+
+    if (app.currentStage !== 'Sourced' && app.updatedAt) {
+      candidateActivities.push({
+        id: `act-app-${app.id}-update`,
+        action: `Moved to ${app.currentStage}`,
+        date: app.updatedAt,
+        actor: 'Recruiter',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: app.currentStage
+      });
+    }
+
+    const appInterviews = interviews.filter(i => i.applicationId === app.id);
+    appInterviews.forEach(iv => {
+      candidateActivities.push({
+        id: `act-iv-${iv.id}-sched`,
+        action: `Interview Scheduled (${iv.interviewType})`,
+        date: iv.createdAt || iv.scheduledAt,
+        actor: 'Recruiter',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: 'Interviewing'
+      });
+      if (iv.status === 'Completed' || iv.status === 'Cancelled') {
+        candidateActivities.push({
+          id: `act-iv-${iv.id}-end`,
+          action: `Interview ${iv.status} (${iv.interviewType})`,
+          date: iv.updatedAt || iv.scheduledAt,
+          actor: iv.status === 'Cancelled' ? 'Recruiter' : 'Interviewer',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Interviewing'
+        });
+      }
+    });
+
+    const appOffers = offers.filter(o => o.applicationId === app.id);
+    appOffers.forEach(o => {
+      candidateActivities.push({
+        id: `act-off-${o.id}-draft`,
+        action: `Offer Drafted`,
+        date: o.createdAt || app.updatedAt,
+        actor: 'Recruiter',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: 'Offered'
+      });
+      if (o.status === 'Offer Issued') {
+        candidateActivities.push({
+          id: `act-off-${o.id}-issue`,
+          action: `Offer Issued to Candidate`,
+          date: o.updatedAt || app.updatedAt,
+          actor: 'Recruiter',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Offered'
+        });
+      } else if (o.status === 'Accepted' || o.status === 'Declined') {
+        candidateActivities.push({
+          id: `act-off-${o.id}-resp`,
+          action: `Offer ${o.status}`,
+          date: o.updatedAt || app.updatedAt,
+          actor: candidate.fullName,
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: o.status === 'Accepted' ? 'Offer Accepted' : 'Offered'
+        });
+      }
+    });
+    
+    const appOnboarding = onboardings.find(o => o.applicationId === app.id);
+    if (appOnboarding) {
+      candidateActivities.push({
+        id: `act-onb-${appOnboarding.id}`,
+        action: `Onboarding Handover Created`,
+        date: appOnboarding.createdAt || app.updatedAt,
+        actor: 'Recruiter',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: 'Hired'
+      });
+    }
+  });
+
+  candidateActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Build Documents
+  const candidateDocuments = [];
+  if (candidate.resumeUrl) {
+    candidateDocuments.push({
+      id: 'doc-resume',
+      name: 'Candidate Resume',
+      type: 'Resume',
+      filename: candidate.resumeUrl.split('/').pop() || 'resume.pdf',
+      uploadedBy: candidate.source === 'Applied' ? candidate.fullName : 'Recruiter',
+      uploadDate: candidate.updatedAt || candidate.createdAt || '2026-07-10T10:30:00Z',
+      status: 'Verified',
+      jobId: null,
+      jobTitle: null
+    });
+  }
+
   return (
     <div className="space-y-6">
       {toast && (
@@ -236,8 +371,8 @@ export default function CandidateDetail() {
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div className="flex gap-5">
-            <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-2xl font-semibold shrink-0">
-              {candidate.fullName.split(' ').map(n => n[0]).join('')}
+            <div className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100">
+              <Users className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <div>
               <div className="flex items-center gap-3">
@@ -784,10 +919,104 @@ export default function CandidateDetail() {
         </div>
       )}
 
-      {/* Activity & Documents */}
-      {(activeTab === 'Activity' || activeTab === 'Documents') && (
-        <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500 italic">
-          {activeTab} view not implemented in this prototype.
+      {/* Activity */}
+      {activeTab === 'Activity' && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 overflow-hidden">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Activity History</h3>
+          <div className="relative pl-4 space-y-6">
+            <div className="absolute top-2 bottom-2 left-[23px] w-0.5 bg-slate-200"></div>
+            {candidateActivities.map((act, idx) => (
+              <div key={act.id + idx} className="relative z-10 flex gap-4">
+                <div className="w-3 h-3 mt-1.5 rounded-full bg-blue-500 ring-4 ring-white shrink-0 shadow-sm" />
+                <div className="flex-1 pb-1">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-4 mb-1">
+                    <p className="font-semibold text-slate-800 text-sm">{act.action}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium whitespace-nowrap">
+                      <Clock className="w-3.5 h-3.5" />
+                      {formatDate(act.date)}
+                    </div>
+                  </div>
+                  {act.jobTitle && (
+                    <p className="text-sm text-slate-600 mb-1">{act.jobTitle}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
+                    <span className="bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-600 border border-slate-200">{act.actor}</span>
+                    {act.stage && (
+                      <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-medium border border-blue-100">Stage: {act.stage}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {candidateActivities.length === 0 && (
+              <div className="text-center text-slate-500 py-8 italic">No activity recorded for this candidate.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Documents */}
+      {activeTab === 'Documents' && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 className="text-lg font-bold text-slate-800">Candidate Documents</h3>
+            <button className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+              Upload Document
+            </button>
+          </div>
+          <div className="p-6">
+            {candidateDocuments.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {candidateDocuments.map((doc, i) => (
+                  <div key={i} className="border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all group bg-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <span className="px-2 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-md border border-green-200">
+                        {doc.status}
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-slate-800 text-sm mb-1 truncate">{doc.name}</h4>
+                    <p className="text-xs text-slate-500 mb-3 truncate" title={doc.filename}>{doc.filename}</p>
+                    
+                    <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Type</span>
+                        <span className="font-medium">{doc.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Uploaded</span>
+                        <span className="font-medium">{formatDate(doc.uploadDate).split(' ')[0]}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">By</span>
+                        <span className="font-medium truncate max-w-[100px]" title={doc.uploadedBy}>{doc.uploadedBy}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-3 border-t border-slate-100">
+                      <button className="flex-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-md transition-colors border border-slate-200">
+                        View
+                      </button>
+                      <button className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-md transition-colors border border-blue-100">
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">No Documents Available</h3>
+                <p className="text-slate-500 max-w-md mx-auto mb-6">There are no documents uploaded for this candidate yet.</p>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                  Upload Document
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

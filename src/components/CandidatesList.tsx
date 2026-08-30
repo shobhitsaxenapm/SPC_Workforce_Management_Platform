@@ -9,10 +9,10 @@ import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import SmartCandidateUpload from './SmartCandidateUpload';
 import CandidateFormModal from './CandidateFormModal';
-import { FileText, UserPlus, FileCheck } from 'lucide-react';
+import { FileText, UserPlus, FileCheck, Trash2 } from 'lucide-react';
 
 export default function CandidatesList() {
-  const { candidates, applications, jobs, clients, createCandidate } = useApp();
+  const { candidates, applications, jobs, clients, createCandidate, deleteCandidate } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCreationMethodModal, setShowCreationMethodModal] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -125,7 +125,7 @@ export default function CandidatesList() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-2">
       <div className="flex justify-between items-center">
         <p className="text-slate-600">View candidate profiles and their applications across client jobs.</p>
         <button onClick={() => setShowCreationMethodModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
@@ -189,19 +189,21 @@ export default function CandidatesList() {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-              <tr>
+        <div className="w-full">
+          <table className="w-full text-left text-sm block md:table">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium hidden md:table-header-group">
+              <tr className="md:table-row">
                 <th className="px-6 py-4">Candidate</th>
                 <th className="px-6 py-4">Role & Experience</th>
                 <th className="px-6 py-4">Top Skills</th>
                 <th className="px-6 py-4">Active Jobs & Stages</th>
                 <th className="px-6 py-4">Source</th>
-                <th className="px-6 py-4">Last Activity</th>
+                <th className="px-6 py-4 w-12 relative">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 flex flex-col md:table-row-group">
               {filteredCandidates.map(candidate => {
                 const candidateApps = applications.filter(a => a.candidateId === candidate.id);
                 const activeCandidateApps = candidateApps.filter(a => !['Rejected', 'Withdrawn'].includes(a.currentStage));
@@ -213,11 +215,12 @@ export default function CandidatesList() {
                 
                 const latestApp = sortedApps[0];
                 const latestJob = latestApp ? jobs.find(j => j.id === latestApp.jobId) : null;
+                const latestClient = latestJob ? clients.find(c => c.id === latestJob.clientId) : null;
                 const additionalActiveCount = activeCandidateApps.length > 1 ? activeCandidateApps.length - 1 : 0;
                 
                 return (
-                  <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
-                    <td className="px-6 py-4">
+                  <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer flex flex-col md:table-row p-4 md:p-0">
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <Link to={`/candidates/${candidate.id}`} className="block">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{candidate.fullName}</p>
@@ -226,42 +229,61 @@ export default function CandidatesList() {
                             <AlertTriangle className="w-4 h-4 text-amber-500" title={candidate.duplicateStatus} />
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{candidate.currentLocation}</div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {candidate.currentLocation}
+                          {latestApp && (
+                            <>
+                              <span className="mx-1.5 font-mono text-slate-300">·</span>
+                              Updated {formatDate(latestApp.lastActivity).split(' ')[0]}
+                            </>
+                          )}
+                        </div>
                       </Link>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-slate-800">{candidate.currentRole || 'N/A'}</p>
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Role & Experience</div>
+                      <p className="text-slate-800 font-medium">{candidate.currentRole || 'N/A'}</p>
                       <p className="text-xs text-slate-500 mt-1">{candidate.totalExperience} • {candidate.currentCompany || 'No Company'}</p>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Top Skills</div>
+                      <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                         {candidate.skills.slice(0, 2).map(skill => (
-                          <span key={skill} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] rounded border border-slate-200">
+                          <span key={skill} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded border border-slate-200">
                             {skill}
                           </span>
                         ))}
                         {candidate.skills.length > 2 && (
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] rounded border border-slate-200">
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded border border-slate-200">
                             +{candidate.skills.length - 2}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Active Jobs & Stages</div>
                       {latestJob ? (
                         <div className="relative">
-                          <div className="flex items-center gap-2">
-                            <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600 truncate max-w-[200px]">
-                              {latestJob.title}
-                            </Link>
-                            <span className="text-slate-400 font-mono text-xs">·</span>
-                            <span className="text-xs text-slate-500 font-mono">{latestJob.code}</span>
-                            <span className="text-slate-400 font-mono text-xs">·</span>
-                            {latestApp && (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-medium border bg-blue-50 text-blue-700 border-blue-200">
-                                {latestApp.currentStage}
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between items-start gap-3">
+                              <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600">
+                                {latestJob.title}
+                              </Link>
+                              {latestApp && (
+                                <span className="px-2 py-0.5 rounded text-[11px] font-medium border bg-blue-50 text-blue-700 border-blue-200 shrink-0 mt-0.5">
+                                  {latestApp.currentStage}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500 font-medium">
+                              <span className="font-mono">{latestJob.code}</span>
+                              {latestClient && (
+                                <>
+                                  <span className="mx-1.5 font-mono text-slate-300">·</span>
+                                  <span>{latestClient.name}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                           {additionalActiveCount > 0 && (
                             <div>
@@ -271,44 +293,44 @@ export default function CandidatesList() {
                                   e.stopPropagation();
                                   setActivePopoverId(activePopoverId === candidate.id ? null : candidate.id);
                                 }}
-                                className="text-xs font-semibold text-blue-600 mt-1 inline-block hover:underline focus:outline-none"
+                                className="text-xs font-semibold text-blue-600 mt-2 inline-block hover:underline focus:outline-none"
                               >
-                                +{additionalActiveCount} more
+                                +{additionalActiveCount} more {additionalActiveCount === 1 ? 'job' : 'jobs'}
                               </button>
                               
                               {activePopoverId === candidate.id && (
-                                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                  <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
-                                    <span className="text-xs font-semibold text-slate-700">Other Active Jobs</span>
+                                <div className="absolute top-full left-0 mt-2 w-[320px] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                                    <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Other Active Jobs</span>
                                     <button 
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePopoverId(null); }}
-                                      className="text-slate-400 hover:text-slate-600"
+                                      className="text-slate-400 hover:text-slate-600 bg-white rounded-md border border-slate-200 p-1 shadow-sm"
                                     >
-                                      <X className="w-3 h-3" />
+                                      <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
-                                  <div className="max-h-60 overflow-y-auto p-2">
+                                  <div className="max-h-72 overflow-y-auto p-2">
                                     {sortedApps.slice(1).map(app => {
                                       const j = jobs.find(jb => jb.id === app.jobId);
                                       const client = j ? clients.find(c => c.id === j.clientId) : null;
                                       if (!j) return null;
                                       
                                       return (
-                                        <Link key={app.id} to={`/candidates/${candidate.id}?tab=Jobs`} className="block p-2 hover:bg-slate-50 rounded-lg transition-colors group">
-                                          <div className="flex items-start justify-between gap-2">
+                                        <Link key={app.id} to={`/candidates/${candidate.id}?tab=Jobs`} className="block p-3 hover:bg-slate-50 rounded-lg transition-colors group border-b border-slate-100 last:border-0">
+                                          <div className="flex justify-between items-start gap-3">
                                             <div className="min-w-0 flex-1">
                                               <p className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">{j.title}</p>
-                                              <div className="flex items-center gap-1.5 mt-0.5">
-                                                <span className="text-xs text-slate-500 font-mono">{j.code}</span>
+                                              <div className="text-xs text-slate-500 font-medium mt-1">
+                                                <span className="font-mono">{j.code}</span>
                                                 {client && (
                                                   <>
-                                                    <span className="text-slate-300">·</span>
-                                                    <span className="text-xs text-slate-600 truncate">{client.name}</span>
+                                                    <span className="mx-1.5 font-mono text-slate-300">·</span>
+                                                    <span className="truncate inline-block align-bottom max-w-[120px]">{client.name}</span>
                                                   </>
                                                 )}
                                               </div>
                                             </div>
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium border bg-slate-100 text-slate-700 border-slate-200 whitespace-nowrap">
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium border bg-slate-100 text-slate-700 border-slate-200 whitespace-nowrap shrink-0 mt-0.5">
                                               {app.currentStage}
                                             </span>
                                           </div>
@@ -316,7 +338,7 @@ export default function CandidatesList() {
                                       );
                                     })}
                                   </div>
-                                  <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="block text-center text-xs font-medium text-blue-600 bg-blue-50 py-2 hover:bg-blue-100 transition-colors border-t border-slate-100">
+                                  <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="block text-center text-xs font-semibold text-blue-600 bg-blue-50 py-2.5 hover:bg-blue-100 transition-colors border-t border-blue-100">
                                     View all hiring progress
                                   </Link>
                                 </div>
@@ -325,20 +347,33 @@ export default function CandidatesList() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-400">No active application</span>
+                        <span className="text-slate-400">No active jobs</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-slate-600 text-xs">{candidate.source}</span>
+                    <td className="md:px-6 md:py-4 block md:table-cell max-w-[200px]">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Source</div>
+                      <span className="text-slate-600 text-xs inline-block break-words whitespace-normal">{candidate.source}</span>
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500">
-                      {latestApp ? formatDate(latestApp.lastActivity) : '-'}
+                    <td className="md:px-6 md:py-4 block md:table-cell text-right">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to remove ${candidate.fullName}? This action cannot be undone.`)) {
+                            deleteCandidate(candidate.id);
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
+                        title="Delete Candidate"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 );
               })}
               {filteredCandidates.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No candidates match the current filters.</td></tr>
+                <tr className="flex md:table-row"><td colSpan={5} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
               )}
             </tbody>
           </table>

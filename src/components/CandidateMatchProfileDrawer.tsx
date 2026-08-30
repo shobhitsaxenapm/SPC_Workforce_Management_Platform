@@ -1,6 +1,6 @@
 import React from 'react';
 import { Candidate, JobMatch } from '../types';
-import { X, MapPin, Briefcase, GraduationCap, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, MapPin, Briefcase, GraduationCap, Calendar, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 
 interface CandidateMatchProfileDrawerProps {
@@ -26,8 +26,8 @@ export default function CandidateMatchProfileDrawer({ isOpen, onClose, candidate
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* Candidate Overview */}
           <div className="flex flex-col gap-1 text-center items-center">
-            <div className="w-16 h-16 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-2xl font-bold mb-2">
-              {candidate.fullName.charAt(0)}
+            <div className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100 mb-2">
+              <Users className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <h3 className="text-xl font-bold text-slate-800">{candidate.fullName}</h3>
             <p className="text-sm font-medium text-slate-600">{candidate.currentRole} at {candidate.currentCompany}</p>

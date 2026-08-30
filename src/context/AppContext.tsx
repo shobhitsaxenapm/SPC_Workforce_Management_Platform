@@ -33,6 +33,7 @@ interface AppContextType {
   createProject: (projectData: Omit<Project, 'id' | 'code' | 'version' | 'revisions' | 'createdAt' | 'updatedAt'>) => void;
   createCandidate: (candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus'>) => { success: boolean; error?: string; candidateId?: string };
   updateCandidate: (candidateId: string, updates: Partial<Candidate>) => void;
+  deleteCandidate: (candidateId: string) => void;
   createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled' | 'engagementType'>, projectId?: string) => void;
   updateJob: (jobId: string, updates: Partial<Job>) => void;
   updateJobStatus: (jobId: string, status: JobStatus) => void;
@@ -550,10 +551,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateCandidate = (candidateId: string, updates: Partial<Candidate>) => {
     const updatedCandidates = candidates.map(c => {
       if (c.id === candidateId) {
-        return { ...c, ...updates };
+        return { ...c, ...updates, updatedAt: new Date().toISOString() };
       }
       return c;
     });
+    persistCandidates(updatedCandidates);
+  };
+
+  const deleteCandidate = (candidateId: string) => {
+    const updatedCandidates = candidates.filter(c => c.id !== candidateId);
     persistCandidates(updatedCandidates);
   };
 
@@ -1169,6 +1175,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         createProject,
         createCandidate,
         updateCandidate,
+        deleteCandidate,
         createJob,
         updateJob,
         updateJobStatus,
