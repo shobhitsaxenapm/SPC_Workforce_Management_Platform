@@ -788,7 +788,7 @@ export default function CandidateDetail() {
                    {topMatches.map(insight => {
                      const job = mockJobs.find(j => j.id === insight.jobId);
                      const client = mockClients.find(c => c.id === job?.clientId);
-                     if (!job || !client) return null;
+                     if (!job) return null;
                      
                      return (
                        <div key={job.id} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col hover:border-blue-300 transition-colors">
@@ -799,7 +799,7 @@ export default function CandidateDetail() {
                             <span className="text-xs text-slate-500">{job.openings - job.filled} open</span>
                          </div>
                          <h4 className="font-bold text-slate-800 text-sm mb-1 leading-tight">{job.title}</h4>
-                         <p className="text-xs text-slate-500 mb-3">{client.name} • {job.location}</p>
+                         <p className="text-xs text-slate-500 mb-3">{client?.name || 'Unknown Client'} • {job.location}</p>
                          
                          <div className="mt-auto space-y-2">
                            <ul className="text-xs text-slate-600 space-y-1">
@@ -886,7 +886,7 @@ export default function CandidateDetail() {
             {matchingJobs.length > 0 ? matchingJobs.map(insight => {
               const job = mockJobs.find(j => j.id === insight.jobId);
               const client = mockClients.find(c => c.id === job?.clientId);
-              if (!job || !client) return null;
+              if (!job) return null;
 
               return (
                 <div key={job.id} className="p-6 flex flex-col md:flex-row gap-6 hover:bg-slate-50/50 transition-colors group">
@@ -903,7 +903,7 @@ export default function CandidateDetail() {
                         {job.title} <span className="text-sm font-normal text-slate-500 ml-2">{job.code}</span>
                       </button>
                        <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
-                         <span className="font-medium text-slate-700 flex items-center gap-1.5"><Building2 className="w-4 h-4"/> {client.name}</span>
+                         <span className="font-medium text-slate-700 flex items-center gap-1.5"><Building2 className="w-4 h-4"/> {client?.name || 'Unknown Client'}</span>
                          <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> {job.location}</span>
                          <span className="flex items-center gap-1.5"><Briefcase className="w-4 h-4"/> {job.employmentType}</span>
                          <span className="text-slate-400">•</span>

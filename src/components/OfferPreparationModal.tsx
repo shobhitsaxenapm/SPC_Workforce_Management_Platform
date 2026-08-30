@@ -83,14 +83,14 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
     }
   }, [isOpen, applicationId, offers, job]);
 
-  if (!isOpen || !application || !candidate || !job || !client) return null;
+  if (!isOpen || !application || !candidate || !job) return null;
 
   const handleSaveDraft = () => {
     const offerData = {
       applicationId: application.id,
       candidateId: candidate.id,
       jobId: job.id,
-      clientId: client.id,
+      clientId: client?.id || '',
       offeredRole: job.title,
       offeredCompensation: annualCTC,
       proposedJoiningDate: joiningDate,
@@ -196,7 +196,7 @@ We are pleased to offer you employment with ${employingEntityName} for the posit
 * Department/Function: ${department || 'N/A'}
 * Employment type: ${employmentType}
 * Work location: ${workLocation}
-${employingEntity === 'SPC' ? `* Client/Assignment: ${client.name}` : ''}
+${employingEntity === 'SPC' ? `* Client/Assignment: ${client?.name || 'Unknown Client'}` : ''}
 * Reporting to: ${reportingManager || 'Management'}
 * Proposed joining date: ${joiningDate}
 
@@ -259,7 +259,7 @@ Date: ____________________
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div>
             <h2 className="text-lg font-semibold text-slate-800">Prepare Offer: {candidate.fullName}</h2>
-            <p className="text-sm text-slate-500">For {job.title} at {client.name}</p>
+            <p className="text-sm text-slate-500">For {job.title} at {client?.name || 'Unknown Client'}</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
             <X className="w-5 h-5" />
@@ -300,7 +300,7 @@ Date: ____________________
                     className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="SPC">SPC Workforce Solutions</option>
-                    <option value="Client">{client.name}</option>
+                    <option value="Client">{client?.name || 'Unknown Client'}</option>
                   </select>
                 </div>
                 {employingEntity === 'Client' && (

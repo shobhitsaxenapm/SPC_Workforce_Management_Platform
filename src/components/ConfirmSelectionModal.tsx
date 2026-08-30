@@ -18,7 +18,7 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
   const job = jobs.find(j => j.id === application?.jobId);
   const client = clients.find(c => c.id === job?.clientId);
 
-  if (!isOpen || !application || !candidate || !job || !client) return null;
+  if (!isOpen || !application || !candidate || !job) return null;
 
   const appInterviews = interviews.filter(i => i.applicationId === applicationId);
   const missingFeedbackCount = appInterviews.filter(i => !i.feedback).length;
@@ -55,7 +55,7 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
             </div>
             <div className="grid grid-cols-3 gap-2">
               <span className="text-sm font-medium text-slate-500">Client:</span>
-              <span className="col-span-2 text-sm font-semibold text-slate-900">{client.name}</span>
+              <span className="col-span-2 text-sm font-semibold text-slate-900">{client?.name || 'Unknown Client'}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <span className="text-sm font-medium text-slate-500">Interviews:</span>
@@ -87,7 +87,7 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
                   onChange={() => setEmployingEntity('Client')}
                   className="text-blue-600 focus:ring-blue-600"
                 />
-                <span className="text-sm font-medium text-slate-700">{client.name} (Direct)</span>
+                <span className="text-sm font-medium text-slate-700">{client?.name || 'Unknown Client'} (Direct)</span>
               </label>
             </div>
           </div>
