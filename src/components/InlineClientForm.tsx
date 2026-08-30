@@ -84,7 +84,7 @@ export default function InlineClientForm({ initialClientName = '', onSuccess, on
         <h3 className="font-semibold text-blue-900">Create New Client</h3>
       </div>
       <div className="p-5">
-        <form id="inlineClientForm" onSubmit={handleSubmit} className="space-y-5">
+        <div id="inlineClientForm" className="space-y-5">
           {errorMsg && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -165,14 +165,15 @@ export default function InlineClientForm({ initialClientName = '', onSuccess, on
               Cancel
             </button>
             <button 
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
