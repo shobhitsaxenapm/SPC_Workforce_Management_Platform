@@ -9,6 +9,7 @@ import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
+import InlineClientForm from './InlineClientForm';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
 import { AlertTriangle } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
@@ -31,6 +32,8 @@ export default function JobsList() {
   const [extractedData, setExtractedData] = useState<ExtractedJobData | null>(null);
   const [sourceText, setSourceText] = useState('');
   const [sourceMetadata, setSourceMetadata] = useState<JobSourceMetadata | null>(null);
+
+  const [showClientForm, setShowClientForm] = useState(false);
 
   // Form State
   const [selectedReqId, setSelectedReqId] = useState('none');
@@ -159,6 +162,7 @@ export default function JobsList() {
     setExtractedData(null);
     setSourceText('');
     setSourceMetadata(null);
+    setShowClientForm(false);
   };
 
   const clientOptions = ([...new Set(jobs.map(j => j.clientId))] as string[]).map(cid => {
@@ -522,15 +526,32 @@ export default function JobsList() {
                         <>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Client *</label>
-                            <select 
-                              required 
-                              value={formData.clientId} 
-                              onChange={e => setFormData({...formData, clientId: e.target.value})} 
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                            >
-                              <option value="">Select Client...</option>
-                              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            {showClientForm ? (
+                              <InlineClientForm 
+                                onSuccess={(newClientId) => {
+                                  setFormData({...formData, clientId: newClientId});
+                                  setShowClientForm(false);
+                                }}
+                                onCancel={() => setShowClientForm(false)}
+                              />
+                            ) : (
+                              <select 
+                                required 
+                                value={formData.clientId} 
+                                onChange={(e) => {
+                                  if (e.target.value === 'NEW') {
+                                    setShowClientForm(true);
+                                  } else {
+                                    setFormData({...formData, clientId: e.target.value})
+                                  }
+                                }} 
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                              >
+                                <option value="">Select Client...</option>
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                <option value="NEW" className="font-bold text-blue-600 bg-blue-50">+ Create New Client</option>
+                              </select>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Project Name *</label>

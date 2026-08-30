@@ -101,6 +101,7 @@ export default function SmartJobUpload({ onExtractionSuccess, onCancel }: SmartJ
           contractDuration: "Permanent",
           applicationDeadline: "2026-12-31",
           targetJoiningDate: "2026-10-01",
+          clientName: "Acme Corp (Mock Extracted)",
           linkedClientRequirement: "None"
         };
         

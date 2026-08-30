@@ -26,7 +26,7 @@ interface AppContextType {
   setQuickViewCandidateId: (id: string | null) => void;
   login: (email: string) => { success: boolean; error?: string };
   logout: () => void;
-  createClient: (clientData: Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>) => { success: boolean; error?: string };
+  createClient: (clientData: Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>) => { success: boolean; error?: string; clientId?: string };
   updateClient: (clientId: string, clientData: Partial<Pick<Client, 'name' | 'industry' | 'industryOtherText' | 'primaryContactName' | 'primaryContactEmail' | 'primaryContactPhone' | 'locations'>>) => { success: boolean; error?: string };
   deleteClient: (clientId: string) => void;
   deleteProject: (projectId: string) => void;
@@ -439,7 +439,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       lastActivity: new Date().toISOString()
     };
     persistClients([newClient, ...clients]);
-    return { success: true };
+    return { success: true, clientId: newClient.id };
   };
 
   const updateClient = (clientId: string, updates: Partial<EditableClientFields>) => {

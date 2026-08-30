@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { ExtractedJobData, JobStatus, JobVisibility, JobSourceMetadata } from '../types';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
+import InlineClientForm from './InlineClientForm';
 
 interface SmartJobReviewProps {
   extractedData: ExtractedJobData;
@@ -35,6 +36,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showClientForm, setShowClientForm] = useState(false);
 
   useEffect(() => {
     // Attempt to auto-map client requirement if provided by AI
@@ -54,6 +56,13 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       } else {
         setFormData(prev => ({ ...prev, projectId: '' }));
       }
+    } else if (extractedData.clientName && !formData.clientId) {
+      // Auto-map client if extracted
+      const normName = extractedData.clientName.trim().toLowerCase();
+      const match = clients.find(c => c.name.trim().toLowerCase() === normName);
+      if (match) {
+        setFormData(prev => ({ ...prev, clientId: match.id }));
+      }
     }
   }, []);
 
@@ -67,13 +76,14 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
         projectName: req.projectName
       }));
     } else {
-      setFormData(prev => ({ ...prev, projectId: '', clientId: '', projectName: '' }));
+      setFormData(prev => ({ ...prev, projectId: '' }));
     }
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = 'Title is required';
+    if (!formData.clientId) newErrors.clientId = 'Client is required';
     if (!formData.location) newErrors.location = 'Location is required';
     if (!formData.summary) newErrors.summary = 'Summary is required';
     setErrors(newErrors);
@@ -186,6 +196,54 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
                   </select>
                   {errors.projectId && <p className="text-red-500 text-xs mt-1">{errors.projectId}</p>}
                 </div>
+
+                {!formData.projectId && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Client <span className="text-red-500">*</span>
+                    </label>
+                    {showClientForm ? (
+                      <InlineClientForm 
+                        initialClientName={extractedData.clientName}
+                        onSuccess={(newClientId) => {
+                          setFormData({...formData, clientId: newClientId});
+                          setShowClientForm(false);
+                          setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
+                        }}
+                        onCancel={() => setShowClientForm(false)}
+                      />
+                    ) : (
+                      <select 
+                        value={formData.clientId}
+                        onChange={(e) => {
+                          if (e.target.value === 'NEW') {
+                            setShowClientForm(true);
+                          } else {
+                            setFormData({...formData, clientId: e.target.value});
+                            if (e.target.value) {
+                              setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
+                            }
+                          }
+                        }}
+                        className={cn("w-full rounded-lg border p-2.5 text-sm", errors.clientId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                      >
+                        <option value="">-- Select Client --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                        <option value="NEW" className="font-bold text-blue-600 bg-blue-50">+ Create New Client</option>
+                      </select>
+                    )}
+                    {!showClientForm && errors.clientId && <p className="text-red-500 text-xs mt-1">{errors.clientId}</p>}
+                    
+                    {!showClientForm && extractedData.clientName && !formData.clientId && (
+                      <div className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
+                        <Info className="w-4 h-4 text-blue-500" />
+                        AI extracted <b>{extractedData.clientName}</b> but no exact match was found. You can create it above.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">

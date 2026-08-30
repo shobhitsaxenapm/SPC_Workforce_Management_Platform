@@ -163,6 +163,7 @@ export interface ExtractedJobData {
   applicationDeadline?: string;
   targetJoiningDate?: string;
   linkedClientProject?: string;
+  clientName?: string;
 }
 
 export interface Job {
