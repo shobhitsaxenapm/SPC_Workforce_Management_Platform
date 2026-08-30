@@ -55,6 +55,9 @@ export default function CandidateDetail() {
   const [locationFilter, setLocationFilter] = useState('');
   const [employmentFilter, setEmploymentFilter] = useState('');
 
+  // Expandable Timeline
+  const [expandedTimelineId, setExpandedTimelineId] = useState<string | null>(null);
+
   const candidate = candidates.find(c => c.id === id);
   if (!candidate) return <div className="p-8 text-center text-slate-500">Candidate not found</div>;
 
@@ -65,8 +68,18 @@ export default function CandidateDetail() {
   const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId)];
   const combinedApplications = [...existingCandidateApps];
 
+  const completedStages = ['Rejected', 'Withdrawn', 'Offer Declined'];
+  const activeProcesses = combinedApplications.filter(app => {
+    const job = jobs.find(j => j.id === app.jobId);
+    return !completedStages.includes(app.currentStage) && job?.status !== 'Closed';
+  });
+  const completedProcesses = combinedApplications.filter(app => {
+    const job = jobs.find(j => j.id === app.jobId);
+    return completedStages.includes(app.currentStage) || job?.status === 'Closed';
+  });
+
   // All Candidate Match Insights from actual match runs
-  const candidateInsights = matchRuns.flatMap(run => {
+  const candidateInsights: Array<{jobId: string, matchScore: number, breakdown: any, strengths: string[], missingCriteria: string[], explanation: string}> = matchRuns.flatMap(run => {
     const match = run.matches.find(m => m.candidateId === candidate.id);
     if (!match) return [];
     return [{ 
@@ -101,31 +114,66 @@ export default function CandidateDetail() {
 
   const getActionsForApplication = (app: Application): ActionConfig => {
     const stage = app.currentStage;
-    const hasOffer = offers.some(o => o.applicationId === app.id);
+    const appOffers = offers.filter(o => o.applicationId === app.id);
+    const activeOffer = appOffers.length > 0 ? appOffers[appOffers.length - 1] : null;
     const substate = app.currentSubstate || '';
 
-    const viewProcess = 'View Hiring Process';
+    const viewTimeline = 'View Timeline';
     const viewJob = 'View Job';
+
+    let primary: string | null = null;
+    let secondary = [viewTimeline, viewJob];
+    let moreActions: string[] = [];
 
     switch (stage) {
       case 'Sourced':
-        return { primary: 'Begin Screening', secondary: [viewProcess, viewJob], moreActions: [] };
+      case 'Applied' as string:
+        primary = 'Begin Screening';
+        break;
+      case 'Screening' as string:
+        primary = 'Continue Screening';
+        moreActions = ['Schedule Interview'];
+        break;
       case 'Interviewing':
-        return { primary: 'Confirm Selection', secondary: ['View Interview', viewProcess, viewJob], moreActions: [] };
+        primary = 'Confirm Selection';
+        moreActions = ['View Interview', 'Schedule Next Round'];
+        break;
       case 'Selected':
-        return { primary: hasOffer ? 'Continue Offer' : 'Prepare Offer', secondary: [viewProcess, viewJob], moreActions: [] };
+        if (activeOffer?.status === 'Draft') {
+          primary = 'Continue Offer';
+        } else if (activeOffer?.status === 'Issued') {
+          primary = 'View Offer';
+        } else {
+          primary = 'Prepare Offer';
+        }
+        break;
       case 'Offered':
-        if (substate === 'Offer Accepted') return { primary: 'Start Onboarding', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
-        return { primary: 'Record Response', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
+        if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
+          primary = 'Start Onboarding';
+        } else if (activeOffer?.status === 'Issued') {
+          primary = 'View Offer';
+          moreActions = ['Record Response'];
+        } else {
+          primary = 'Record Response';
+        }
+        break;
       case 'Hired':
       case 'Joined':
-        return { primary: 'Start Onboarding', secondary: ['View Offer', viewProcess, viewJob], moreActions: [] };
+        if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
+          primary = 'Start Onboarding';
+        } else {
+          primary = 'Start Onboarding';
+        }
+        break;
       case 'Rejected':
       case 'Withdrawn':
-        return { primary: 'View History', secondary: [viewProcess, viewJob], moreActions: [] };
+        primary = 'View History';
+        break;
       default:
-        return { primary: null, secondary: [viewProcess, viewJob], moreActions: [] };
+        primary = null;
     }
+
+    return { primary, secondary, moreActions };
   };
 
   const handleAction = async (action: string, app: Application) => {
@@ -161,6 +209,9 @@ export default function CandidateDetail() {
         break;
       case 'View Job':
         setQuickViewJobId(jobId);
+        break;
+      case 'View Timeline':
+        setExpandedTimelineId(prev => prev === app.id ? null : app.id);
         break;
       case 'Open Handover':
       case 'View Offer':
@@ -350,6 +401,154 @@ export default function CandidateDetail() {
     });
   }
 
+  const renderAppCard = (app: Application) => {
+    const job = mockJobs.find(j => j.id === app.jobId);
+    const client = mockClients.find(c => c.id === job?.clientId);
+    const recruiter = mockUsers.find(u => u.id === app.assignedRecruiterId);
+    
+    let originLabel = 'Applied directly';
+    if ('associationOrigin' in app && app.associationOrigin) {
+      originLabel = app.associationOrigin as string;
+    } else if (app.source === 'SPC Careers Website') {
+      originLabel = 'Applied through SPC Careers Website';
+    }
+
+    const currentStage = app.currentStage || 'Unknown';
+    const actionConfig = getActionsForApplication(app);
+
+    const appInterview = interviews.find(i => i.applicationId === app.id);
+    const appOffer = offers.filter(o => o.applicationId === app.id).pop();
+    const lastActivity = (app as any).updatedAt || app.lastActivity || appOffer?.createdAt || appInterview?.createdAt || app.appliedDate;
+    const isExpanded = expandedTimelineId === app.id;
+    const insight = candidateInsights.find(i => i.jobId === app.jobId);
+
+    const timelineStages = ['Added', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined'];
+    const getStageIndex = (stage: string) => {
+      if (['Rejected', 'Withdrawn'].includes(stage)) return -1;
+      switch (stage) {
+        case 'Sourced':
+        case 'Applied': return 0;
+        case 'Screening': return 1;
+        case 'Interviewing': return 2;
+        case 'Selected': return 3;
+        case 'Offered': return 4;
+        case 'Hired': return 5;
+        case 'Joined': return 6;
+        default: return -1;
+      }
+    };
+    const currentIndex = getStageIndex(currentStage);
+
+    return (
+      <div key={app.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
+        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <button onClick={() => job && setQuickViewJobId(job.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-lg outline-none text-left">
+                {job?.title || 'Unknown Job'} <span className="text-sm font-normal text-slate-500 ml-1">{job?.code}</span>
+              </button>
+              <span className="text-slate-400">•</span>
+              <button onClick={() => client && setQuickViewClientId(client.id)} className="text-sm text-slate-600 hover:text-blue-600 outline-none">
+                {client?.name || 'Unknown Client'}
+              </button>
+            </div>
+            <div className="text-xs text-slate-500 space-y-1">
+              <p><span className="font-medium text-slate-700">Origin: {originLabel}</span> • Added {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
+              <p>Last Activity: {formatDate(lastActivity)}</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
+              {currentStage}
+            </span>
+            {appOffer && (
+              <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
+                Offer: {appOffer.status}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div className="p-5 bg-slate-50 border-b border-slate-100">
+            <div className="relative flex items-center justify-between mt-2 max-w-2xl mx-auto">
+              <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 z-0"></div>
+              {timelineStages.map((stage, idx) => {
+                const isCompleted = currentIndex >= idx;
+                const isCurrent = currentIndex === idx;
+                return (
+                  <div key={stage} className="relative z-10 flex flex-col items-center gap-2 w-16">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2 transition-colors duration-300",
+                      isCompleted ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300",
+                      isCurrent && "ring-4 ring-blue-100"
+                    )} />
+                    <span className={cn(
+                      "text-[10px] font-medium text-center leading-tight transition-colors duration-300",
+                      isCompleted ? "text-slate-800" : "text-slate-400",
+                      isCurrent && "font-bold text-blue-700"
+                    )}>{stage}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="p-4 bg-slate-50 flex justify-end gap-2 items-center flex-wrap border-t border-slate-100">
+          {insight && (
+            <button 
+              onClick={() => handleAction('View Match', app)}
+              className="px-3 py-1.5 bg-transparent text-indigo-600 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1 mr-auto"
+            >
+              <Sparkles className="w-4 h-4" /> View Match
+            </button>
+          )}
+
+          {actionConfig.secondary.map((action, idx) => (
+            <button 
+              key={idx} 
+              onClick={() => handleAction(action, app)}
+              disabled={isProcessing === app.jobId}
+              className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {action === 'View Timeline' ? (isExpanded ? 'Hide Timeline' : 'View Timeline') : action}
+            </button>
+          ))}
+          
+          {actionConfig.primary && (
+            <button 
+              onClick={() => handleAction(actionConfig.primary!, app)}
+              disabled={isProcessing === app.jobId}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 min-w-[120px]"
+            >
+              {isProcessing === app.jobId ? 'Processing...' : actionConfig.primary}
+            </button>
+          )}
+          
+          {actionConfig.moreActions.length > 0 && (
+            <div className="relative group">
+              <button disabled={isProcessing === app.jobId} className="px-2 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
+                {actionConfig.moreActions.map((ma, idx) => (
+                   <button 
+                     key={idx} 
+                     onClick={() => handleAction(ma, app)}
+                     className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                   >
+                     {ma}
+                   </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {toast && (
@@ -439,10 +638,11 @@ export default function CandidateDetail() {
       {/* Tabs Navigation */}
       <div className="border-b border-slate-200 overflow-x-auto hide-scrollbar">
         <div className="flex gap-6 min-w-max px-2">
-          {(['Overview', 'Matching Jobs', 'Jobs & Hiring Progress', 'Activity', 'Documents'] as TabType[]).map(tab => {
-            let label = tab as string;
-            if (tab === 'Matching Jobs') label = `Matching Jobs (${matchingJobs.length})`;
-            if (tab === 'Jobs & Hiring Progress') label = `Jobs & Hiring Progress (${combinedApplications.length})`;
+          {['Overview', 'Hiring Progress', 'Matching Jobs', 'Activity', 'Documents'].map(tab => {
+            const isActive = activeTab === tab;
+            const count = tab === 'Hiring Progress' ? activeProcesses.length :
+              tab === 'Matching Jobs' ? matchingJobs.length : null;
+            const label = count !== null ? `${tab} (${count})` : tab;
             
             return (
               <button
@@ -767,10 +967,10 @@ export default function CandidateDetail() {
       )}
 
       {/* Jobs & Hiring Progress Tab Content */}
-      {activeTab === 'Jobs & Hiring Progress' && (
+      {activeTab === 'Hiring Progress' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-slate-800">Current Job Processes</h3>
+            <h3 className="text-lg font-semibold text-slate-800">Hiring Progress</h3>
             <button 
               onClick={() => setShowAddJobModal(true)} 
               className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -779,131 +979,7 @@ export default function CandidateDetail() {
             </button>
           </div>
           
-          {combinedApplications.length > 0 ? combinedApplications.map(app => {
-            const job = mockJobs.find(j => j.id === app.jobId);
-            const client = mockClients.find(c => c.id === job?.clientId);
-            const recruiter = mockUsers.find(u => u.id === app.assignedRecruiterId);
-            const insight = candidateInsights.find(i => i.jobId === app.jobId);
-            
-            // Map technical origin/source names to friendly language
-            let originLabel = 'Applied directly';
-            let relationshipLabel = 'Applied';
-            
-            if ('associationOrigin' in app && app.associationOrigin) {
-              originLabel = app.associationOrigin as string;
-              relationshipLabel = 'Added by recruiter';
-            } else if (app.source === 'SPC Careers Website') {
-              originLabel = 'Applied through SPC Careers Website';
-            }
-
-            const currentStage = app.currentStage || 'Unknown';
-            const actionConfig = getActionsForApplication(app);
-
-            const appInterview = interviews.find(i => i.applicationId === app.id);
-            const appOffer = offers.find(o => o.applicationId === app.id);
-            const lastActivity = app.updatedAt || appOffer?.createdAt || appInterview?.createdAt || app.appliedDate;
-
-            return (
-              <div key={'id' in app ? app.id : `app-${app.jobId}`} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
-                {'isLocal' in app && app.isLocal && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>}
-                <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <button onClick={() => job && setQuickViewJobId(job.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-lg outline-none text-left">
-                        {job?.title || 'Unknown Job'} <span className="text-sm font-normal text-slate-500 ml-1">{job?.code}</span>
-                      </button>
-                      <span className="text-slate-400">•</span>
-                      <button onClick={() => client && setQuickViewClientId(client.id)} className="text-sm text-slate-600 hover:text-blue-600 outline-none">
-                        {client?.name || 'Unknown Client'}
-                      </button>
-                    </div>
-                    <div className="text-xs text-slate-500 space-y-1">
-                      <p><span className="font-medium text-slate-700">Origin: {originLabel}</span> • Since {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
-                      <p>Last Activity: {formatDate(lastActivity)}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
-                      {currentStage}
-                    </span>
-                    {appInterview && (
-                      <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
-                        Interview: {appInterview.status}
-                      </span>
-                    )}
-                    {appOffer && (
-                      <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
-                        Offer: {appOffer.status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 items-center flex-wrap">
-                  {/* Secondary/Tertiary Match Insight Action */}
-                  {insight && (
-                    <button 
-                      onClick={() => handleAction('View Match', app)}
-                      className="px-3 py-1.5 bg-transparent text-indigo-600 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1 mr-auto"
-                    >
-                      <Sparkles className="w-4 h-4" /> View Match
-                    </button>
-                  )}
-
-                  {/* Configured Actions */}
-                  {actionConfig.secondary.map((action, idx) => (
-                    <button 
-                      key={idx} 
-                      onClick={() => handleAction(action, app)}
-                      disabled={isProcessing === app.jobId}
-                      className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-                    >
-                      {action}
-                    </button>
-                  ))}
-                  
-                  {actionConfig.primary && (
-                    <button 
-                      onClick={() => handleAction(actionConfig.primary!, app)}
-                      disabled={isProcessing === app.jobId}
-                      className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 min-w-[120px]"
-                    >
-                      {isProcessing === app.jobId ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Processing...
-                        </>
-                      ) : (
-                        actionConfig.primary
-                      )}
-                    </button>
-                  )}
-                  
-                  {actionConfig.moreActions.length > 0 && (
-                    <div className="relative group">
-                      <button disabled={isProcessing === app.jobId} className="px-2 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
-                        <MoreHorizontal className="w-5 h-5" />
-                      </button>
-                      <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
-                        {actionConfig.moreActions.map((ma, idx) => (
-                           <button 
-                             key={idx} 
-                             onClick={() => handleAction(ma, app)}
-                             className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                           >
-                             {ma}
-                           </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          }) : (
+          {activeProcesses.length === 0 && completedProcesses.length === 0 ? (
             <div className="p-12 text-center text-slate-500 bg-white border border-slate-200 rounded-xl shadow-sm">
               <Briefcase className="w-12 h-12 mx-auto text-slate-300 mb-4" />
               <h3 className="text-lg font-medium text-slate-800 mb-2">No Active Job Processes</h3>
@@ -914,6 +990,21 @@ export default function CandidateDetail() {
               >
                 Add to Job Pipeline
               </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {activeProcesses.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">Active Processes</h4>
+                  {activeProcesses.map(renderAppCard)}
+                </div>
+              )}
+              {completedProcesses.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">Completed / Closed</h4>
+                  {completedProcesses.map(renderAppCard)}
+                </div>
+              )}
             </div>
           )}
         </div>
