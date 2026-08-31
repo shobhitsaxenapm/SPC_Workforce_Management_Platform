@@ -141,6 +141,9 @@ export default function CandidateDetail() {
         if (hasMissingFeedback) {
           primary = 'Record Feedback';
           moreActions = ['Confirm Selection', 'View Interview', 'Schedule Next Round'];
+        } else if (substate === 'Next Round To Schedule') {
+          primary = 'Schedule Next Round';
+          moreActions = ['Confirm Selection', 'View Interview'];
         } else {
           primary = 'Confirm Selection';
           moreActions = ['View Interview', 'Schedule Next Round'];
