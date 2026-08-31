@@ -151,9 +151,9 @@ export default function CandidateDetail() {
         break;
       }
       case 'Selected':
-        if (activeOffer?.status === 'Draft') {
+        if (activeOffer?.status === 'Offer Draft') {
           primary = 'Continue Offer';
-        } else if (activeOffer?.status === 'Issued') {
+        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Sent') {
           primary = 'View Offer';
         } else {
           primary = 'Prepare Offer';
@@ -162,7 +162,7 @@ export default function CandidateDetail() {
       case 'Offered':
         if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
           primary = 'Start Onboarding';
-        } else if (activeOffer?.status === 'Issued') {
+        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Sent') {
           primary = 'View Offer';
           moreActions = ['Record Response'];
         } else {
