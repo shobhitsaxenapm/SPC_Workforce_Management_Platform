@@ -134,10 +134,19 @@ export default function CandidateDetail() {
         primary = 'Continue Screening';
         moreActions = ['Schedule Interview'];
         break;
-      case 'Interviewing':
-        primary = 'Confirm Selection';
-        moreActions = ['View Interview', 'Schedule Next Round'];
+      case 'Interviewing': {
+        const appInterviews = interviews.filter(i => i.applicationId === app.id);
+        const hasMissingFeedback = appInterviews.some(i => (i.status === 'Scheduled' || i.status === 'Completed') && !i.feedback);
+        
+        if (hasMissingFeedback) {
+          primary = 'Record Feedback';
+          moreActions = ['Confirm Selection', 'View Interview', 'Schedule Next Round'];
+        } else {
+          primary = 'Confirm Selection';
+          moreActions = ['View Interview', 'Schedule Next Round'];
+        }
         break;
+      }
       case 'Selected':
         if (activeOffer?.status === 'Draft') {
           primary = 'Continue Offer';
@@ -226,10 +235,11 @@ export default function CandidateDetail() {
       case 'View Interview':
         setShowViewInterviewModal({ jobId: app.jobId, candidateId: app.candidateId });
         break;
-      case 'Record Feedback':
-        const appInterview = interviews.find(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed'));
+      case 'Record Feedback': {
+        const appInterview = interviews.find(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed') && !i.feedback);
         if (appInterview) setShowRecordFeedbackModal(appInterview.id);
         break;
+      }
       default:
         alert(`Simulating action: ${action}\nRoute or drawer would open here.`);
         break;
