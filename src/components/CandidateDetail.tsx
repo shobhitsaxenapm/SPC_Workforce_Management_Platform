@@ -429,7 +429,11 @@ export default function CandidateDetail() {
     const currentStage = app.currentStage || 'Unknown';
     const actionConfig = getActionsForApplication(app);
 
-    const appInterview = interviews.find(i => i.applicationId === app.id);
+    const appInterviews = interviews.filter(i => i.applicationId === app.id);
+    const appInterview = appInterviews.length > 0 
+      ? [...appInterviews].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())[0] 
+      : undefined;
+
     const appOffer = offers.filter(o => o.applicationId === app.id).pop();
     const lastActivity = (app as any).updatedAt || app.lastActivity || appOffer?.createdAt || appInterview?.createdAt || app.appliedDate;
     const isExpanded = expandedTimelineId === app.id;
@@ -468,6 +472,14 @@ export default function CandidateDetail() {
             <div className="text-xs text-slate-500 space-y-1">
               <p><span className="font-medium text-slate-700">Origin: {originLabel}</span> • Added {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
               <p>Last Activity: {formatDate(lastActivity)}</p>
+              {appInterview && currentStage === 'Interviewing' && (
+                <p>
+                  <span className="font-medium text-slate-600">Current Round: </span> 
+                  {appInterview.roundName ? `${appInterview.roundName} ` : ''} 
+                  {appInterview.interviewType ? `(${appInterview.interviewType})` : ''} 
+                  <span className="text-slate-400 ml-1">• {new Date(appInterview.scheduledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
