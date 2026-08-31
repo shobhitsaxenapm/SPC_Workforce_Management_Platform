@@ -136,7 +136,7 @@ export default function CandidateDetail() {
         break;
       case 'Interviewing': {
         const appInterviews = interviews.filter(i => i.applicationId === app.id);
-        const hasMissingFeedback = appInterviews.some(i => (i.status === 'Scheduled' || i.status === 'Completed') && !i.feedback);
+        const hasMissingFeedback = appInterviews.some(i => (i.status === 'Scheduled' || i.status === 'Completed') && i.feedbackStatus !== 'Submitted');
         
         if (hasMissingFeedback) {
           primary = 'Record Feedback';
@@ -236,7 +236,7 @@ export default function CandidateDetail() {
         setShowViewInterviewModal({ jobId: app.jobId, candidateId: app.candidateId });
         break;
       case 'Record Feedback': {
-        const appInterview = interviews.find(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed') && !i.feedback);
+        const appInterview = interviews.find(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed') && i.feedbackStatus !== 'Submitted');
         if (appInterview) setShowRecordFeedbackModal(appInterview.id);
         break;
       }
