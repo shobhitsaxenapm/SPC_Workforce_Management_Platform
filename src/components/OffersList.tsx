@@ -45,8 +45,8 @@ export default function OffersList() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Active Modals
-  // 'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | 'hold_confirm' | null
-  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | null>(null);
+  // 'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | 'hold_confirm' | 'version_history' | null
+  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | 'version_history' | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
 
   // Form states
@@ -81,14 +81,24 @@ export default function OffersList() {
   const uniqueJobs = Array.from(new Set(offers.map(o => o.jobId))).map(id => jobs.find(j => j.id === id)).filter(Boolean);
 
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Offer Status', options: ['Offer Draft', 'Approval Pending', 'Approved', 'Offer Issued', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Offer Status', options: ['Offer Draft', 'Approval Pending', 'Approved', 'Offer Issued', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired', 'Withdrawn', 'Negotiation in Progress', 'Revised Draft', 'Revised Offer Issued', 'Superseded'].map(s => ({ value: s, label: s })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
     { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) },
     { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expired', 'Expiring in 7 Days', 'Expiring in 30 Days', 'No Immediate Risk'].map(r => ({ value: r, label: r })) }
   ];
 
+  // Deduplicate offers by applicationId, taking the latest version
+  const latestOffersMap = new Map<string, Offer>();
+  offers.forEach(o => {
+    const existing = latestOffersMap.get(o.applicationId);
+    if (!existing || (o.version || 1) > (existing.version || 1)) {
+      latestOffersMap.set(o.applicationId, o);
+    }
+  });
+  const latestOffers = Array.from(latestOffersMap.values());
+
   // Composite search and filtering
-  const filtered = offers.filter(offer => {
+  const filtered = latestOffers.filter(offer => {
     const candidate = candidates.find(c => c.id === offer.candidateId);
     const client = clients.find(c => c.id === offer.clientId);
     const job = jobs.find(j => j.id === offer.jobId);
@@ -361,6 +371,17 @@ export default function OffersList() {
                         >
                           <Eye className="w-3.5 h-3.5" /> View
                         </button>
+                        {offers.filter(o => o.applicationId === offer.applicationId).length > 1 && (
+                          <button 
+                            onClick={() => {
+                              setSelectedOffer(offer);
+                              setActiveModal('version_history');
+                            }} 
+                            className="text-xs font-medium text-blue-600 hover:text-blue-900 border border-blue-200 bg-blue-50 px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" /> History
+                          </button>
+                        )}
                         
                         {offer.status === 'Accepted' && (
                           offer.onboardingStarted ? (
@@ -783,6 +804,75 @@ export default function OffersList() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VERSION HISTORY MODAL */}
+      {activeModal === 'version_history' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-slate-200 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Offer Version History</h3>
+                  <p className="text-sm text-slate-500">{candidates.find(c => c.id === selectedOffer.candidateId)?.fullName}</p>
+                </div>
+              </div>
+              <button onClick={() => { setActiveModal(null); setSelectedOffer(null); }} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 pr-2 space-y-4">
+              {offers.filter(o => o.applicationId === selectedOffer.applicationId).sort((a,b) => (b.version || 1) - (a.version || 1)).map(version => (
+                <div key={version.id} className={cn("border rounded-xl p-4", version.id === selectedOffer.id ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-200")}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800 text-base">Version {version.version || 1}</span>
+                        {version.id === selectedOffer.id && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded uppercase tracking-wider">Current</span>}
+                      </div>
+                      <p className="text-sm text-slate-500 mt-1">Status: <span className="font-medium text-slate-700">{version.status}</span></p>
+                    </div>
+                    <div className="text-right text-xs text-slate-500 space-y-1">
+                      {version.sentDate && <p>Issued: {formatDate(version.sentDate)}</p>}
+                      {version.acceptedAt && <p>Accepted: {formatDate(version.acceptedAt)}</p>}
+                      {version.rejectedAt && <p>Declined: {formatDate(version.rejectedAt)}</p>}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm mt-4 bg-slate-50 rounded-lg p-3">
+                    <div>
+                      <span className="text-slate-500 block mb-0.5">Compensation</span>
+                      <span className="font-medium text-slate-800">{version.offeredCompensation || version.annualCTC || 'Not specified'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block mb-0.5">Proposed Joining</span>
+                      <span className="font-medium text-slate-800">{version.proposedJoiningDate ? formatDate(version.proposedJoiningDate) : 'Not specified'}</span>
+                    </div>
+                  </div>
+                  
+                  {version.negotiationNote && (
+                    <div className="mt-3 text-sm border-t border-slate-100 pt-3">
+                      <span className="text-slate-500 font-medium block mb-1">Negotiation Note:</span>
+                      <p className="text-slate-700 italic">{version.negotiationNote}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="pt-4 mt-4 border-t border-slate-200 flex justify-end shrink-0">
+              <button 
+                onClick={() => { setActiveModal(null); setSelectedOffer(null); }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Close History
+              </button>
+            </div>
           </div>
         </div>
       )}

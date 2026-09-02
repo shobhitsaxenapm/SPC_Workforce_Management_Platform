@@ -29,7 +29,7 @@ export type ApplicationSubstate =
   | string;
 
 export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'No Show';
-export type OfferStatus = 'Offer Draft' | 'Approval Pending' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn';
+export type OfferStatus = 'Offer Draft' | 'Approval Pending' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn' | 'Negotiation in Progress' | 'Revised Draft' | 'Revised Offer Issued' | 'Superseded';
 export type OnboardingStatus = 'Documents Requested' | 'Documents Submitted' | 'Verification In Progress' | 'Changes Requested' | 'Approved' | 'Joining Scheduled' | 'Completed';
 export type DeploymentStatus = 'Scheduled' | 'Active' | 'Completed' | 'Terminated';
 export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';
@@ -385,6 +385,12 @@ export interface Offer {
   withdrawnAt?: string;
   extendedAt?: string;
   assignedRecruiterId?: string;
+
+  // Version Control Fields
+  version?: number;
+  parentOfferId?: string;
+  negotiationNote?: string;
+
 
   // Added Comprehensive Offer Fields
   employingEntity?: 'SPC' | 'Client';

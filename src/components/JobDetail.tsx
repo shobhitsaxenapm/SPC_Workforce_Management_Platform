@@ -24,7 +24,6 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
-  const [confirmHiredAppId, setConfirmHiredAppId] = useState<string | null>(null);
   
   if (!job) return <div>Job not found</div>;
 
@@ -80,12 +79,20 @@ export default function JobDetail() {
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
     if (newStage === 'Hired') {
-       const existingOffer = offers.find(o => o.applicationId === appId && (o.status === 'Offer Issued' || o.status === 'Sent'));
-       if (!existingOffer) {
-          alert('Cannot mark as Hired: No issued offer found for this candidate.');
+       const appOffers = offers.filter(o => o.applicationId === appId);
+       const latestOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
+       
+       if (!latestOffer) {
+          alert('Cannot mark as Hired: No offer found for this candidate.');
           return;
        }
-       setConfirmHiredAppId(appId);
+       
+       if (latestOffer.status !== 'Accepted') {
+          alert('Cannot mark as Hired: The candidate must have an Accepted offer first.');
+          return;
+       }
+       
+       updateApplicationStage(appId, newStage);
        return;
     }
 
@@ -440,17 +447,26 @@ export default function JobDetail() {
                           </div>
                         )}
                         
-                        {(() => {
-                           const existingOffer = offers.find(o => o.applicationId === app.id);
-                           if (existingOffer) {
-                              return (
-                                <div className="mb-3 px-2 py-1 bg-indigo-50 border border-indigo-100 rounded-md text-[10px] font-medium text-indigo-700 flex justify-between items-center">
-                                  <span>Offer: {existingOffer.status}</span>
-                                </div>
-                              );
-                           }
-                           return null;
-                        })()}
+                        {app.currentStage === 'Offered' && (
+                          <div className="mt-3 flex gap-2">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
+                              className="flex-1 text-[10px] font-semibold text-slate-600 border border-slate-200 bg-white py-1 rounded shadow-sm hover:bg-slate-50 transition-colors"
+                              title={offers.some(o => o.applicationId === app.id && (o.status === 'Offer Draft' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress')) ? 'Continue Offer' : 'Prepare Offer'}
+                            >
+                              {offers.some(o => o.applicationId === app.id && (o.status === 'Offer Draft' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress')) ? 'Continue Offer' : 'Prepare Offer'}
+                            </button>
+                            {offers.some(o => o.applicationId === app.id && (o.status === 'Offer Issued' || o.status === 'Revised Offer Issued' || o.status === 'Sent')) && (
+                              <Link 
+                                to={`/offers`}
+                                onClick={e => e.stopPropagation()}
+                                className="flex-1 text-[10px] font-semibold text-blue-600 border border-blue-200 bg-blue-50 py-1 rounded shadow-sm hover:bg-blue-100 transition-colors text-center block"
+                              >
+                                View Offer
+                              </Link>
+                            )}
+                          </div>
+                        )}
 
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
@@ -463,16 +479,6 @@ export default function JobDetail() {
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-center gap-2">
-                              {app.currentStage === 'Selected' && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
-                                  className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
-                                  title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                </button>
-                              )}
                               <select 
                                 className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
                                 value={app.currentStage}
@@ -539,14 +545,6 @@ export default function JobDetail() {
           isOpen={!!showOfferPreparationModal}
           onClose={() => setShowOfferPreparationModal(null)}
           applicationId={showOfferPreparationModal}
-        />
-      )}
-
-      {confirmHiredAppId && (
-        <ConfirmOfferAcceptanceModal 
-          isOpen={!!confirmHiredAppId}
-          onClose={() => setConfirmHiredAppId(null)}
-          applicationId={confirmHiredAppId}
         />
       )}
     </div>

@@ -49,11 +49,12 @@ interface AppContextType {
   resolveInformationRequest: (projectId: string) => void;
   cancelInformationRequest: (projectId: string, reason?: string) => void;
   createOffer: (offerData: Omit<Offer, 'id' | 'status'>) => string;
+  createRevisedOffer: (parentOfferId: string, offerData: Omit<Offer, 'id' | 'status' | 'version' | 'parentOfferId'>) => string;
   updateOffer: (offerId: string, updates: Partial<Offer>) => void;
   submitOfferForApproval: (offerId: string) => void;
   approveOffer: (offerId: string) => void;
   issueOffer: (offerId: string) => void;
-  recordOfferResponse: (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => void;
+  recordOfferResponse: (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn' | 'Continue Negotiation', reason?: string) => void;
   updateProjectStatus: (projectId: string, status: ProjectStatus, reason?: string) => { success: boolean; error?: string };
   updateProject: (projectId: string, updates: Partial<Project>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
@@ -936,8 +937,24 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return newOffer.id;
   };
 
+  const createRevisedOffer = (parentOfferId: string, offerData: Omit<Offer, 'id' | 'status' | 'version' | 'parentOfferId'>) => {
+    const parentOffer = offers.find(o => o.id === parentOfferId);
+    const newVersion = (parentOffer?.version || 1) + 1;
+    
+    const newOffer: Offer = {
+      ...offerData,
+      id: `off_gen_${Date.now()}`,
+      status: 'Revised Draft',
+      version: newVersion,
+      parentOfferId: parentOffer?.parentOfferId || parentOfferId, // Link to root parent
+      deliveryStatus: 'Not Sent'
+    };
+    persistOffers([newOffer, ...offers]);
+    return newOffer.id;
+  };
+
   const updateOffer = (offerId: string, updates: Partial<Offer>) => {
-    persistOffers(offers.map(o => o.id === offerId ? { ...o, ...updates, version: (o.version || 1) + 1 } : o));
+    persistOffers(offers.map(o => o.id === offerId ? { ...o, ...updates } : o));
   };
 
   const submitOfferForApproval = (offerId: string) => {
@@ -949,17 +966,37 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const issueOffer = (offerId: string) => {
-    updateOffer(offerId, { 
-       status: 'Offer Issued', 
-       sentDate: new Date().toISOString(), 
-       deliveryStatus: 'Delivery Pending' 
-    });
     const offer = offers.find(o => o.id === offerId);
-    if (offer) updateApplicationStage(offer.applicationId, 'Offered', '');
+    if (!offer) return;
+    
+    const isRevised = offer.status === 'Revised Draft' || offer.status === 'Approved' && offer.version && offer.version > 1;
+
+    const updated = offers.map(o => {
+      if (o.id === offerId) {
+        return { 
+          ...o, 
+          status: isRevised ? 'Revised Offer Issued' : 'Offer Issued', 
+          sentDate: new Date().toISOString(), 
+          deliveryStatus: 'Delivery Pending' 
+        };
+      }
+      // Supersede older active offers for the same application
+      if (o.applicationId === offer.applicationId && o.id !== offerId && !['Declined', 'Expired', 'Withdrawn', 'Accepted'].includes(o.status)) {
+        return { ...o, status: 'Superseded' as const };
+      }
+      return o;
+    });
+    
+    persistOffers(updated);
+    updateApplicationStage(offer.applicationId, 'Offered', '');
   };
 
-  const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn', reason?: string) => {
+  const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn' | 'Continue Negotiation', reason?: string) => {
     if (response === 'Negotiation Requested') return;
+    if (response === 'Continue Negotiation') {
+       updateOffer(offerId, { status: 'Negotiation in Progress', negotiationNote: reason });
+       return;
+    }
     const statusMap: Record<string, OfferStatus> = {
       'Accepted': 'Accepted',
       'Declined': 'Declined',
@@ -1195,6 +1232,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         cancelInterview,
         updateInterviewStatus,
         createOffer,
+        createRevisedOffer,
         updateOffer,
         submitOfferForApproval,
         approveOffer,

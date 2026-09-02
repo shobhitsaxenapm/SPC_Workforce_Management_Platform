@@ -13,6 +13,8 @@ export default function ConfirmOfferAcceptanceModal({ isOpen, onClose, applicati
   
   // Use current date as default acceptance date
   const [acceptanceDate, setAcceptanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [responseType, setResponseType] = useState<'Accepted' | 'Declined' | 'Continue Negotiation'>('Accepted');
+  const [note, setNote] = useState('');
 
   if (!isOpen) return null;
 
@@ -26,21 +28,33 @@ export default function ConfirmOfferAcceptanceModal({ isOpen, onClose, applicati
   if (!offer) return null;
 
   const handleConfirm = () => {
-    if (!acceptanceDate) {
-      alert("Please enter the acceptance date.");
-      return;
+    if (responseType === 'Accepted') {
+      if (!acceptanceDate) {
+        alert("Please enter the acceptance date.");
+        return;
+      }
+      updateOffer(offer.id, { 
+        status: 'Accepted', 
+        acceptedAt: new Date(acceptanceDate).toISOString() 
+      });
+      updateApplicationStage(applicationId, 'Hired', 'Offer Accepted');
+    } else if (responseType === 'Declined') {
+      updateOffer(offer.id, { 
+        status: 'Declined',
+        notes: note
+      });
+      updateApplicationStage(applicationId, 'Rejected', undefined, note || 'Offer Declined');
+    } else if (responseType === 'Continue Negotiation') {
+      if (!note) {
+        alert("Please enter a negotiation note.");
+        return;
+      }
+      updateOffer(offer.id, {
+        status: 'Negotiation in Progress',
+        negotiationNote: note
+      });
+      // Candidate remains in 'Offered' stage
     }
-
-    // Change offer status to Accepted and record acceptance date
-    updateOffer(offer.id, { 
-      status: 'Accepted', 
-      acceptedAt: new Date(acceptanceDate).toISOString() 
-    });
-
-    // Change pipeline stage to Hired
-    updateApplicationStage(applicationId, 'Hired', 'Offer Accepted');
-    
-    // Add activity history logic if necessary (handled by updateApplicationStage/updateOffer if any)
     
     onClose();
   };
@@ -63,9 +77,9 @@ export default function ConfirmOfferAcceptanceModal({ isOpen, onClose, applicati
           </div>
           
           <div className="text-center">
-            <h3 className="text-xl font-bold text-slate-800 mb-1">Mark as Hired</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-1">Record Offer Response</h3>
             <p className="text-slate-500 text-sm">
-              Confirm that {candidate.fullName} has formally accepted the offer.
+              Record the candidate's response to the issued offer.
             </p>
           </div>
 
@@ -88,20 +102,52 @@ export default function ConfirmOfferAcceptanceModal({ isOpen, onClose, applicati
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">
-              Acceptance Date <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="date"
-                required
-                value={acceptanceDate}
-                onChange={(e) => setAcceptanceDate(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-              />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Candidate Response <span className="text-red-500">*</span></label>
+              <select 
+                value={responseType} 
+                onChange={(e) => setResponseType(e.target.value as any)}
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
+              >
+                <option value="Accepted">Accepted Offer</option>
+                <option value="Continue Negotiation">Requested Negotiation / Revision</option>
+                <option value="Declined">Declined Offer</option>
+              </select>
             </div>
+
+            {responseType === 'Accepted' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Acceptance Date <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="date"
+                    required
+                    value={acceptanceDate}
+                    onChange={(e) => setAcceptanceDate(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(responseType === 'Declined' || responseType === 'Continue Negotiation') && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {responseType === 'Declined' ? 'Reason for Declining' : 'Negotiation Note / Requested Changes'} <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
+                  rows={3}
+                  placeholder={responseType === 'Declined' ? 'E.g., Took another offer...' : 'E.g., Wants higher base salary...'}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
 

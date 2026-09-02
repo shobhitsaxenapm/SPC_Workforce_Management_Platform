@@ -36,6 +36,8 @@ export default function CandidateDetail() {
   const [showViewInterviewModal, setShowViewInterviewModal] = useState<{jobId: string, candidateId: string} | null>(null);
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [showProcessModal, setShowProcessModal] = useState<string | null>(null);
+  const [negotiationPrompt, setNegotiationPrompt] = useState<{ offerId: string; candidateName: string } | null>(null);
+  const [negotiationNote, setNegotiationNote] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isAddingToPipeline, setIsAddingToPipeline] = useState<boolean>(false);
   
@@ -151,9 +153,9 @@ export default function CandidateDetail() {
         break;
       }
       case 'Selected':
-        if (activeOffer?.status === 'Offer Draft') {
+        if (activeOffer?.status === 'Offer Draft' || activeOffer?.status === 'Revised Draft') {
           primary = 'Continue Offer';
-        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Sent') {
+        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Revised Offer Issued' || activeOffer?.status === 'Sent') {
           primary = 'View Offer';
         } else {
           primary = 'Prepare Offer';
@@ -162,9 +164,14 @@ export default function CandidateDetail() {
       case 'Offered':
         if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
           primary = 'Start Onboarding';
-        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Sent') {
+        } else if (activeOffer?.status === 'Negotiation in Progress') {
+          primary = 'Revise Offer';
+          moreActions = ['View Offer'];
+        } else if (activeOffer?.status === 'Offer Draft' || activeOffer?.status === 'Revised Draft') {
+          primary = 'Continue Offer';
+        } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Revised Offer Issued' || activeOffer?.status === 'Sent') {
           primary = 'View Offer';
-          moreActions = ['Record Response'];
+          moreActions = ['Record Response', 'Record Negotiation'];
         } else {
           primary = 'Record Response';
         }
@@ -204,8 +211,16 @@ export default function CandidateDetail() {
         break;
       case 'Prepare Offer':
       case 'Continue Offer':
+      case 'Revise Offer':
         setShowOfferPreparationModal(app.id);
         break;
+      case 'Record Negotiation': {
+        const appOffer = offers.filter(o => o.applicationId === app.id).pop();
+        if (appOffer) {
+          setNegotiationPrompt({ offerId: appOffer.id, candidateName: candidate.fullName });
+        }
+        break;
+      }
       case 'Start Onboarding':
         setShowOnboardingModal({ jobId });
         break;
@@ -1337,6 +1352,55 @@ export default function CandidateDetail() {
           interview={interviews.find(i => i.id === showRecordFeedbackModal)!}
           candidateName={candidate.fullName}
         />
+      )}
+
+      {/* Record Negotiation Modal */}
+      {negotiationPrompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+               <h3 className="font-bold text-slate-800">Record Negotiation</h3>
+             </div>
+             <div className="p-6">
+                <p className="text-slate-600 text-sm mb-4">Record negotiation notes for <strong>{negotiationPrompt.candidateName}</strong>. This will set the offer status to "Negotiation in Progress" and allow you to revise the offer.</p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Negotiation Note / Reason</label>
+                  <textarea 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
+                    rows={3}
+                    placeholder="E.g., Candidate requested higher base salary..."
+                    value={negotiationNote}
+                    onChange={(e) => setNegotiationNote(e.target.value)}
+                  />
+                </div>
+             </div>
+             <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                <button 
+                  onClick={() => {
+                    setNegotiationPrompt(null);
+                    setNegotiationNote('');
+                  }} 
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    if (negotiationNote.trim()) {
+                      recordOfferResponse(negotiationPrompt.offerId, 'Continue Negotiation', negotiationNote);
+                      setNegotiationPrompt(null);
+                      setNegotiationNote('');
+                    } else {
+                      alert('Please enter a negotiation note.');
+                    }
+                  }} 
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Save Note
+                </button>
+             </div>
+          </div>
+        </div>
       )}
     </div>
   );

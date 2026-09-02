@@ -9,7 +9,8 @@ interface OfferPreparationModalProps {
 }
 
 export default function OfferPreparationModal({ applicationId, isOpen, onClose }: OfferPreparationModalProps) {
-  const { applications, candidates, jobs, clients, offers, createOffer, updateOffer, submitOfferForApproval, issueOffer, updateApplicationStage } = useApp();
+  const { applications, candidates, jobs, clients, offers, createOffer, createRevisedOffer, updateOffer, submitOfferForApproval, issueOffer, updateApplicationStage } = useApp();
+  const [parentOfferId, setParentOfferId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // State
@@ -49,9 +50,17 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
     if (!isOpen) return;
 
     // Load existing draft if exists
-    const existingOffer = offers.find(o => o.applicationId === applicationId && (o.status === 'Offer Draft' || o.status === 'Approval Pending'));
+    const existingOffer = offers.find(o => o.applicationId === applicationId && 
+      (o.status === 'Offer Draft' || o.status === 'Approval Pending' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress'));
+      
     if (existingOffer) {
-      setDraftId(existingOffer.id);
+      if (existingOffer.status === 'Negotiation in Progress') {
+        setDraftId(null);
+        setParentOfferId(existingOffer.id);
+      } else {
+        setDraftId(existingOffer.id);
+        setParentOfferId(null);
+      }
       setEmployingEntity(existingOffer.employingEntity || 'SPC');
       setEmployingEntityName(existingOffer.employingEntityName || 'SPC Workforce Solutions');
       setRegisteredOfficeAddress(existingOffer.registeredOfficeAddress || '123 SPC Tower, Tech Park, Mumbai');
@@ -119,6 +128,10 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
 
     if (draftId) {
       updateOffer(draftId, offerData);
+    } else if (parentOfferId) {
+      const newId = createRevisedOffer(parentOfferId, offerData);
+      setDraftId(newId);
+      setParentOfferId(null);
     } else {
       const newId = createOffer(offerData);
       setDraftId(newId);
