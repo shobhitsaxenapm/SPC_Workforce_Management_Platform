@@ -73,11 +73,16 @@ export default function JobDetail() {
       case 'Joined': return ['Joined'];
       case 'Rejected':
       case 'Withdrawn': return [currentStage, 'Sourced']; // Allow reopening
-      default: return ['Sourced', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'];
+      default: return ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Rejected', 'Withdrawn'];
     }
   };
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
+    if (newStage === 'Offered') {
+       setShowOfferPreparationModal(appId);
+       return;
+    }
+
     if (newStage === 'Hired') {
        const appOffers = offers.filter(o => o.applicationId === appId);
        const latestOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
@@ -470,15 +475,26 @@ export default function JobDetail() {
 
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
-                          <div className="flex items-center gap-2">
+                          
+                          <div className="flex gap-2">
                             <button 
-                              onClick={() => setScheduleCandidateId(candidate.id)}
-                              className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setScheduleCandidateId(candidate?.id || null); }}
+                              className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
                               title="Schedule Interview"
                             >
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-center gap-2">
+                              {app.currentStage === 'Selected' && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
+                                  className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
+                                  title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
+                                </button>
+                              )}
                               <select 
                                 className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
                                 value={app.currentStage}
