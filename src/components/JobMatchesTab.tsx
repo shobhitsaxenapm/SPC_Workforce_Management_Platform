@@ -11,7 +11,8 @@ interface JobMatchesTabProps {
 }
 
 export default function JobMatchesTab({ job }: JobMatchesTabProps) {
-  const { matchRuns, candidates, addMatchToPipeline, dismissMatch, currentUser } = useApp();
+  const { matchRuns, candidates, addMatchToPipeline, dismissMatch, currentUser, runJobMatching } = useApp();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   
@@ -45,11 +46,33 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
 
   const canAction = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
 
+  const handleRunMatches = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      runJobMatching(job.id);
+      setIsRefreshing(false);
+    }, 1000);
+  };
+
   if (!run) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
         <h3 className="text-lg font-medium text-gray-900 mb-2">No Matching Data</h3>
         <p className="text-gray-500 mb-4">Run the matching engine to find suitable candidates from the database.</p>
+        <button 
+          onClick={handleRunMatches} 
+          disabled={isRefreshing}
+          className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 inline-flex items-center justify-center gap-2"
+        >
+          {isRefreshing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Running Engine...
+            </>
+          ) : (
+            'Run AI Matcher'
+          )}
+        </button>
       </div>
     );
   }
