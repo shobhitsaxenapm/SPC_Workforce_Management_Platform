@@ -230,73 +230,7 @@ export default function JobDetail() {
               </div>
             </div>
 
-            {/* Top Candidate Matches Preview */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-800">Top Candidate Matches</h3>
-                <button onClick={() => setActiveTab('Matches')} className="text-sm font-medium text-blue-600 hover:text-blue-700">View all matches</button>
-              </div>
-              
-              {!currentMatchRun ? (
-                <div className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                  Matching engine has not been run for this job yet.
-                </div>
-              ) : activeMatches.length === 0 ? (
-                <div className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                  No active matches found.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeMatches.slice(0, 3).map(match => {
-                    const candidate = candidates.find(c => c.id === match.candidateId);
-                    if (!candidate) return null;
-                    const inPipeline = applications.some(a => a.jobId === job.id && a.candidateId === match.candidateId);
-                    return (
-                      <div key={match.candidateId} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 hover:bg-gray-50 rounded-xl border border-gray-100 gap-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                            {candidate.fullName.charAt(0)}
-                          </div>
-                          <div className="flex flex-col">
-                            <button onClick={() => setSelectedProfileId(candidate.id)} className="font-semibold text-slate-800 hover:text-blue-600 text-left text-sm">{candidate.fullName}</button>
-                            <span className="text-xs text-gray-500 mt-0.5">{candidate.currentRole} • {candidate.currentLocation}</span>
-                            <span className="text-xs text-gray-500 mt-0.5">Exp: {candidate.totalExperience} • Avail: {candidate.noticePeriod}</span>
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {match.matchStrengths.slice(0, 3).map((s, i) => (
-                                <span key={i} className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded">
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-                            Score <span className={cn("px-2 py-0.5 rounded-full font-bold", match.score >= 85 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700")}>{match.score}%</span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <button onClick={() => setSelectedProfileId(candidate.id)} className="text-xs font-medium text-slate-600 hover:text-blue-600 px-2 py-1">
-                              View Profile
-                            </button>
-                            {inPipeline ? (
-                              <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg border border-gray-200">In Pipeline</span>
-                            ) : canAction ? (
-                              <button 
-                                onClick={() => addMatchToPipeline(job.id, candidate.id)}
-                                className="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" />
-                                Add to Pipeline
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+
           </div>
 
           <div className="lg:col-span-1 space-y-6">
