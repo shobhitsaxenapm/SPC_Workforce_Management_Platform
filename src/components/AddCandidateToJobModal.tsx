@@ -11,14 +11,8 @@ interface AddCandidateToJobModalProps {
 }
 
 export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCandidateToJobModalProps) {
-  const { candidates, jobs, applications, createCandidate, addMatchToPipeline } = useApp();
-  const job = jobs.find(j => j.id === jobId);
-
-  const [activeTab, setActiveTab] = useState<'existing' | 'new'>('existing');
-  
-  // Search state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const { candidates, applications, addMatchToPipeline, createCandidate } = useApp();
+  const job = useApp().jobs.find(j => j.id === jobId);
 
   // Form state for Create New
   const [formData, setFormData] = useState({
@@ -209,124 +203,7 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200 bg-white">
-          <button
-            className={cn("px-6 py-3 font-medium text-sm transition-colors", activeTab === 'existing' ? "border-b-2 border-blue-600 text-blue-700" : "text-slate-500 hover:text-slate-700")}
-            onClick={() => { setActiveTab('existing'); setSelectedCandidateId(null); }}
-          >
-            Select Existing Candidate
-          </button>
-          <button
-            className={cn("px-6 py-3 font-medium text-sm transition-colors", activeTab === 'new' ? "border-b-2 border-blue-600 text-blue-700" : "text-slate-500 hover:text-slate-700")}
-            onClick={() => setActiveTab('new')}
-          >
-            Create New Candidate
-          </button>
-        </div>
-
         <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-          {activeTab === 'existing' ? (
-            <div className="space-y-6">
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-                <Search className="w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name, email, phone, role, or skills..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="flex-1 outline-none text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
-                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-sm text-slate-700">Results ({filteredCandidates.length})</div>
-                  <div className="overflow-y-auto max-h-[400px]">
-                    {filteredCandidates.length === 0 ? (
-                      <div className="p-8 text-center text-slate-500 text-sm">No candidates found</div>
-                    ) : (
-                      filteredCandidates.map(c => {
-                        const inPipeline = applications.some(a => a.jobId === jobId && a.candidateId === c.id);
-                        return (
-                          <div 
-                            key={c.id} 
-                            onClick={() => setSelectedCandidateId(c.id)}
-                            className={cn(
-                              "p-4 border-b border-slate-100 cursor-pointer transition-colors hover:bg-blue-50",
-                              selectedCandidateId === c.id ? "bg-blue-50 border-blue-200" : ""
-                            )}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className="font-semibold text-sm text-slate-800">{c.fullName}</h4>
-                              {inPipeline ? (
-                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">In Pipeline</span>
-                              ) : (
-                                <span className="text-xs text-slate-500">{c.code}</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-600 mb-2 truncate">{c.currentRole} • {c.currentLocation}</div>
-                            <div className="text-xs text-slate-500 flex gap-2">
-                              <span>{c.totalExperience} exp</span>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                  {selectedCandidate ? (
-                    <div className="space-y-6">
-                      <h3 className="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2">Selected Candidate</h3>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase">Name</label>
-                          <div className="text-sm font-medium text-slate-800">{selectedCandidate.fullName}</div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase">Role & Location</label>
-                          <div className="text-sm text-slate-700">{selectedCandidate.currentRole} • {selectedCandidate.currentLocation}</div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase">Experience</label>
-                          <div className="text-sm text-slate-700">{selectedCandidate.totalExperience}</div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase">Top Skills</label>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {selectedCandidate.skills?.slice(0,5).map(s => <span key={s} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">{s}</span>)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {alreadyInPipeline ? (
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 text-amber-800 mt-6">
-                          <AlertCircle className="w-5 h-5 shrink-0" />
-                          <div className="text-sm">This candidate is already associated with this Job and is currently in the <strong>{alreadyInPipeline.currentStage}</strong> stage.</div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={handleAddExisting}
-                          disabled={isProcessing}
-                          className="w-full py-2.5 mt-6 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {isProcessing ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> Adding candidate...</> : 'Add to Pipeline'}
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                      <Search className="w-12 h-12 mb-4 text-slate-300" />
-                      <p className="text-sm font-medium">Select a candidate to view details</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
             <div className="space-y-6">
               {Object.keys(errors).length > 0 && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700">
@@ -453,7 +330,6 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
               </div>
 
             </div>
-          )}
         </div>
       </div>
     </div>
