@@ -89,23 +89,7 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
     return false;
   };
 
-  const handleAddExisting = async () => {
-    if (!selectedCandidateId) return;
-    setIsProcessing(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 800));
 
-    const result = addMatchToPipeline(jobId, selectedCandidateId, 'Recruiter Added from Job Pipeline');
-    if (!result.success) {
-      alert(result.error);
-      setIsProcessing(false);
-      return;
-    }
-
-    alert('Candidate added to the Sourced stage for this Job.');
-    setIsProcessing(false);
-    onClose();
-  };
 
   const handleCreateAndAdd = async () => {
     setIsProcessing(true);
@@ -167,22 +151,7 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
     handleCreateAndAdd();
   };
 
-  const filteredCandidates = candidates.filter(c => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      c.fullName.toLowerCase().includes(term) ||
-      c.code?.toLowerCase().includes(term) ||
-      c.email.toLowerCase().includes(term) ||
-      c.phone.includes(term) ||
-      c.currentRole?.toLowerCase().includes(term) ||
-      c.currentLocation?.toLowerCase().includes(term) ||
-      c.skills?.some(s => s.toLowerCase().includes(term))
-    );
-  });
 
-  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
-  const alreadyInPipeline = selectedCandidateId ? applications.find(a => a.jobId === jobId && a.candidateId === selectedCandidateId) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
