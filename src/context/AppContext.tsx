@@ -315,13 +315,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
 
   const [matchRuns, setMatchRuns] = useState<JobMatchRun[]>(() => {
-    const runs = safeParse<JobMatchRun[]>('spc_match_runs', []);
-    if (!runs.some(r => r.jobId === 'j3')) {
-      const mockRun = getMockWarehouseMatchRun(new Date().toISOString());
-      runs.push(mockRun);
-      localStorage.setItem('spc_match_runs', JSON.stringify(runs));
-    }
-    return runs;
+    return safeParse<JobMatchRun[]>('spc_match_runs', []);
   });
 
   const [informationRequests, setInformationRequests] = useState<InformationRequest[]>(() => {
@@ -644,7 +638,20 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     let finalCandidate: Candidate;
 
     if (existingCandidate) {
-      finalCandidate = existingCandidate;
+      finalCandidate = {
+        ...existingCandidate,
+        // Update missing profile information
+        fullName: existingCandidate.fullName || candidateData.fullName,
+        currentLocation: existingCandidate.currentLocation || candidateData.currentLocation,
+        totalExperience: existingCandidate.totalExperience || candidateData.totalExperience,
+        currentRole: existingCandidate.currentRole || candidateData.currentRole,
+        currentCompany: existingCandidate.currentCompany || candidateData.currentCompany,
+        skills: existingCandidate.skills?.length ? existingCandidate.skills : candidateData.skills,
+        expectedSalary: existingCandidate.expectedSalary || candidateData.expectedSalary,
+        noticePeriod: existingCandidate.noticePeriod || candidateData.noticePeriod,
+        resumeUrl: existingCandidate.resumeUrl || candidateData.resumeUrl,
+      };
+      persistCandidates(candidates.map(c => c.id === finalCandidate.id ? finalCandidate : c));
     } else {
       const candidateId = 'can_' + Math.random().toString(36).substr(2, 9);
       const candidateCode = 'CAN-26-' + Math.floor(100 + Math.random() * 900);
@@ -653,7 +660,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         id: candidateId,
         code: candidateCode,
         duplicateStatus: 'None',
-        source: 'Careers Portal',
+        source: 'SPC Careers Website',
       };
       persistCandidates([finalCandidate, ...candidates]);
     }
@@ -665,9 +672,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       candidateId: finalCandidate.id,
       jobId: jobId,
       projectId: targetJob ? targetJob.projectId : 'none',
-      currentStage: 'Sourced',
+      currentStage: 'New',
       appliedDate: new Date().toISOString(),
-      source: 'Careers Portal',
+      source: 'SPC Careers Website',
       assignedRecruiterId: targetJob ? targetJob.assignedRecruiterId : 'u3',
       matchScore: 85, // Default mock score
       lastActivity: new Date().toISOString(),
@@ -1010,7 +1017,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const offer = offers.find(o => o.id === offerId);
     if (offer) {
       if (response === 'Accepted') {
-        updateApplicationStage(offer.applicationId, 'Offered', 'Offer Accepted');
+        updateApplicationStage(offer.applicationId, 'Hired', 'Offer Accepted');
       } else if (response === 'Declined' || response === 'Expired' || response === 'Withdrawn') {
         updateApplicationStage(offer.applicationId, 'Rejected', undefined, reason || `Offer ${response}`);
       }

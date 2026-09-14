@@ -17,8 +17,9 @@ import ViewInterviewModal from './ViewInterviewModal';
 import AddJobToCandidateModal from './AddJobToCandidateModal';
 import CandidateProcessModal from './CandidateProcessModal';
 import RecordInterviewFeedbackModal from './RecordInterviewFeedbackModal';
+import ResumeModal from './ResumeModal';
 
-type TabType = 'Overview' | 'Matching Jobs' | 'Jobs & Hiring Progress' | 'Activity' | 'Documents';
+type TabType = 'Overview' | 'Matching Jobs' | 'Hiring Progress' | 'Activity';
 
 interface ActionConfig {
   primary: string | null;
@@ -28,7 +29,7 @@ interface ActionConfig {
 
 export default function CandidateDetail() {
   const { id } = useParams();
-  const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline, recordOfferResponse } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
@@ -55,7 +56,19 @@ export default function CandidateDetail() {
   
   // Filters for Matching Jobs
   const [locationFilter, setLocationFilter] = useState('');
-  const [employmentFilter, setEmploymentFilter] = useState('');
+  
+  // On-demand matching state
+  const [hasRunCandidateMatch, setHasRunCandidateMatch] = useState(false);
+  const [isRefreshingMatches, setIsRefreshingMatches] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+
+  const handleRunCandidateMatches = () => {
+    setIsRefreshingMatches(true);
+    setTimeout(() => {
+      setHasRunCandidateMatch(true);
+      setIsRefreshingMatches(false);
+    }, 1000);
+  };
 
   // Expandable Timeline
   const [expandedTimelineId, setExpandedTimelineId] = useState<string | null>(null);
@@ -105,7 +118,7 @@ export default function CandidateDetail() {
     if (job.openings - job.filled <= 0) return false;
 
     if (locationFilter && job.location !== locationFilter) return false;
-    if (employmentFilter && job.employmentType !== employmentFilter) return false;
+
 
     return true;
   }).sort((a, b) => b.matchScore - a.matchScore);
@@ -656,7 +669,10 @@ export default function CandidateDetail() {
                 <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
                   Download Resume
                 </button>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+                <button 
+                  onClick={() => setShowResumeModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                >
                   <FileText className="w-4 h-4" />
                   View Resume
                 </button>
@@ -689,7 +705,7 @@ export default function CandidateDetail() {
       {/* Tabs Navigation */}
       <div className="border-b border-slate-200 overflow-x-auto hide-scrollbar">
         <div className="flex gap-6 min-w-max px-2">
-          {['Overview', 'Hiring Progress', 'Matching Jobs', 'Activity', 'Documents'].map(tab => {
+          {['Overview', 'Hiring Progress', 'Matching Jobs', 'Activity'].map(tab => {
             const isActive = activeTab === tab;
             const count = tab === 'Hiring Progress' ? activeProcesses.length :
               tab === 'Matching Jobs' ? matchingJobs.length : null;
@@ -799,78 +815,9 @@ export default function CandidateDetail() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-4">System Metadata</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Profile Created Date</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.createdAt ? formatDate(candidate.createdAt) : 'Not provided'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Resume Last Updated</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.resumeUrl ? 'Recently updated' : 'Not provided'}</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6 shadow-sm">
-               <div className="flex justify-between items-center mb-4">
-                 <h3 className="font-semibold text-slate-800">Top Matching Jobs</h3>
-                 <button onClick={() => setActiveTab('Matching Jobs')} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                   View all matching jobs
-                 </button>
-               </div>
-               
-               {topMatches.length > 0 ? (
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   {topMatches.map(insight => {
-                     const job = mockJobs.find(j => j.id === insight.jobId);
-                     const client = mockClients.find(c => c.id === job?.clientId);
-                     if (!job) return null;
-                     
-                     return (
-                       <div key={job.id} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col hover:border-blue-300 transition-colors">
-                         <div className="flex justify-between items-start mb-2">
-                            <span className="inline-flex items-center justify-center bg-indigo-100 text-indigo-700 font-bold text-sm px-2 py-0.5 rounded shadow-sm">
-                              {insight.matchScore}%
-                            </span>
-                            <span className="text-xs text-slate-500">{job.openings - job.filled} open</span>
-                         </div>
-                         <h4 className="font-bold text-slate-800 text-sm mb-1 leading-tight">{job.title}</h4>
-                         <p className="text-xs text-slate-500 mb-3">{client?.name || 'Unknown Client'} • {job.location}</p>
-                         
-                         <div className="mt-auto space-y-2">
-                           <ul className="text-xs text-slate-600 space-y-1">
-                             {insight.strengths.slice(0, 2).map((s, i) => (
-                               <li key={i} className="flex items-start gap-1"><span className="text-green-500 font-bold">•</span> <span className="truncate">{s}</span></li>
-                             ))}
-                             {insight.missingCriteria.length > 0 && (
-                               <li className="flex items-start gap-1"><span className="text-amber-500 font-bold">•</span> <span className="truncate">{insight.missingCriteria[0]}</span></li>
-                             )}
-                           </ul>
-                           
-                           <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
-                              <button onClick={() => setSelectedInsight({ job, client, insight })} className="text-xs font-medium text-slate-600 hover:text-slate-900 px-2 py-1.5 border border-slate-200 rounded hover:bg-slate-50">
-                                View Match
-                              </button>
-                              <button onClick={() => setShowPipelineConfirmModal(job.id)} className="text-xs font-medium text-blue-600 hover:text-blue-800 px-2 py-1.5 border border-blue-200 rounded bg-blue-50 hover:bg-blue-100 text-center">
-                                Pipeline
-                              </button>
-                           </div>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               ) : (
-                  <div className="bg-white/60 p-6 rounded-lg text-center text-slate-600 text-sm">
-                    <p>No new eligible matching jobs found.</p>
-                    <p className="text-xs mt-1 text-slate-500">The candidate may already be in the pipeline for all their strong matches.</p>
-                  </div>
-               )}
-            </div>
 
             {candidate.professionalSummary && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -905,11 +852,31 @@ export default function CandidateDetail() {
       )}
 
       {/* Matching Jobs Tab */}
-      {activeTab === 'Matching Jobs' && (
+      {activeTab === 'Matching Jobs' && !hasRunCandidateMatch && (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+          <h3 className="text-lg font-medium text-slate-900 mb-2">No Matching Data</h3>
+          <p className="text-slate-500 mb-4">Run the matching engine to find suitable jobs for this candidate.</p>
+          <button 
+            onClick={handleRunCandidateMatches} 
+            disabled={isRefreshingMatches}
+            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 inline-flex items-center justify-center gap-2"
+          >
+            {isRefreshingMatches ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Finding Matches...
+              </>
+            ) : (
+              'Find AI Matches'
+            )}
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'Matching Jobs' && hasRunCandidateMatch && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4 flex-wrap">
              <div className="flex gap-4 flex-1">
-
                <label className="flex items-center gap-2 text-sm text-slate-600">
                  Location:
                  <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border-slate-300 rounded px-2 py-1">
@@ -920,6 +887,20 @@ export default function CandidateDetail() {
                  </select>
                </label>
              </div>
+             <button 
+                onClick={handleRunCandidateMatches} 
+                disabled={isRefreshingMatches}
+                className="px-4 py-2 bg-white border border-blue-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 shadow-sm"
+              >
+                {isRefreshingMatches ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    Refreshing...
+                  </>
+                ) : (
+                  'Refresh Matches'
+                )}
+              </button>
           </div>
           
           <div className="divide-y divide-slate-100">
@@ -1063,102 +1044,12 @@ export default function CandidateDetail() {
 
       {/* Activity */}
       {activeTab === 'Activity' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 overflow-hidden">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Activity History</h3>
-          <div className="relative pl-4 space-y-6">
-            <div className="absolute top-2 bottom-2 left-[23px] w-0.5 bg-slate-200"></div>
-            {candidateActivities.map((act, idx) => (
-              <div key={act.id + idx} className="relative z-10 flex gap-4">
-                <div className="w-3 h-3 mt-1.5 rounded-full bg-blue-500 ring-4 ring-white shrink-0 shadow-sm" />
-                <div className="flex-1 pb-1">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-4 mb-1">
-                    <p className="font-semibold text-slate-800 text-sm">{act.action}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium whitespace-nowrap">
-                      <Clock className="w-3.5 h-3.5" />
-                      {formatDate(act.date)}
-                    </div>
-                  </div>
-                  {act.jobTitle && (
-                    <p className="text-sm text-slate-600 mb-1">{act.jobTitle}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
-                    <span className="bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-600 border border-slate-200">{act.actor}</span>
-                    {act.stage && (
-                      <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-medium border border-blue-100">Stage: {act.stage}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {candidateActivities.length === 0 && (
-              <div className="text-center text-slate-500 py-8 italic">No activity recorded for this candidate.</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Documents */}
-      {activeTab === 'Documents' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 className="text-lg font-bold text-slate-800">Candidate Documents</h3>
-            <button className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-              Upload Document
-            </button>
-          </div>
-          <div className="p-6">
-            {candidateDocuments.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {candidateDocuments.map((doc, i) => (
-                  <div key={i} className="border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all group bg-white">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <span className="px-2 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-md border border-green-200">
-                        {doc.status}
-                      </span>
-                    </div>
-                    <h4 className="font-semibold text-slate-800 text-sm mb-1 truncate">{doc.name}</h4>
-                    <p className="text-xs text-slate-500 mb-3 truncate" title={doc.filename}>{doc.filename}</p>
-                    
-                    <div className="space-y-1.5 text-xs text-slate-600 mb-4">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Type</span>
-                        <span className="font-medium">{doc.type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Uploaded</span>
-                        <span className="font-medium">{formatDate(doc.uploadDate).split(' ')[0]}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">By</span>
-                        <span className="font-medium truncate max-w-[100px]" title={doc.uploadedBy}>{doc.uploadedBy}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 pt-3 border-t border-slate-100">
-                      <button className="flex-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-md transition-colors border border-slate-200">
-                        View
-                      </button>
-                      <button className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-md transition-colors border border-blue-100">
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">No Documents Available</h3>
-                <p className="text-slate-500 max-w-md mx-auto mb-6">There are no documents uploaded for this candidate yet.</p>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                  Upload Document
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
+          <Clock className="w-12 h-12 text-slate-300 mb-4" />
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Coming Soon</h3>
+          <p className="text-slate-500 max-w-sm text-center">
+            Detailed candidate activity tracking and audit logs will be available in a future update.
+          </p>
         </div>
       )}
 
@@ -1401,6 +1292,9 @@ export default function CandidateDetail() {
              </div>
           </div>
         </div>
+      )}
+      {showResumeModal && (
+        <ResumeModal candidateId={candidate.id} onClose={() => setShowResumeModal(false)} />
       )}
     </div>
   );

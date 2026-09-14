@@ -176,10 +176,6 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
   const handleMarkAsShared = () => {
     if (draftId) {
       updateOffer(draftId, { deliveryStatus: 'Sent' });
-      const currentOffer = offers.find(o => o.id === draftId);
-      if (currentOffer) {
-         updateApplicationStage(currentOffer.applicationId, 'Offered', 'Offer Sent Manually');
-      }
     }
     onClose();
   };

@@ -6,7 +6,11 @@ export type ProjectFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfill
 export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
+  | 'New'
+  | 'Under Review'
+  | 'Application Rejected'
   | 'Sourced'
+  | 'Screening'
   | 'Interviewing'
   | 'Selected'
   | 'Offered'
@@ -415,7 +419,6 @@ export interface Offer {
   
   // Version and Tracking
   templateVersion?: string;
-  version?: number;
   deliveryStatus?: 'Not Sent' | 'Sending' | 'Sent' | 'Failed' | 'Delivery Pending';
 }
 

@@ -67,10 +67,10 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
           {isRefreshing ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Running Engine...
+              Finding Matches...
             </>
           ) : (
-            'Run AI Matcher'
+            'Find AI Matches'
           )}
         </button>
       </div>
@@ -90,6 +90,22 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
           />
         </div>
+        {canAction && (
+          <button 
+            onClick={handleRunMatches} 
+            disabled={isRefreshing}
+            className="px-4 py-2 bg-white border border-blue-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 shadow-sm"
+          >
+            {isRefreshing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                Refreshing...
+              </>
+            ) : (
+              'Refresh Matches'
+            )}
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">

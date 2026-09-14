@@ -80,18 +80,23 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
     }
   };
 
-  const validate = () => {
+  const validate = (isDraft: boolean = false) => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = 'Title is required';
-    if (!formData.clientId) newErrors.clientId = 'Client is required';
-    if (!formData.location) newErrors.location = 'Location is required';
-    if (!formData.summary) newErrors.summary = 'Summary is required';
+    
+    if (!isDraft) {
+      if (!formData.clientId) newErrors.clientId = 'Client is required';
+      if (!formData.location) newErrors.location = 'Location is required';
+      if (!formData.summary) newErrors.summary = 'Summary is required';
+      if (!formData.targetJoiningDate) newErrors.targetJoiningDate = 'Target Joining Date is required';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = (status: JobStatus = 'Draft') => {
-    if (!validate()) return;
+    if (!validate(status === 'Draft')) return;
     
     createJob({
       title: formData.title,
@@ -360,6 +365,17 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
                     onChange={e => setFormData({...formData, experienceRange: e.target.value})}
                     className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Joining Date <span className="text-red-500">*</span></label>
+                  <input 
+                    type="date" 
+                    value={formData.targetJoiningDate} 
+                    onChange={e => setFormData({...formData, targetJoiningDate: e.target.value})}
+                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.targetJoiningDate ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                  />
+                  {errors.targetJoiningDate && <p className="text-red-500 text-xs mt-1">{errors.targetJoiningDate}</p>}
                 </div>
               </div>
             </div>

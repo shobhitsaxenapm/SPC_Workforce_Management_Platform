@@ -9,9 +9,10 @@ interface CandidateFormModalProps {
   onClose: () => void;
   initialData: Partial<Candidate>;
   isEditMode?: boolean;
+  onSaveSuccess?: (candidateId: string) => void;
 }
 
-export default function CandidateFormModal({ isOpen, onClose, initialData, isEditMode = false }: CandidateFormModalProps) {
+export default function CandidateFormModal({ isOpen, onClose, initialData, isEditMode = false, onSaveSuccess }: CandidateFormModalProps) {
   const { createCandidate, updateCandidate, candidates } = useApp();
   
   const [formData, setFormData] = useState({
@@ -54,12 +55,8 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
     if (formData.currentRole.trim() === '') newErrors.currentRole = 'Current Role is required';
     if (!formData.noticePeriod) newErrors.noticePeriod = 'Notice Period is required';
     if (formData.noticePeriod === 'Custom' && !formData.customNoticePeriod) newErrors.customNoticePeriod = 'Custom Notice Period in Days is required';
-    
-    // Numeric checks for salaries (if provided)
-    if (formData.currentSalary && isNaN(Number(formData.currentSalary))) newErrors.currentSalary = 'Must be a number';
-    if (formData.expectedSalary && isNaN(Number(formData.expectedSalary))) newErrors.expectedSalary = 'Must be a number';
-    if (formData.expectedSalary && Number(formData.expectedSalary) < 0) newErrors.expectedSalary = 'Cannot be negative';
-    if (formData.currentSalary && Number(formData.currentSalary) < 0) newErrors.currentSalary = 'Cannot be negative';
+    // Salaries are stored as free-form strings (e.g., '₹ 3.20 LPA')
+    // so we don't enforce strict numeric validation.
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -113,7 +110,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
         resumeUrl: formData.resumeUrl,
       });
     } else {
-      createCandidate({
+      const createResult = createCandidate({
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
@@ -139,6 +136,9 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
         education: formData.educationEntries[0]?.qualification || '',
         createdMethod: 'Resume Upload',
       });
+      if (createResult && createResult.success && createResult.candidateId) {
+        onSaveSuccess?.(createResult.candidateId);
+      }
     }
     onClose();
   };
@@ -368,7 +368,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
                   <input type="text" placeholder="3.80" value={formData.expectedSalary} onChange={e => setFormData({...formData, expectedSalary: e.target.value})} className={cn("w-full pl-7 pr-3 py-2 border rounded-lg text-sm outline-none", errors.expectedSalary ? "border-red-300" : "border-slate-300")} />
                 </div>
                 {errors.expectedSalary && <p className="text-red-500 text-xs mt-1">{errors.expectedSalary}</p>}
-                {(formData.expectedSalary && formData.currentSalary && Number(formData.expectedSalary) < Number(formData.currentSalary)) && (
+                {(formData.expectedSalary && formData.currentSalary && Number(formData.expectedSalary.replace(/[^0-9.]/g, '')) < Number(formData.currentSalary.replace(/[^0-9.]/g, ''))) && (
                    <p className="text-amber-500 text-[10px] mt-1 font-medium">Warning: Expected is lower than Current.</p>
                 )}
               </div>

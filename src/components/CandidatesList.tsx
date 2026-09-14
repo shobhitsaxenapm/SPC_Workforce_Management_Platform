@@ -5,107 +5,49 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { mockUsers } from '../data/mockData';
 import FilterPanel, { FilterField } from './FilterPanel';
-import DateRangeFilter from './DateRangeFilter';
-import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import SmartCandidateUpload from './SmartCandidateUpload';
 import CandidateFormModal from './CandidateFormModal';
 import { FileText, UserPlus, FileCheck, Trash2 } from 'lucide-react';
 
 export default function CandidatesList() {
   const { candidates, applications, jobs, clients, createCandidate, deleteCandidate } = useApp();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showCreationMethodModal, setShowCreationMethodModal] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [candidateToDelete, setCandidateToDelete] = useState<any>(null);
   const [activePopoverId, setActivePopoverId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ 
-    source: '', 
     stage: '', 
     location: '', 
     availability: '', 
-    recruiter: '' 
+    designation: '' 
   });
 
-  const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const [formData, setFormData] = useState({
-    fullName: '', email: '', phone: '', currentLocation: '',
-    totalExperience: '', currentCompany: '', currentRole: '',
-    skills: '', education: '', currentSalary: '', expectedSalary: '',
-    noticePeriod: '',
-  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    setErrorMsg(null);
-    if (!formData.fullName.trim()) { setErrorMsg('Full name is required.'); return; }
-    if (!formData.email.trim() && !formData.phone.trim()) { setErrorMsg('Please provide at least email or phone.'); return; }
-    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { setErrorMsg('Please enter a valid email address.'); return; }
-
-    setIsSubmitting(true);
-    const result = createCandidate({
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      currentLocation: formData.currentLocation.trim(),
-      totalExperience: formData.totalExperience || 'Fresher',
-      currentCompany: formData.currentCompany.trim() || 'N/A',
-      currentRole: formData.currentRole.trim(),
-      skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
-      education: formData.education.trim() || 'Graduate',
-      currentSalary: formData.currentSalary || '0',
-      expectedSalary: formData.expectedSalary || '0',
-      noticePeriod: formData.noticePeriod || 'Immediate',
-      resumeUrl: undefined,
-      source: 'Manual Entry',
-    });
-    setIsSubmitting(false);
-    if (!result.success) { setErrorMsg(result.error || 'Failed.'); return; }
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      setIsModalOpen(false);
-      setFormData({ fullName: '', email: '', phone: '', currentLocation: '', totalExperience: '', currentCompany: '', currentRole: '', skills: '', education: '', currentSalary: '', expectedSalary: '', noticePeriod: '' });
-    }, 1500);
-  };
 
   const sources = [...new Set(candidates.map(c => c.source).filter(Boolean))] as string[];
   const locations = [...new Set(candidates.map(c => c.currentLocation).filter(Boolean))] as string[];
   const availabilities = [...new Set(candidates.map(c => c.noticePeriod).filter(Boolean))] as string[];
   
-  const canonicalStages = ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
+
   
-  // Get all unique recruiter IDs assigned to active jobs
-  const activeJobs = jobs.filter(j => j.status !== 'Closed' && j.status !== 'Cancelled');
-  const recruiterIds = [...new Set(activeJobs.map(j => j.assignedRecruiterId).filter(Boolean))] as string[];
-  const recruiters = recruiterIds.map(id => {
-    const user = mockUsers.find(u => u.id === id);
-    return { value: id, label: user?.name || id };
-  });
+  const designations = [...new Set(candidates.map(c => c.currentRole).filter(Boolean))] as string[];
+  
+  const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
 
   const filterFields: FilterField[] = [
     { key: 'stage', label: 'Stage', options: canonicalStages.map(s => ({ value: s, label: s })) },
-    { key: 'source', label: 'Source', options: sources.map(s => ({ value: s, label: s })) },
     { key: 'location', label: 'Location', options: locations.map(l => ({ value: l, label: l })) },
     { key: 'availability', label: 'Availability', options: availabilities.map(a => ({ value: a, label: a })) },
-    { key: 'recruiter', label: 'Recruiter', options: recruiters },
+    { key: 'designation', label: 'Designation', options: designations.map(d => ({ value: d, label: d })) },
   ];
 
   const filteredCandidates = candidates.filter(c => {
     const candidateApps = applications.filter(a => a.candidateId === c.id);
-    const activeCandidateApps = candidateApps.filter(a => !['Rejected', 'Withdrawn'].includes(a.currentStage));
-    const assignedRecruiterIds = activeCandidateApps.map(a => {
-      const job = jobs.find(j => j.id === a.jobId);
-      return job?.assignedRecruiterId;
-    }).filter(Boolean);
 
     const matchSearch = !searchTerm ||
       c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,22 +55,26 @@ export default function CandidatesList() {
       c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchSource = !filters.source || c.source === filters.source;
     const matchLocation = !filters.location || c.currentLocation === filters.location;
     const matchAvailability = !filters.availability || c.noticePeriod === filters.availability;
     const matchStage = !filters.stage || candidateApps.some(a => a.currentStage === filters.stage);
-    const matchRecruiter = !filters.recruiter || assignedRecruiterIds.includes(filters.recruiter);
+    const matchDesignation = !filters.designation || c.currentRole === filters.designation;
     
-    const matchDate = isDateInPreset(c.createdAt || '2026-07-11T12:00:00Z', datePreset, customStart, customEnd);
-    
-    return matchSearch && matchSource && matchLocation && matchAvailability && matchStage && matchRecruiter && matchDate;
+    return matchSearch && matchLocation && matchAvailability && matchStage && matchDesignation;
   });
+
+  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
+  const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
 
   return (
     <div className="space-y-6 pt-2">
       <div className="flex justify-between items-center">
         <p className="text-slate-600">View candidate profiles and their applications across client jobs.</p>
-        <button onClick={() => setShowCreationMethodModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+        <button onClick={() => setShowUpload(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
           <Plus className="w-4 h-4" />
           Add Candidate
         </button>
@@ -146,46 +92,15 @@ export default function CandidatesList() {
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
             />
           </div>
-          <DateRangeFilter
-            preset={datePreset}
-            customStart={customStart}
-            customEnd={customEnd}
-            onChange={(preset, start, end) => {
-              setDatePreset(preset);
-              setCustomStart(start);
-              setCustomEnd(end);
-            }}
-          />
           <FilterPanel
             fields={filterFields}
             values={filters}
             onChange={(k, v) => setFilters({ ...filters, [k]: v })}
             onClear={() => {
-              setFilters({ source: '', stage: '', location: '', availability: '', recruiter: '' });
-              setDatePreset('All Time');
-              setCustomStart('');
-              setCustomEnd('');
+              setFilters({ stage: '', location: '', availability: '', designation: '' });
             }}
           />
         </div>
-
-        {datePreset !== 'All Time' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Created Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
-              <button 
-                onClick={() => {
-                  setDatePreset('All Time');
-                  setCustomStart('');
-                  setCustomEnd('');
-                }} 
-                className="hover:text-blue-900 focus:outline-none"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          </div>
-        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -193,175 +108,50 @@ export default function CandidatesList() {
           <table className="w-full text-left text-sm block md:table">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium hidden md:table-header-group">
               <tr className="md:table-row">
-                <th className="px-6 py-4">Candidate</th>
-                <th className="px-6 py-4">Role & Experience</th>
-                <th className="px-6 py-4">Top Skills</th>
-                <th className="px-6 py-4">Active Jobs & Stages</th>
-                <th className="px-6 py-4">Source</th>
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Contact Info</th>
+                <th className="px-6 py-4">Present Company</th>
+                <th className="px-6 py-4">Location</th>
+                <th className="px-6 py-4">Total Experience</th>
                 <th className="px-6 py-4 w-12 relative">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 flex flex-col md:table-row-group">
-              {filteredCandidates.map(candidate => {
-                const candidateApps = applications.filter(a => a.candidateId === candidate.id);
-                const activeCandidateApps = candidateApps.filter(a => !['Rejected', 'Withdrawn'].includes(a.currentStage));
-                
-                // Sort to find latest active app, fallback to latest overall
-                const sortedApps = (activeCandidateApps.length > 0 ? activeCandidateApps : candidateApps).sort((a, b) => 
-                  new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
-                );
-                
-                const latestApp = sortedApps[0];
-                const latestJob = latestApp ? jobs.find(j => j.id === latestApp.jobId) : null;
-                const latestClient = latestJob ? clients.find(c => c.id === latestJob.clientId) : null;
-                const additionalActiveCount = activeCandidateApps.length > 1 ? activeCandidateApps.length - 1 : 0;
-                
+              {paginatedCandidates.map(candidate => {
                 return (
                   <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer flex flex-col md:table-row p-4 md:p-0">
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <Link to={`/candidates/${candidate.id}`} className="block">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{candidate.fullName}</p>
-                          {candidate.resumeUrl && <FileCheck className="w-3.5 h-3.5 text-blue-500" title="Resume Attached" />}
-                          {candidate.duplicateStatus !== 'None' && (
-                            <AlertTriangle className="w-4 h-4 text-amber-500" title={candidate.duplicateStatus} />
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {candidate.currentLocation}
-                          {latestApp && (
-                            <>
-                              <span className="mx-1.5 font-mono text-slate-300">·</span>
-                              Updated {formatDate(latestApp.lastActivity).split(' ')[0]}
-                            </>
-                          )}
                         </div>
                       </Link>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Role & Experience</div>
-                      <p className="text-slate-800 font-medium">{candidate.currentRole || 'N/A'}</p>
-                      <p className="text-xs text-slate-500 mt-1">{candidate.totalExperience} • {candidate.currentCompany || 'No Company'}</p>
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Contact Info</div>
+                      <p className="text-slate-800 text-sm">{candidate.email}</p>
+                      <p className="text-slate-500 text-xs mt-0.5">{candidate.phone}</p>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Top Skills</div>
-                      <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                        {candidate.skills.slice(0, 2).map(skill => (
-                          <span key={skill} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded border border-slate-200">
-                            {skill}
-                          </span>
-                        ))}
-                        {candidate.skills.length > 2 && (
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded border border-slate-200">
-                            +{candidate.skills.length - 2}
-                          </span>
-                        )}
-                      </div>
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Present Company</div>
+                      <p className="text-slate-800 text-sm">{candidate.currentCompany || 'N/A'}</p>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Active Jobs & Stages</div>
-                      {latestJob ? (
-                        <div className="relative">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex justify-between items-start gap-3">
-                              <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="font-medium text-slate-700 hover:text-blue-600">
-                                {latestJob.title}
-                              </Link>
-                              {latestApp && (
-                                <span className="px-2 py-0.5 rounded text-[11px] font-medium border bg-blue-50 text-blue-700 border-blue-200 shrink-0 mt-0.5">
-                                  {latestApp.currentStage}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-500 font-medium">
-                              <span className="font-mono">{latestJob.code}</span>
-                              {latestClient && (
-                                <>
-                                  <span className="mx-1.5 font-mono text-slate-300">·</span>
-                                  <span>{latestClient.name}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          {additionalActiveCount > 0 && (
-                            <div>
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setActivePopoverId(activePopoverId === candidate.id ? null : candidate.id);
-                                }}
-                                className="text-xs font-semibold text-blue-600 mt-2 inline-block hover:underline focus:outline-none"
-                              >
-                                +{additionalActiveCount} more {additionalActiveCount === 1 ? 'job' : 'jobs'}
-                              </button>
-                              
-                              {activePopoverId === candidate.id && (
-                                <div className="absolute top-full left-0 mt-2 w-[320px] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-                                    <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Other Active Jobs</span>
-                                    <button 
-                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePopoverId(null); }}
-                                      className="text-slate-400 hover:text-slate-600 bg-white rounded-md border border-slate-200 p-1 shadow-sm"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                  <div className="max-h-72 overflow-y-auto p-2">
-                                    {sortedApps.slice(1).map(app => {
-                                      const j = jobs.find(jb => jb.id === app.jobId);
-                                      const client = j ? clients.find(c => c.id === j.clientId) : null;
-                                      if (!j) return null;
-                                      
-                                      return (
-                                        <Link key={app.id} to={`/candidates/${candidate.id}?tab=Jobs`} className="block p-3 hover:bg-slate-50 rounded-lg transition-colors group border-b border-slate-100 last:border-0">
-                                          <div className="flex justify-between items-start gap-3">
-                                            <div className="min-w-0 flex-1">
-                                              <p className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">{j.title}</p>
-                                              <div className="text-xs text-slate-500 font-medium mt-1">
-                                                <span className="font-mono">{j.code}</span>
-                                                {client && (
-                                                  <>
-                                                    <span className="mx-1.5 font-mono text-slate-300">·</span>
-                                                    <span className="truncate inline-block align-bottom max-w-[120px]">{client.name}</span>
-                                                  </>
-                                                )}
-                                              </div>
-                                            </div>
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium border bg-slate-100 text-slate-700 border-slate-200 whitespace-nowrap shrink-0 mt-0.5">
-                                              {app.currentStage}
-                                            </span>
-                                          </div>
-                                        </Link>
-                                      );
-                                    })}
-                                  </div>
-                                  <Link to={`/candidates/${candidate.id}?tab=Jobs`} className="block text-center text-xs font-semibold text-blue-600 bg-blue-50 py-2.5 hover:bg-blue-100 transition-colors border-t border-blue-100">
-                                    View all hiring progress
-                                  </Link>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400">No active jobs</span>
-                      )}
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Location</div>
+                      <p className="text-slate-800 text-sm">{candidate.currentLocation}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 block md:table-cell max-w-[200px]">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Source</div>
-                      <span className="text-slate-600 text-xs inline-block break-words whitespace-normal">{candidate.source}</span>
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Experience</div>
+                      <p className="text-slate-800 text-sm">{candidate.totalExperience}</p>
                     </td>
                     <td className="md:px-6 md:py-4 block md:table-cell text-right">
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          if (window.confirm(`Are you sure you want to remove ${candidate.fullName}? This action cannot be undone.`)) {
-                            deleteCandidate(candidate.id);
-                          }
+                          setCandidateToDelete(candidate);
                         }}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
                         title="Delete Candidate"
@@ -373,182 +163,35 @@ export default function CandidatesList() {
                 );
               })}
               {filteredCandidates.length === 0 && (
-                <tr className="flex md:table-row"><td colSpan={5} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
+                <tr className="flex md:table-row"><td colSpan={6} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
               )}
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-slate-50">
+            <span className="text-sm text-slate-500">
+              Showing <span className="font-medium text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-slate-700">{Math.min(currentPage * itemsPerPage, filteredCandidates.length)}</span> of <span className="font-medium text-slate-700">{filteredCandidates.length}</span> candidates
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-bold text-slate-800">Add Candidate (Legacy Manual)</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto">
-              {isSuccess ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">Candidate Added</h3>
-                  <p className="text-slate-500 text-sm">The candidate has been added to the pool.</p>
-                </div>
-              ) : (
-                <form id="createCandidateForm" onSubmit={handleSubmit} className="space-y-6">
-                  {errorMsg && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{errorMsg}</div>
-                  )}
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Personal Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-                        <input type="text" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                        <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Location</label>
-                        <input type="text" value={formData.currentLocation} onChange={e => setFormData({...formData, currentLocation: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500">At least one of email or phone is required.</p>
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Professional Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Total Experience</label>
-                        <select value={formData.totalExperience} onChange={e => setFormData({...formData, totalExperience: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-                          <option value="">Select...</option>
-                          <option value="Fresher">Fresher</option>
-                          <option value="1-3 Years">1-3 Years</option>
-                          <option value="3-5 Years">3-5 Years</option>
-                          <option value="5+ Years">5+ Years</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Company</label>
-                        <input type="text" value={formData.currentCompany} onChange={e => setFormData({...formData, currentCompany: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Role</label>
-                        <input type="text" value={formData.currentRole} onChange={e => setFormData({...formData, currentRole: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Education</label>
-                        <input type="text" placeholder="e.g. B.Tech, MBA" value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Skills (comma-separated)</label>
-                        <input type="text" placeholder="e.g. Excel, Data Entry, Typing" value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">Compensation & Availability</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Salary (LPA)</label>
-                        <input type="text" placeholder="e.g. 3.5" value={formData.currentSalary} onChange={e => setFormData({...formData, currentSalary: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Expected Salary (LPA)</label>
-                        <input type="text" placeholder="e.g. 4.5" value={formData.expectedSalary} onChange={e => setFormData({...formData, expectedSalary: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Notice Period</label>
-                        <select value={formData.noticePeriod} onChange={e => setFormData({...formData, noticePeriod: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-                          <option value="">Select...</option>
-                          <option value="Immediate">Immediate</option>
-                          <option value="15 Days">15 Days</option>
-                          <option value="30 Days">30 Days</option>
-                          <option value="60 Days">60 Days</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                Cancel
-              </button>
-              {!isSuccess && (
-                <button type="submit" form="createCandidateForm" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors">
-                  Add Candidate
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Creation Method Selection Modal */}
-      {showCreationMethodModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800">Add Candidate</h2>
-              <button onClick={() => setShowCreationMethodModal(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 flex gap-4">
-              <button 
-                onClick={() => {
-                  setShowCreationMethodModal(false);
-                  setShowUpload(true);
-                }}
-                className="flex-1 flex flex-col items-center gap-3 p-6 border-2 border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800">Upload Resume</h3>
-                  <p className="text-xs text-slate-500 mt-1">Extract details from PDF or DOCX automatically</p>
-                </div>
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setShowCreationMethodModal(false);
-                  setIsModalOpen(true);
-                  setErrorMsg(null);
-                }}
-                className="flex-1 flex flex-col items-center gap-3 p-6 border-2 border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <UserPlus className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800">Add Manually</h3>
-                  <p className="text-xs text-slate-500 mt-1">Enter candidate details manually in a form</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Full-Screen Smart Upload Modal */}
       {showUpload && (
@@ -582,6 +225,40 @@ export default function CandidatesList() {
           initialData={extractedData}
           isEditMode={false}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {candidateToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Candidate</h3>
+              <p className="text-slate-500 text-sm">
+                Are you sure you want to remove <span className="font-semibold text-slate-700">{candidateToDelete.fullName}</span>? This action cannot be undone and will remove all their applications from the system.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setCandidateToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  deleteCandidate(candidateToDelete.id);
+                  setCandidateToDelete(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Candidate
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -12,12 +12,13 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
 import OfferPreparationModal from './OfferPreparationModal';
 import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
+import JobApplicantsTab from './JobApplicantsTab';
 
 export default function JobDetail() {
   const { id } = useParams();
   const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewProjectId, setQuickViewCandidateId } = useApp();
   const job = jobs.find(j => j.id === id);
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Applicants' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -31,6 +32,8 @@ export default function JobDetail() {
   const client = clients.find(c => c.id === job.clientId);
   const recruiter = mockUsers.find(u => u.id === job.assignedRecruiterId);
   const jobApplications = applications.filter(a => a.jobId === job.id);
+  const applicants = jobApplications.filter(a => a.source === 'SPC Careers Website');
+  const pipelineApps = jobApplications.filter(a => !['New', 'Under Review', 'Application Rejected'].includes(a.currentStage));
   
   const progress = (job.filled / job.openings) * 100;
 
@@ -40,13 +43,13 @@ export default function JobDetail() {
   const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'] as const;
+  const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Rejected'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
   
   let groupedCount = 0;
-  jobApplications.forEach(app => {
+  pipelineApps.forEach(app => {
     const canonical = app.currentStage as string;
     if (groupedApps[canonical]) {
         groupedApps[canonical].push(app);
@@ -61,45 +64,20 @@ export default function JobDetail() {
     }
   });
 
-  if (process.env.NODE_ENV === 'development' && groupedCount !== jobApplications.length) {
-     console.warn(`Pipeline mismatch: Job ${job.id} has ${jobApplications.length} apps, but grouped ${groupedCount}`);
+  if (process.env.NODE_ENV === 'development' && groupedCount !== pipelineApps.length) {
+     console.warn(`Pipeline mismatch: Job ${job.id} has ${pipelineApps.length} apps, but grouped ${groupedCount}`);
   }
 
   // Dynamic selectable stages based on current stage
   const getSelectableStages = (currentStage: ApplicationStage): ApplicationStage[] => {
     switch (currentStage) {
-      case 'Offered': return ['Offered', 'Hired', 'Rejected', 'Withdrawn'];
-      case 'Hired': return ['Hired', 'Joined', 'Rejected', 'Withdrawn'];
-      case 'Joined': return ['Joined'];
       case 'Rejected':
       case 'Withdrawn': return [currentStage, 'Sourced']; // Allow reopening
-      default: return ['Sourced', 'Interviewing', 'Selected', 'Offered', 'Rejected', 'Withdrawn'];
+      default: return ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Rejected'];
     }
   };
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
-    if (newStage === 'Offered') {
-       setShowOfferPreparationModal(appId);
-       return;
-    }
-
-    if (newStage === 'Hired') {
-       const appOffers = offers.filter(o => o.applicationId === appId);
-       const latestOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
-       
-       if (!latestOffer) {
-          alert('Cannot mark as Hired: No offer found for this candidate.');
-          return;
-       }
-       
-       if (latestOffer.status !== 'Accepted') {
-          alert('Cannot mark as Hired: The candidate must have an Accepted offer first.');
-          return;
-       }
-       
-       updateApplicationStage(appId, newStage);
-       return;
-    }
 
     if (newStage === 'Rejected' || newStage === 'Withdrawn') {
        const reason = window.prompt(`Please provide a reason for marking as ${newStage}:`);
@@ -164,6 +142,12 @@ export default function JobDetail() {
           <FileText className="w-4 h-4" /> Job Overview
         </button>
         <button 
+          onClick={() => setActiveTab('Applicants')} 
+          className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Applicants' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
+        >
+          <List className="w-4 h-4" /> Applicants ({applicants.length})
+        </button>
+        <button 
           onClick={() => setActiveTab('Matches')} 
           className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Matches' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
@@ -173,7 +157,7 @@ export default function JobDetail() {
           onClick={() => setActiveTab('Pipeline')} 
           className={cn("px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2", activeTab === 'Pipeline' ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700")}
         >
-          <LayoutGrid className="w-4 h-4" /> Pipeline ({jobApplications.length})
+          <LayoutGrid className="w-4 h-4" /> Pipeline ({pipelineApps.length})
         </button>
         <button 
           onClick={() => setActiveTab('Activity')} 
@@ -253,12 +237,12 @@ export default function JobDetail() {
               <div className="mt-6 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Applicants</span>
-                  <span className="font-medium text-gray-800">{jobApplications.filter(a => a.source !== 'Internal Match').length}</span>
+                  <span className="font-medium text-gray-800">{applicants.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Active Pipeline</span>
                   <span className="font-medium text-gray-800">
-                    {jobApplications.filter(a => a.currentStage !== 'Rejected' && a.currentStage !== 'Withdrawn' && a.currentStage !== 'Offer Declined').length}
+                    {pipelineApps.filter(a => a.currentStage !== 'Rejected' && a.currentStage !== 'Withdrawn' && a.currentStage !== 'Offer Declined').length}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
@@ -279,12 +263,12 @@ export default function JobDetail() {
                     {isRefreshing ? (
                       <>
                         <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        Refreshing matches...
+                        {currentMatchRun ? 'Refreshing matches...' : 'Finding matches...'}
                       </>
                     ) : (
                       <>
                         <Search className="w-4 h-4" />
-                        Refresh Matches
+                        {currentMatchRun ? 'Refresh Matches' : 'Find AI Matches'}
                       </>
                     )}
                   </button>
@@ -321,6 +305,10 @@ export default function JobDetail() {
         </div>
       )}
       
+      {activeTab === 'Applicants' && (
+        <JobApplicantsTab applications={applicants} candidates={candidates} />
+      )}
+
       {activeTab === 'Matches' && <JobMatchesTab job={job} />}
 
       {activeTab === 'Pipeline' && (
@@ -386,26 +374,19 @@ export default function JobDetail() {
                           </div>
                         )}
                         
-                        {app.currentStage === 'Offered' && (
-                          <div className="mt-3 flex gap-2">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
-                              className="flex-1 text-[10px] font-semibold text-slate-600 border border-slate-200 bg-white py-1 rounded shadow-sm hover:bg-slate-50 transition-colors"
-                              title={offers.some(o => o.applicationId === app.id && (o.status === 'Offer Draft' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress')) ? 'Continue Offer' : 'Prepare Offer'}
-                            >
-                              {offers.some(o => o.applicationId === app.id && (o.status === 'Offer Draft' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress')) ? 'Continue Offer' : 'Prepare Offer'}
-                            </button>
-                            {offers.some(o => o.applicationId === app.id && (o.status === 'Offer Issued' || o.status === 'Revised Offer Issued' || o.status === 'Sent')) && (
-                              <Link 
-                                to={`/offers`}
-                                onClick={e => e.stopPropagation()}
-                                className="flex-1 text-[10px] font-semibold text-blue-600 border border-blue-200 bg-blue-50 py-1 rounded shadow-sm hover:bg-blue-100 transition-colors text-center block"
-                              >
-                                View Offer
-                              </Link>
-                            )}
-                          </div>
-                        )}
+                        {app.currentStage === 'Selected' && (() => {
+                           const appOffers = offers.filter(o => o.applicationId === app.id);
+                           const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
+                           if (!activeOffer) return null;
+                           return (
+                             <div className="mb-3 flex gap-2">
+                               <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-100 flex items-center gap-1">
+                                 <FileText className="w-3 h-3" />
+                                 {activeOffer.status}
+                               </span>
+                             </div>
+                           );
+                        })()}
 
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
@@ -419,16 +400,54 @@ export default function JobDetail() {
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-center gap-2">
-                              {app.currentStage === 'Selected' && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); setShowOfferPreparationModal(app.id); }}
-                                  className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
-                                  title={offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  {offers.some(o => o.applicationId === app.id && o.status === 'Offer Draft') ? 'Continue Offer' : 'Prepare Offer'}
-                                </button>
-                              )}
+                              {app.currentStage === 'Selected' && (() => {
+                                const appOffers = offers.filter(o => o.applicationId === app.id);
+                                const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
+                                
+                                let actionLabel = 'Prepare Offer';
+                                let isLink = false;
+                                let showModal = false;
+
+                                if (!activeOffer) {
+                                  actionLabel = 'Prepare Offer';
+                                  showModal = true;
+                                } else if (activeOffer.status === 'Offer Draft' || activeOffer.status === 'Revised Draft') {
+                                  actionLabel = 'Continue Offer';
+                                  showModal = true;
+                                } else if (activeOffer.status === 'Approval Pending') {
+                                  actionLabel = 'View Approval';
+                                  isLink = true;
+                                } else if (activeOffer.status === 'Approved') {
+                                  actionLabel = 'Issue Offer';
+                                  showModal = true;
+                                } else if (['Offer Issued', 'Revised Offer Issued', 'Negotiation in Progress', 'Sent'].includes(activeOffer.status)) {
+                                  actionLabel = 'View Offer';
+                                  isLink = true;
+                                }
+
+                                if (isLink) {
+                                  return (
+                                    <Link
+                                      to="/offers"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors text-[10px] font-medium border border-indigo-200 block"
+                                    >
+                                      {actionLabel}
+                                    </Link>
+                                  );
+                                }
+                                
+                                return (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); if(showModal) setShowOfferPreparationModal(app.id); }}
+                                    className="p-1.5 px-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
+                                    title={actionLabel}
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    {actionLabel}
+                                  </button>
+                                );
+                              })()}
                               <select 
                                 className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
                                 value={app.currentStage}
@@ -453,6 +472,35 @@ export default function JobDetail() {
             );
           })}
           </div>
+
+          {jobApplications.filter(a => a.currentStage === 'Hired').length > 0 && (
+            <div className="mt-8 pt-8 border-t border-slate-200">
+              <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                Completed Outcomes
+              </h3>
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {jobApplications.filter(a => a.currentStage === 'Hired').map(app => {
+                  const candidate = candidates.find(c => c.id === app.candidateId);
+                  if (!candidate) return null;
+                  return (
+                    <div key={app.id} className="w-[320px] flex-shrink-0 bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm relative">
+                      <div className="flex justify-between items-start mb-2">
+                          <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-green-900 hover:text-green-700 truncate outline-none text-left mr-2">
+                            {candidate.fullName}
+                          </button>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">
+                            Hired
+                          </span>
+                      </div>
+                      <p className="text-xs text-green-700 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
+                      <p className="text-xs text-green-600/70 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
