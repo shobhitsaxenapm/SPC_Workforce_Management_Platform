@@ -39,7 +39,6 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-xs">
             <tr>
               <th className="px-4 py-4 pl-6">Candidate Details</th>
-              <th className="px-4 py-4">Current Status</th>
               <th className="px-4 py-4">Applied On</th>
               <th className="px-4 py-4">Application Status</th>
               <th className="px-4 py-4 text-right pr-6">Actions</th>
@@ -48,7 +47,7 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
           <tbody className="divide-y divide-slate-100">
             {applications.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                   No applicants found for this job.
                 </td>
               </tr>
@@ -70,12 +69,6 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
                           <span>{candidate.phone}</span>
                         </div>
                         <div>{candidate.currentLocation}</div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <div className="text-slate-900 font-medium">{candidate.currentRole || 'Fresher'}</div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {candidate.currentCompany ? candidate.currentCompany : 'No Company'} • {candidate.totalExperience || '0 Years'}
                       </div>
                     </td>
                     <td className="px-4 py-4 align-top">
