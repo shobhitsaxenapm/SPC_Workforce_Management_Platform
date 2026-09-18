@@ -1,18 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Application, Candidate } from '../types';
 import { useApp } from '../context/AppContext';
 import { FileText, Eye, CheckCircle2, XCircle, ArrowRightCircle } from 'lucide-react';
 import ResumeModal from './ResumeModal';
 import { cn, formatDate } from '../lib/utils';
+import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
+import { isDateInPreset } from '../lib/dateUtils';
+import { SearchX } from 'lucide-react';
 
 interface JobApplicantsTabProps {
+  jobId: string;
   applications: Application[];
   candidates: Candidate[];
 }
 
-export default function JobApplicantsTab({ applications, candidates }: JobApplicantsTabProps) {
+export default function JobApplicantsTab({ jobId, applications, candidates }: JobApplicantsTabProps) {
   const { updateApplicationStage, setQuickViewCandidateId } = useApp();
   const [viewResumeId, setViewResumeId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ApplicantFilters>(createEmptyFilters());
+
+  // Reset filters when changing jobs
+  useEffect(() => {
+    setFilters(createEmptyFilters());
+  }, [jobId]);
+
+  // Compute available locations and statuses based on current applicants
+  const availableLocations = useMemo(() => {
+    const locs = new Set<string>();
+    applications.forEach(app => {
+      const candidate = candidates.find(c => c.id === app.candidateId);
+      if (candidate?.currentLocation) locs.add(candidate.currentLocation);
+    });
+    return Array.from(locs).sort();
+  }, [applications, candidates]);
+
+  const availableStatuses = useMemo(() => {
+    const sts = new Set<string>();
+    applications.forEach(app => {
+      const isMovedToPipeline = !['New', 'Under Review', 'Application Rejected'].includes(app.currentStage);
+      sts.add(isMovedToPipeline ? 'Moved to Pipeline' : app.currentStage);
+    });
+    return Array.from(sts).sort();
+  }, [applications]);
+
+  // Filter applications
+  const filteredApplications = useMemo(() => {
+    return applications.filter(app => {
+      const candidate = candidates.find(c => c.id === app.candidateId);
+      if (!candidate) return false;
+
+      // Search (Name, Email, Phone)
+      if (filters.searchQuery) {
+        const q = filters.searchQuery.toLowerCase();
+        const name = (candidate.fullName || '').toLowerCase();
+        const email = (candidate.email || '').toLowerCase();
+        const phone = (candidate.phone || '').toLowerCase();
+        if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) {
+          return false;
+        }
+      }
+
+      // Location
+      if (filters.locations.length > 0) {
+        if (!candidate.currentLocation || !filters.locations.includes(candidate.currentLocation)) {
+          return false;
+        }
+      }
+
+      // Status
+      if (filters.statuses.length > 0) {
+        const isMovedToPipeline = !['New', 'Under Review', 'Application Rejected'].includes(app.currentStage);
+        const displayStatus = isMovedToPipeline ? 'Moved to Pipeline' : app.currentStage;
+        if (!filters.statuses.includes(displayStatus)) {
+          return false;
+        }
+      }
+
+      // Applied On
+      if (filters.appliedOn) {
+        if (!isDateInPreset(app.appliedDate, filters.appliedOn, filters.customStartDate, filters.customEndDate)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [applications, candidates, filters]);
 
   // We only show website applications in this tab. The logic to filter them can be handled here or in JobDetail,
   // but to be safe we'll show whatever applications are passed in.
@@ -33,8 +106,20 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <ApplicantFilterToolbar 
+        filters={filters} 
+        onChange={setFilters} 
+        availableLocations={availableLocations} 
+        availableStatuses={availableStatuses} 
+      />
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-sm font-medium text-slate-500">
+          Showing {filteredApplications.length} of {applications.length} applicants
+        </span>
+      </div>
+      <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-600">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-xs">
             <tr>
@@ -45,14 +130,26 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {applications.length === 0 ? (
+            {filteredApplications.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                  No applicants found for this job.
+                <td colSpan={4} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-500">
+                    <SearchX className="w-10 h-10 text-slate-300 mb-3" />
+                    <p className="text-sm font-medium text-slate-900 mb-1">No applicants found</p>
+                    <p className="text-xs text-slate-500 mb-4">Try adjusting your filters or search query.</p>
+                    {(filters.searchQuery || filters.locations.length > 0 || filters.statuses.length > 0 || filters.appliedOn) && (
+                      <button 
+                        onClick={() => setFilters(createEmptyFilters())}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
-              applications.map((app) => {
+              filteredApplications.map((app) => {
                 const candidate = candidates.find((c) => c.id === app.candidateId);
                 if (!candidate) return null;
 
@@ -144,6 +241,7 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       {viewResumeId && (

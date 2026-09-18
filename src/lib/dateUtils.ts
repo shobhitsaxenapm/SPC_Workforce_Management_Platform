@@ -1,4 +1,4 @@
-export type DatePreset = 'All Time' | 'Last 7 Days' | 'Last 30 Days' | 'This Month' | 'Last Quarter' | 'Custom';
+export type DatePreset = 'All Time' | 'Today' | 'Last 7 Days' | 'Last 30 Days' | 'This Month' | 'Last Quarter' | 'Custom';
 
 export function parsePeriod(periodStr: string | undefined | null): Date | null {
   if (!periodStr) return null;
@@ -41,6 +41,9 @@ export function isDateInPreset(
   switch (preset) {
     case 'All Time':
       return true;
+    case 'Today': {
+      return target.getTime() === ref.getTime();
+    }
     case 'Last 7 Days': {
       const start = new Date(ref);
       start.setDate(ref.getDate() - 7);

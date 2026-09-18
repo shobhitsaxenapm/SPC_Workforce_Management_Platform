@@ -301,7 +301,7 @@ export default function JobDetail() {
       )}
       
       {activeTab === 'Applicants' && (
-        <JobApplicantsTab applications={applicants} candidates={candidates} />
+        <JobApplicantsTab jobId={job.id} applications={applicants} candidates={candidates} />
       )}
 
       {activeTab === 'Matches' && <JobMatchesTab job={job} />}
