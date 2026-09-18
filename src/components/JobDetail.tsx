@@ -288,11 +288,6 @@ export default function JobDetail() {
                   <p className="text-xs text-slate-500 mb-1">Application Deadline</p>
                   <p className="text-sm font-medium text-slate-800">{formatDate(job.applicationDeadline)}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Visibility</p>
-                  <p className="text-sm font-medium text-slate-800">{job.visibility}</p>
-                </div>
-                
                 <hr className="border-slate-100" />
                 
                 <div>

@@ -91,7 +91,7 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
                         {isMovedToPipeline ? 'Moved to Pipeline' : app.currentStage}
                       </span>
                     </td>
-                    <td className="px-4 py-4 align-top text-right pr-6 space-y-2">
+                    <td className="px-4 py-4 align-top text-right pr-6">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setQuickViewCandidateId(candidate.id)}
@@ -107,32 +107,36 @@ export default function JobApplicantsTab({ applications, candidates }: JobApplic
                         >
                           <FileText className="w-4 h-4" />
                         </button>
-                      </div>
-                      
-                      {!isMovedToPipeline && app.currentStage !== 'Application Rejected' && (
-                        <div className="flex flex-col items-end gap-1.5 mt-2">
-                          {app.currentStage === 'New' && (
+                        
+                        {!isMovedToPipeline && app.currentStage !== 'Application Rejected' && (
+                          <>
+                            <div className="w-px h-4 bg-slate-200 mx-1" />
+                            {app.currentStage === 'New' && (
+                              <button
+                                onClick={() => handleMarkUnderReview(app.id)}
+                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                title="Mark Under Review"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleMarkUnderReview(app.id)}
-                              className="text-[11px] font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+                              onClick={() => handleMoveToScreening(app.id)}
+                              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Move to Screening"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Mark Under Review
+                              <ArrowRightCircle className="w-4 h-4" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleMoveToScreening(app.id)}
-                            className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
-                          >
-                            <ArrowRightCircle className="w-3.5 h-3.5" /> Move to Screening
-                          </button>
-                          <button
-                            onClick={() => handleReject(app.id)}
-                            className="text-[11px] font-medium text-red-600 hover:text-red-700 transition-colors flex items-center gap-1"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Reject
-                          </button>
-                        </div>
-                      )}
+                            <button
+                              onClick={() => handleReject(app.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Reject Application"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
