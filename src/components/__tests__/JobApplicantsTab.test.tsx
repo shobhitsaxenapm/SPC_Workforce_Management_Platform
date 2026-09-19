@@ -5,9 +5,10 @@ import JobApplicantsTab from '../JobApplicantsTab';
 import { Application, Candidate } from '../../types';
 import '@testing-library/jest-dom';
 
+const mockUpdateStage = vi.fn();
 vi.mock('../../context/AppContext', () => ({
   useApp: () => ({
-    updateApplicationStage: vi.fn(),
+    updateApplicationStage: mockUpdateStage,
     setQuickViewCandidateId: vi.fn()
   })
 }));
@@ -167,5 +168,22 @@ describe('JobApplicantsTab Filtering', () => {
     if (removeBtn) fireEvent.click(removeBtn);
     
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument();
+  });
+
+  it('asks for confirmation and updates stage when Move to Pipeline is clicked', () => {
+    // Mock window.confirm
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    render(<JobApplicantsTab jobId="j1" applications={mockApplications} candidates={mockCandidates} />);
+    
+    // Find the move to pipeline button for Alice (who is in 'New' stage)
+    const moveBtn = screen.getByTitle('Move to Pipeline');
+    fireEvent.click(moveBtn);
+    
+    expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to move this applicant to the pipeline?');
+    expect(mockUpdateStage).toHaveBeenCalledWith('a1', 'Sourced');
+    
+    confirmSpy.mockRestore();
+    mockUpdateStage.mockClear();
   });
 });

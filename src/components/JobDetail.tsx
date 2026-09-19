@@ -10,7 +10,6 @@ import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
-import OfferPreparationModal from './OfferPreparationModal';
 import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
 import JobApplicantsTab from './JobApplicantsTab';
 
@@ -24,7 +23,6 @@ export default function JobDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
-  const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
   
   if (!job) return <div>Job not found</div>;
 
@@ -50,7 +48,11 @@ export default function JobDetail() {
   
   let groupedCount = 0;
   pipelineApps.forEach(app => {
-    const canonical = app.currentStage as string;
+    let canonical = app.currentStage as string;
+    if (canonical === 'Offered') {
+      canonical = 'Selected';
+    }
+    
     if (groupedApps[canonical]) {
         groupedApps[canonical].push(app);
     } else {
@@ -369,7 +371,7 @@ export default function JobDetail() {
                           </div>
                         )}
                         
-                        {app.currentStage === 'Selected' && (() => {
+                        {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
                            const appOffers = offers.filter(o => o.applicationId === app.id);
                            const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
                            if (!activeOffer) return null;
@@ -377,7 +379,9 @@ export default function JobDetail() {
                              <div className="mb-3 flex gap-2">
                                <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-100 flex items-center gap-1">
                                  <FileText className="w-3 h-3" />
-                                 {activeOffer.status}
+                                 {['Offer Draft', 'Pending Approval', 'Approved', 'Sent'].includes(activeOffer.status) 
+                                   ? `Offer: ${activeOffer.status === 'Offer Draft' ? 'Draft' : activeOffer.status}` 
+                                   : activeOffer.status}
                                </span>
                              </div>
                            );
@@ -395,57 +399,40 @@ export default function JobDetail() {
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-center gap-2">
-                              {app.currentStage === 'Selected' && (() => {
+                              {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
                                 const appOffers = offers.filter(o => o.applicationId === app.id);
                                 const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
                                 
-                                let actionLabel = 'Prepare Offer';
-                                let isLink = false;
-                                let showModal = false;
-
-                                if (!activeOffer) {
-                                  actionLabel = 'Prepare Offer';
-                                  showModal = true;
-                                } else if (activeOffer.status === 'Offer Draft' || activeOffer.status === 'Revised Draft') {
-                                  actionLabel = 'Continue Offer';
-                                  showModal = true;
-                                } else if (activeOffer.status === 'Approval Pending') {
-                                  actionLabel = 'View Approval';
-                                  isLink = true;
-                                } else if (activeOffer.status === 'Approved') {
-                                  actionLabel = 'Issue Offer';
-                                  showModal = true;
-                                } else if (['Offer Issued', 'Revised Offer Issued', 'Negotiation in Progress', 'Sent'].includes(activeOffer.status)) {
+                                let actionLabel = 'Initiate Offer';
+                                if (activeOffer) {
                                   actionLabel = 'View Offer';
-                                  isLink = true;
-                                }
-
-                                if (isLink) {
-                                  return (
-                                    <Link
-                                      to="/offers"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors text-[10px] font-medium border border-indigo-200 block"
-                                    >
-                                      {actionLabel}
-                                    </Link>
-                                  );
                                 }
                                 
                                 return (
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); if(showModal) setShowOfferPreparationModal(app.id); }}
-                                    className="p-1.5 px-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200"
-                                    title={actionLabel}
+                                  <Link
+                                    to="/offers"
+                                    state={!activeOffer ? {
+                                      candidateId: candidate.id,
+                                      candidateName: candidate.fullName,
+                                      jobId: job.id,
+                                      jobTitle: job.title,
+                                      clientId: job.clientId,
+                                      projectId: job.projectId,
+                                      applicationId: app.id
+                                    } : {
+                                      openOfferId: activeOffer.id
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200 block"
                                   >
                                     <FileText className="w-3 h-3" />
                                     {actionLabel}
-                                  </button>
+                                  </Link>
                                 );
                               })()}
                               <select 
                                 className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
-                                value={app.currentStage}
+                                value={app.currentStage === 'Offered' ? 'Selected' : app.currentStage}
                                 onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
                               >
                                 {getSelectableStages(app.currentStage).map(s => <option key={s} value={s}>{s}</option>)}
@@ -530,14 +517,6 @@ export default function JobDetail() {
           jobId={job.id} 
           isOpen={showAddCandidateModal} 
           onClose={() => setShowAddCandidateModal(false)} 
-        />
-      )}
-
-      {showOfferPreparationModal && (
-        <OfferPreparationModal 
-          isOpen={!!showOfferPreparationModal}
-          onClose={() => setShowOfferPreparationModal(null)}
-          applicationId={showOfferPreparationModal}
         />
       )}
     </div>

@@ -33,7 +33,7 @@ export type ApplicationSubstate =
   | string;
 
 export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'No Show';
-export type OfferStatus = 'Offer Draft' | 'Approval Pending' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn' | 'Negotiation in Progress' | 'Revised Draft' | 'Revised Offer Issued' | 'Superseded';
+export type OfferStatus = 'Offer Draft' | 'Pending Approval' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn' | 'Negotiation in Progress' | 'Revised Draft' | 'Revised Offer Issued' | 'Superseded';
 export type OnboardingStatus = 'Documents Requested' | 'Documents Submitted' | 'Verification In Progress' | 'Changes Requested' | 'Approved' | 'Joining Scheduled' | 'Completed';
 export type DeploymentStatus = 'Scheduled' | 'Active' | 'Completed' | 'Terminated';
 export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';
@@ -365,6 +365,14 @@ export interface Interview {
   internalNotes?: string;
 }
 
+export interface OfferActivity {
+  id: string;
+  action: string;
+  date: string;
+  actor: string;
+  comment?: string;
+}
+
 export interface Offer {
   id: string;
   applicationId: string;
@@ -420,6 +428,7 @@ export interface Offer {
   // Version and Tracking
   templateVersion?: string;
   deliveryStatus?: 'Not Sent' | 'Sending' | 'Sent' | 'Failed' | 'Delivery Pending';
+  activities?: OfferActivity[];
 }
 
 export interface Onboarding {

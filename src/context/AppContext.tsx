@@ -965,7 +965,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const submitOfferForApproval = (offerId: string) => {
-    updateOffer(offerId, { status: 'Approval Pending' });
+    updateOffer(offerId, { status: 'Pending Approval' });
   };
 
   const approveOffer = (offerId: string) => {

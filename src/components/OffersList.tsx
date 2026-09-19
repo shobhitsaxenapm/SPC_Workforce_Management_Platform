@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Search, AlertCircle, X, CheckCircle2, Calendar, Clock, 
   User, DollarSign, Briefcase, FileText, ArrowRight, Eye, 
-  RefreshCw, Send, Check, ShieldAlert, AlertTriangle, Users, HelpCircle
+  RefreshCw, Send, Check, ShieldAlert, AlertTriangle, Users, HelpCircle, Save
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
@@ -18,6 +18,7 @@ export default function OffersList() {
     candidates, 
     jobs, 
     clients, 
+    projects,
     onboardings,
     updateOfferStatus,
     submitOfferForApproval,
@@ -25,7 +26,9 @@ export default function OffersList() {
     issueOffer,
     recordOfferResponse,
     extendOfferExpiry, 
-    startOnboardingFromOffer 
+    startOnboardingFromOffer,
+    createOffer,
+    updateOffer
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,13 +48,39 @@ export default function OffersList() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Active Modals
-  // 'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | 'hold_confirm' | 'version_history' | null
-  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'reject_confirm' | 'extend_expiry' | 'version_history' | null>(null);
+  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'draft_form' | 'return_comment' | 'letter_preview' | null>(null);
+  const [previewSource, setPreviewSource] = useState<'view' | 'draft_form' | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [returnComment, setReturnComment] = useState('');
+  const [draftData, setDraftData] = useState({
+    offeredCompensation: '',
+    employmentType: 'Full-time',
+    contractDuration: '',
+    proposedJoiningDate: '',
+    expiryDate: '',
+    notes: ''
+  });
+
+  const location = useLocation();
+  const [handoffState, setHandoffState] = useState<any>(null);
+
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.openOfferId) {
+        const offerToOpen = offers.find(o => o.id === location.state.openOfferId);
+        if (offerToOpen) {
+          setSelectedOffer(offerToOpen);
+          setActiveModal('view');
+        }
+      } else if (location.state.candidateId) {
+        setHandoffState(location.state);
+      }
+      // Clear state from history so it doesn't trigger on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, offers]);
 
   // Form states
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [newExpiryDate, setNewExpiryDate] = useState('');
   const [formError, setFormError] = useState('');
 
   const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -59,10 +88,37 @@ export default function OffersList() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Status Formatter
+  const getDisplayStatus = (status: OfferStatus): string => {
+    if (status === 'Offer Draft') return 'Draft';
+    if (status === 'Pending Approval') return 'Pending Approval';
+    if (status === 'Approved') return 'Approved';
+    if (['Offer Issued', 'Sent', 'Viewed'].includes(status)) return 'Sent';
+    if (['Negotiation in Progress', 'Revised Draft', 'Revised Offer Issued'].includes(status)) return 'Negotiating';
+    if (status === 'Accepted') return 'Accepted';
+    if (status === 'Declined') return 'Declined';
+    if (status === 'Expired') return 'Expired';
+    if (['Withdrawn', 'Superseded'].includes(status)) return 'Withdrawn';
+    return status;
+  };
+
+  // Last Activity Calculator
+  const getLastActivity = (offer: Offer): string | null => {
+    const activityDates = (offer.activities || []).map(a => a.date);
+    const dates = [
+      offer.sentDate, offer.rejectedAt, offer.acceptedAt, 
+      offer.withdrawnAt, offer.extendedAt, offer.offerDate,
+      ...activityDates
+    ].filter(Boolean) as string[];
+    
+    if (dates.length === 0) return null;
+    return new Date(Math.max(...dates.map(d => new Date(d).getTime()))).toISOString();
+  };
+
   // Expiry Risk Calculator
-  const getExpiryRisk = (offer: Offer): 'Expired' | 'Expiring in 7 Days' | 'Expiring in 30 Days' | 'No Immediate Risk' => {
+  const getExpiryRisk = (offer: Offer): 'Expired' | 'Expiring soon' | 'No expiry date' | 'No Immediate Risk' => {
     if (offer.status === 'Expired') return 'Expired';
-    if (!offer.expiryDate) return 'No Immediate Risk';
+    if (!offer.expiryDate) return 'No expiry date';
     
     const expiryTime = new Date(offer.expiryDate).getTime();
     const now = Date.now();
@@ -71,8 +127,7 @@ export default function OffersList() {
     if (diffMs < 0) return 'Expired';
     
     const diffDays = diffMs / (24 * 3600 * 1000);
-    if (diffDays <= 7) return 'Expiring in 7 Days';
-    if (diffDays <= 30) return 'Expiring in 30 Days';
+    if (diffDays <= 7) return 'Expiring soon';
     return 'No Immediate Risk';
   };
 
@@ -81,10 +136,10 @@ export default function OffersList() {
   const uniqueJobs = Array.from(new Set(offers.map(o => o.jobId))).map(id => jobs.find(j => j.id === id)).filter(Boolean);
 
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Offer Status', options: ['Offer Draft', 'Approval Pending', 'Approved', 'Offer Issued', 'Sent', 'Viewed', 'Accepted', 'Declined', 'Expired', 'Withdrawn', 'Negotiation in Progress', 'Revised Draft', 'Revised Offer Issued', 'Superseded'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Status', options: ['Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
     { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) },
-    { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expired', 'Expiring in 7 Days', 'Expiring in 30 Days', 'No Immediate Risk'].map(r => ({ value: r, label: r })) }
+    { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expiring soon', 'Expired', 'No expiry date'].map(r => ({ value: r, label: r })) }
   ];
 
   // Deduplicate offers by applicationId, taking the latest version
@@ -109,11 +164,11 @@ export default function OffersList() {
       client?.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       offer.offeredRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (job && job.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      offer.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      offer.offeredCompensation.toLowerCase().includes(searchTerm.toLowerCase());
+      getDisplayStatus(offer.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (offer.offerReference && offer.offerReference.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Filter values matches
-    const matchStatus = !filters.status || offer.status === filters.status;
+    const matchStatus = !filters.status || getDisplayStatus(offer.status) === filters.status;
     const matchClient = !filters.clientId || offer.clientId === filters.clientId;
     const matchJob = !filters.jobId || offer.jobId === filters.jobId;
     
@@ -122,101 +177,187 @@ export default function OffersList() {
     const matchRisk = !filters.expiryRisk || risk === filters.expiryRisk;
 
     // Date range preset matches
-    const matchDate = isDateInPreset(offer.proposedJoiningDate, datePreset, customStart, customEnd);
+    const lastActivity = getLastActivity(offer);
+    const matchDate = lastActivity ? isDateInPreset(lastActivity, datePreset, customStart, customEnd) : (datePreset === 'All Time');
 
     return matchSearch && matchStatus && matchClient && matchJob && matchRisk && matchDate;
   });
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
 
-  // Mark Accepted Handler
-  const handleMarkAccepted = (offerId: string) => {
-    recordOfferResponse(offerId, 'Accepted');
-    triggerToast('Offer status updated to Accepted!');
-    
-    if (selectedOffer && selectedOffer.id === offerId) {
-      setSelectedOffer(prev => prev ? { ...prev, status: 'Accepted' } : null);
-    }
-  };
-
-  // Mark Withdrawn Handler
-  const handleMarkWithdrawn = (offerId: string) => {
-    recordOfferResponse(offerId, 'Withdrawn');
-    triggerToast('Offer has been withdrawn.');
-    
-    if (selectedOffer && selectedOffer.id === offerId) {
-      setSelectedOffer(prev => prev ? { ...prev, status: 'Withdrawn' } : null);
-    }
-  };
-
-  // Reopen Offer Handler
-  const handleReopenOffer = (offerId: string) => {
-    updateOfferStatus(offerId, 'Offer Draft');
-    triggerToast('Offer status reverted to Draft.');
-    
-    if (selectedOffer && selectedOffer.id === offerId) {
-      setSelectedOffer(prev => prev ? { ...prev, status: 'Offer Draft' } : null);
-    }
-  };
-
-  // Reject Submit Handler
-  const handleRejectSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedOffer) return;
-    if (!rejectionReason.trim()) {
-      setFormError('Rejection reason is required.');
-      return;
-    }
-
-    recordOfferResponse(selectedOffer.id, 'Declined', rejectionReason.trim());
-
-    triggerToast('Offer has been marked as Rejected.');
-    setActiveModal(null);
-    setSelectedOffer(null);
-    setRejectionReason('');
-    setFormError('');
-  };
-
-  // Expiry Extension Submit Handler
-  const handleExtendExpirySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedOffer) return;
-    if (!newExpiryDate) {
-      setFormError('New expiry date is required.');
-      return;
-    }
-    
-    const selectedDate = new Date(newExpiryDate);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    
-    if (selectedDate < today) {
-      setFormError('Expiry date must be in the future.');
-      return;
-    }
-
-    extendOfferExpiry(selectedOffer.id, newExpiryDate + 'T23:59:59Z');
-    triggerToast('Offer expiry date extended successfully!');
-    setActiveModal(null);
-    setSelectedOffer(null);
-    setNewExpiryDate('');
-    setFormError('');
-  };
-
   // Start Onboarding Submit Handler
   const handleStartOnboardingSubmit = () => {
     if (!selectedOffer) return;
-    
-    const res = startOnboardingFromOffer(selectedOffer.id);
-    if (!res.success) {
-      triggerToast(res.error || 'Onboarding start failed.', 'error');
-      setFormError(res.error || 'Onboarding start failed.');
+    const result = startOnboardingFromOffer(selectedOffer.id);
+    if (result.success) {
+      triggerToast('Onboarding created and linked successfully!');
+      setActiveModal(null);
+      setSelectedOffer(null);
+    } else {
+      const errorMsg = result.error || 'Failed to start onboarding';
+      triggerToast(errorMsg, 'error');
+      setFormError(errorMsg);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    if (!draftData.offeredCompensation.trim() || !draftData.proposedJoiningDate || !draftData.expiryDate) {
+      setFormError('Compensation, joining date, and expiry date are required.');
       return;
     }
 
-    triggerToast('Onboarding created and linked successfully!');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const joiningDate = new Date(draftData.proposedJoiningDate);
+    if (joiningDate < today) {
+      setFormError('Joining date cannot be in the past.');
+      return;
+    }
+
+    const validUntil = new Date(draftData.expiryDate);
+    if (validUntil < today) {
+      setFormError('Expiry date cannot be in the past.');
+      return;
+    }
+
+    if (selectedOffer && selectedOffer.status === 'Offer Draft') {
+      // Edit existing draft
+      updateOffer(selectedOffer.id, { 
+        ...draftData,
+        activities: [
+          ...(selectedOffer.activities || []),
+          {
+            id: Date.now().toString(),
+            action: 'Draft updated',
+            date: new Date().toISOString(),
+            actor: 'Current user'
+          }
+        ]
+      });
+      triggerToast('Offer draft updated successfully!');
+    } else if (handoffState) {
+      // Create new draft
+      createOffer({
+        candidateId: handoffState.candidateId,
+        applicationId: handoffState.applicationId,
+        jobId: handoffState.jobId,
+        clientId: handoffState.clientId,
+        projectId: handoffState.projectId,
+        offeredRole: handoffState.jobTitle,
+        offeredCompensation: draftData.offeredCompensation,
+        employmentType: draftData.employmentType as any,
+        contractDuration: draftData.contractDuration,
+        proposedJoiningDate: draftData.proposedJoiningDate,
+        expiryDate: draftData.expiryDate,
+        notes: draftData.notes,
+        approvalRequired: false,
+        version: 1,
+        activities: [
+          {
+            id: Date.now().toString(),
+            action: 'Draft saved',
+            date: new Date().toISOString(),
+            actor: 'Current user'
+          }
+        ]
+      });
+      triggerToast('Offer draft created successfully!');
+      setHandoffState(null);
+    }
+
     setActiveModal(null);
     setSelectedOffer(null);
+    setFormError('');
+  };
+
+  const handleSubmitForApproval = () => {
+    if (!selectedOffer) return;
+    if (!selectedOffer.offeredCompensation || !selectedOffer.employmentType || !selectedOffer.proposedJoiningDate || !selectedOffer.expiryDate) {
+      setFormError('Cannot submit: Compensation, employment type, joining date, and expiry date are required.');
+      return;
+    }
+    if (window.confirm('Are you sure you want to submit this offer for approval?')) {
+      updateOffer(selectedOffer.id, {
+        status: 'Pending Approval',
+        activities: [
+          ...(selectedOffer.activities || []),
+          {
+            id: Date.now().toString(),
+            action: 'Submitted for approval',
+            date: new Date().toISOString(),
+            actor: 'Current user'
+          }
+        ]
+      });
+      triggerToast('Offer submitted for approval.');
+      setActiveModal(null);
+      setSelectedOffer(null);
+    }
+  };
+
+  const handleApproveOffer = () => {
+    if (!selectedOffer) return;
+    if (window.confirm('Are you sure you want to approve this offer?')) {
+      updateOffer(selectedOffer.id, {
+        status: 'Approved',
+        activities: [
+          ...(selectedOffer.activities || []),
+          {
+            id: Date.now().toString(),
+            action: 'Offer approved',
+            date: new Date().toISOString(),
+            actor: 'Current user'
+          }
+        ]
+      });
+      triggerToast('Offer approved successfully.');
+      setActiveModal(null);
+      setSelectedOffer(null);
+    }
+  };
+
+  const handleReturnToDraft = () => {
+    if (!selectedOffer) return;
+    updateOffer(selectedOffer.id, {
+      status: 'Offer Draft',
+      activities: [
+        ...(selectedOffer.activities || []),
+        {
+          id: Date.now().toString(),
+          action: 'Returned to draft',
+          date: new Date().toISOString(),
+          actor: 'Current user',
+          comment: returnComment.trim() || undefined
+        }
+      ]
+    });
+    triggerToast('Offer returned to draft.');
+    setActiveModal(null);
+    setSelectedOffer(null);
+    setReturnComment('');
+  };
+
+  const handleIssueOffer = () => {
+    if (!selectedOffer) return;
+    if (window.confirm('Are you sure you want to issue this offer to the candidate?')) {
+      updateOffer(selectedOffer.id, {
+        status: 'Sent',
+        sentDate: new Date().toISOString(),
+        activities: [
+          ...(selectedOffer.activities || []),
+          {
+            id: Date.now().toString(),
+            action: 'Offer issued',
+            date: new Date().toISOString(),
+            actor: 'Current user'
+          }
+        ]
+      });
+      triggerToast('Offer sent to candidate.');
+      setActiveModal(null);
+      setSelectedOffer(null);
+    }
   };
 
   return (
@@ -232,8 +373,52 @@ export default function OffersList() {
         </div>
       )}
 
+      {handoffState && handoffState.candidateId && !handoffState.openOfferId && (() => {
+        const existingOffer = offers.find(o => o.applicationId === handoffState.applicationId);
+        
+        return (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
+            <div>
+              <h3 className="text-sm font-semibold text-indigo-900 mb-1">
+                Ready to prepare an offer for {handoffState.candidateName}
+              </h3>
+              <p className="text-xs text-indigo-700 max-w-2xl">
+                {handoffState.jobTitle} {handoffState.clientId ? `· ${clients.find(c => c.id === handoffState.clientId)?.name || handoffState.clientId}` : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {existingOffer ? (
+                <button
+                  onClick={() => {
+                    setSelectedOffer(existingOffer);
+                    setActiveModal('view');
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-lg shadow-sm"
+                >
+                  View Offer
+                </button>
+              ) : (
+                <button
+                  onClick={() => setActiveModal('draft_form')}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm"
+                >
+                  Prepare Offer
+                </button>
+              )}
+              <button 
+                onClick={() => setHandoffState(null)} 
+                className="text-indigo-400 hover:text-indigo-600 transition-colors bg-white rounded-full p-1 border border-indigo-100 shadow-sm"
+                aria-label="Dismiss banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="flex justify-between items-center">
-        <p className="text-slate-600">Track offer approvals, sent offers, expiry risk, and accepted client-deployment offers.</p>
+        <p className="text-slate-600">Manage offer drafts, approvals, issued offers, expiry risk and candidate responses.</p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -252,6 +437,7 @@ export default function OffersList() {
             preset={datePreset}
             customStart={customStart}
             customEnd={customEnd}
+            label="Last Activity"
             onChange={(preset, start, end) => {
               setDatePreset(preset);
               setCustomStart(start);
@@ -279,7 +465,7 @@ export default function OffersList() {
         {datePreset !== 'All Time' && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Proposed Joining Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
+              Last Activity: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
               <button 
                 onClick={() => {
                   setDatePreset('All Time');
@@ -297,15 +483,16 @@ export default function OffersList() {
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
               <tr>
-                <th className="px-6 py-4">Candidate & Client</th>
-                <th className="px-6 py-4">Offered Role</th>
-                <th className="px-6 py-4">Compensation</th>
-                <th className="px-6 py-4">Joining Date</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4">Candidate</th>
+                <th className="px-6 py-4">Job & Client</th>
+                <th className="px-6 py-4">Current Offer</th>
+                <th className="px-6 py-4 whitespace-nowrap">Joining Date</th>
+                <th className="px-6 py-4 whitespace-nowrap">Status</th>
+                <th className="px-6 py-4 whitespace-nowrap">Last Activity</th>
+                <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -314,80 +501,77 @@ export default function OffersList() {
                 const job = jobs.find(j => j.id === offer.jobId);
                 const client = clients.find(c => c.id === offer.clientId);
                 const risk = getExpiryRisk(offer);
+                const displayStatus = getDisplayStatus(offer.status);
+                const lastActivityDate = getLastActivity(offer);
 
                 return (
                   <tr key={offer.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-800">{candidate?.fullName}</div>
-                      <div className="text-xs text-slate-500 mt-1">{client?.name}</div>
+                      {candidate?.phone && <div className="text-xs text-slate-500 mt-1">{candidate.phone}</div>}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-slate-800 font-medium">{offer.offeredRole}</div>
-                      <div className="text-xs text-slate-500 mt-1">{offer.contractDuration}</div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-800 font-semibold">
-                      {offer.offeredCompensation}
-                    </td>
-                    <td className="px-6 py-4 text-slate-700">
-                      {formatDate(offer.proposedJoiningDate)}
+                      <div className="text-xs text-slate-500 mt-1">{client?.name}</div>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="text-slate-800 font-medium">{offer.offeredCompensation}</div>
+                      <div className="text-xs text-slate-500 mt-1">{offer.contractDuration}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {offer.proposedJoiningDate ? formatDate(offer.proposedJoiningDate) : <span className="text-slate-400 italic">Not set</span>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span className={cn(
                           "inline-flex items-center w-fit px-2.5 py-0.5 rounded text-xs font-semibold border",
-                          offer.status === 'Accepted' ? "bg-green-50 text-green-700 border-green-200" :
-                          offer.status === 'Sent' || offer.status === 'Viewed' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          offer.status === 'Approval Pending' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                          offer.status === 'Declined' || offer.status === 'Expired' ? "bg-red-50 text-red-700 border-red-200" :
+                          displayStatus === 'Accepted' ? "bg-green-50 text-green-700 border-green-200" :
+                          displayStatus === 'Sent' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          displayStatus === 'Pending Approval' || displayStatus === 'Negotiating' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          displayStatus === 'Declined' || displayStatus === 'Expired' ? "bg-red-50 text-red-700 border-red-200" :
                           "bg-slate-50 text-slate-600 border-slate-200"
                         )}>
-                          {offer.status}
+                          {displayStatus}
                         </span>
-                        {offer.status === 'Sent' && offer.expiryDate && (
+                        {(displayStatus === 'Sent' || displayStatus === 'Negotiating') && offer.expiryDate && (
                           <span className={cn(
                             "inline-flex items-center w-fit gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded",
                             risk === 'Expired' ? "bg-red-50 text-red-600 border border-red-100" :
-                            risk === 'Expiring in 7 Days' ? "bg-amber-50 text-amber-700 border border-amber-100 animate-pulse" :
+                            risk === 'Expiring soon' ? "bg-amber-50 text-amber-700 border border-amber-100 animate-pulse" :
                             "text-slate-500"
                           )}>
-                            <AlertCircle className="w-3 h-3" /> Exp: {formatDate(offer.expiryDate)}
+                            <AlertCircle className="w-3 h-3 shrink-0" /> <span className="truncate">Offer expires: {formatDate(offer.expiryDate)}</span>
                           </span>
                         )}
                         {offer.onboardingStarted && (
                           <span className="inline-flex items-center gap-1 text-[10px] text-green-600 font-semibold">
-                            <CheckCircle2 className="w-3 h-3" /> Onboarding Started
+                            <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">Onboarding Started</span>
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-slate-700 whitespace-nowrap">
+                      {lastActivityDate ? formatDate(lastActivityDate) : <span className="text-slate-400 italic">Not available</span>}
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex gap-2 justify-end">
                         <button 
                           onClick={() => {
                             setSelectedOffer(offer);
                             setActiveModal('view');
-                          }} 
-                          className="text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm"
+                          }}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium border border-blue-200 flex items-center gap-1 whitespace-nowrap shrink-0"
+                          title="View Offer"
                         >
-                          <Eye className="w-3.5 h-3.5" /> View
+                          <Eye className="w-3.5 h-3.5" />
+                          View Offer
                         </button>
-                        {offers.filter(o => o.applicationId === offer.applicationId).length > 1 && (
-                          <button 
-                            onClick={() => {
-                              setSelectedOffer(offer);
-                              setActiveModal('version_history');
-                            }} 
-                            className="text-xs font-medium text-blue-600 hover:text-blue-900 border border-blue-200 bg-blue-50 px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" /> History
-                          </button>
-                        )}
                         
-                        {offer.status === 'Accepted' && (
+                        {displayStatus === 'Accepted' && (
                           offer.onboardingStarted ? (
                             <Link 
                               to="/onboarding" 
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 border border-blue-200 rounded shadow-sm inline-flex items-center"
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 border border-blue-200 rounded shadow-sm inline-flex items-center shrink-0 whitespace-nowrap"
                             >
                               View Onboarding
                             </Link>
@@ -398,9 +582,9 @@ export default function OffersList() {
                                 setFormError('');
                                 setActiveModal('onboarding_confirm');
                               }} 
-                              className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-2.5 py-1.5 rounded shadow-sm"
+                              className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-2.5 py-1.5 rounded shadow-sm flex items-center gap-1 shrink-0 whitespace-nowrap"
                             >
-                              Start Onboarding
+                              <ArrowRight className="w-3.5 h-3.5 shrink-0" /> Start Onboarding
                             </button>
                           )
                         )}
@@ -411,7 +595,7 @@ export default function OffersList() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     No offers found matching your criteria.
                   </td>
                 </tr>
@@ -516,122 +700,102 @@ export default function OffersList() {
                 )}
               </div>
 
-              {/* Status Action Buttons */}
-              <div className="pt-6 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-white">
-                {selectedOffer.status === 'Offer Draft' && (
-                  <button 
-                    onClick={() => {
-                      submitOfferForApproval(selectedOffer.id);
-                      triggerToast('Offer submitted for approvals review.');
-                      setSelectedOffer(prev => prev ? { ...prev, status: 'Approval Pending' } : null);
-                    }}
-                    className="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
-                  >
-                    Submit for Approval
-                  </button>
-                )}
+              {/* Activity Timeline */}
+              {selectedOffer.activities && selectedOffer.activities.length > 0 && (
+                <div className="mt-8 border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-500" /> Activity Timeline
+                  </h3>
+                  <div className="space-y-4">
+                    {selectedOffer.activities.map(activity => (
+                      <div key={activity.id} className="flex gap-3">
+                        <div className="w-1.5 rounded-full bg-indigo-100 flex-shrink-0" />
+                        <div className="flex-1 bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-slate-800">{activity.action}</span>
+                            <span className="text-slate-400">{formatDate(activity.date)}</span>
+                          </div>
+                          <span className="text-slate-500 block">by {activity.actor}</span>
+                          {activity.comment && (
+                            <div className="mt-2 text-slate-700 italic bg-white p-2 rounded border border-slate-100">
+                              "{activity.comment}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {selectedOffer.status === 'Approval Pending' && (
+              {/* Status Action Buttons */}
+              <div className="pt-6 mt-6 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-white items-center">
+                <button 
+                  onClick={() => { setActiveModal(null); setSelectedOffer(null); }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Close Offer
+                </button>
+                <button
+                  onClick={() => {
+                    setPreviewSource('view');
+                    setActiveModal('letter_preview');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+                >
+                  <Eye className="w-4 h-4" /> Preview Offer Letter
+                </button>
+                <div className="flex-1" />
+                {selectedOffer.status === 'Offer Draft' && (
                   <>
-                    <button 
+                    <button
                       onClick={() => {
-                        approveOffer(selectedOffer.id);
-                        triggerToast('Offer approved successfully!');
-                        setSelectedOffer(prev => prev ? { ...prev, status: 'Approved', approvedBy: 'Admin' } : null);
+                        setDraftData({
+                          offeredCompensation: selectedOffer.offeredCompensation || '',
+                          employmentType: selectedOffer.employmentType || 'Full-time',
+                          contractDuration: selectedOffer.contractDuration || '',
+                          proposedJoiningDate: selectedOffer.proposedJoiningDate || '',
+                          expiryDate: selectedOffer.expiryDate || '',
+                          notes: selectedOffer.notes || ''
+                        });
+                        setActiveModal('draft_form');
                       }}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm"
+                      className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+                    >
+                      Continue Draft
+                    </button>
+                    <button
+                      onClick={handleSubmitForApproval}
+                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Submit for Approval
+                    </button>
+                  </>
+                )}
+                {selectedOffer.status === 'Pending Approval' && (
+                  <>
+                    <button
+                      onClick={() => setActiveModal('return_comment')}
+                      className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      Return to Draft
+                    </button>
+                    <button
+                      onClick={handleApproveOffer}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Approve Offer
                     </button>
-                    <button 
-                      onClick={() => setActiveModal('reject_confirm')}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg"
-                    >
-                      Reject Offer
-                    </button>
                   </>
                 )}
-
                 {selectedOffer.status === 'Approved' && (
-                  <button 
-                    onClick={() => {
-                      issueOffer(selectedOffer.id);
-                      triggerToast('Offer letter sent to candidate!');
-                      setSelectedOffer(prev => prev ? { ...prev, status: 'Sent', sentDate: new Date().toISOString(), deliveryStatus: 'Sent' } : null);
-                    }}
-                    className="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1.5"
+                  <button
+                    onClick={handleIssueOffer}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <Send className="w-3.5 h-3.5" /> Dispatch Offer
+                    Issue Offer
                   </button>
                 )}
-
-                {selectedOffer.status === 'Sent' && (
-                  <>
-                    <button 
-                      onClick={() => handleMarkAccepted(selectedOffer.id)}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm"
-                    >
-                      Mark Accepted
-                    </button>
-                    <button 
-                      onClick={() => setActiveModal('reject_confirm')}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm"
-                    >
-                      Mark Rejected
-                    </button>
-                    <button 
-                      onClick={() => setActiveModal('extend_expiry')}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm"
-                    >
-                      Extend Expiry
-                    </button>
-                    <button 
-                      onClick={() => handleMarkWithdrawn(selectedOffer.id)}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                    >
-                      Withdraw
-                    </button>
-                  </>
-                )}
-
-                {selectedOffer.status === 'Accepted' && (
-                  <>
-                    {selectedOffer.onboardingStarted ? (
-                      <Link 
-                        to="/onboarding" 
-                        className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm inline-flex items-center gap-1.5"
-                      >
-                        View Onboarding Folder
-                      </Link>
-                    ) : (
-                      <button 
-                        onClick={() => {
-                          setFormError('');
-                          setActiveModal('onboarding_confirm');
-                        }}
-                        className="px-4 py-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm"
-                      >
-                        Start Onboarding Case
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {['Declined', 'Expired', 'Withdrawn'].includes(selectedOffer.status) && (
-                  <button 
-                    onClick={() => handleReopenOffer(selectedOffer.id)}
-                    className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-350 hover:bg-slate-50 rounded-lg shadow-sm flex items-center gap-1.5"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" /> Reopen / Reset to Draft
-                  </button>
-                )}
-
-                <button 
-                  onClick={() => { setActiveModal(null); setSelectedOffer(null); }}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
@@ -703,179 +867,444 @@ export default function OffersList() {
         </div>
       )}
 
-      {/* REJECT OFFER MODAL */}
-      {activeModal === 'reject_confirm' && selectedOffer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">Decline / Reject Offer</h3>
-            </div>
-            
-            <form onSubmit={handleRejectSubmit} className="space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" />
-                  {formError}
+      {/* DRAFT FORM MODAL */}
+      {activeModal === 'draft_form' && (handoffState || selectedOffer) && (() => {
+        const context = selectedOffer || handoffState;
+        const candidateName = selectedOffer ? candidates.find(c => c.id === selectedOffer.candidateId)?.fullName : context.candidateName;
+        const jobTitle = selectedOffer ? selectedOffer.offeredRole : context.jobTitle;
+        const clientId = selectedOffer ? selectedOffer.clientId : context.clientId;
+        const clientName = clientId ? clients.find(c => c.id === clientId)?.name || clientId : '';
+        const projectId = selectedOffer ? selectedOffer.projectId : context.projectId;
+        const projectName = projectId ? projects.find(p => p.id === projectId)?.name || projectId : '';
+        const appId = selectedOffer ? selectedOffer.applicationId : context.applicationId;
+        
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex max-h-[90vh]">
+              {/* Draft Form */}
+              <div className="flex-1 overflow-y-auto p-6 border-r border-slate-100 flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-bold text-slate-800">
+                    {selectedOffer ? 'Edit Offer Draft' : 'Create Offer Draft'}
+                  </h2>
+                  <button 
+                    onClick={() => { setActiveModal(null); setFormError(''); }}
+                    className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-              )}
-              
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Reason for Rejection / Declining *
-                </label>
-                <textarea 
-                  rows={3} 
-                  required
-                  value={rejectionReason} 
-                  onChange={e => setRejectionReason(e.target.value)} 
-                  placeholder="Explain why the candidate declined or why the offer was rejected..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
-                />
-              </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => { setActiveModal(null); setRejectionReason(''); setFormError(''); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
-                >
-                  Reject Offer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                {formError && (
+                  <div className="mb-6 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 shrink-0" />
+                    {formError}
+                  </div>
+                )}
 
-      {/* EXTEND EXPIRY MODAL */}
-      {activeModal === 'extend_expiry' && selectedOffer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">Extend Offer Expiry</h3>
-            </div>
-            
-            <form onSubmit={handleExtendExpirySubmit} className="space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" />
-                  {formError}
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  New Expiry Date *
-                </label>
-                <input 
-                  type="date" 
-                  required
-                  value={newExpiryDate} 
-                  onChange={e => setNewExpiryDate(e.target.value)} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => { setActiveModal(null); setNewExpiryDate(''); setFormError(''); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                >
-                  Save Expiry
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* VERSION HISTORY MODAL */}
-      {activeModal === 'version_history' && selectedOffer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-slate-200 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Offer Version History</h3>
-                  <p className="text-sm text-slate-500">{candidates.find(c => c.id === selectedOffer.candidateId)?.fullName}</p>
-                </div>
-              </div>
-              <button onClick={() => { setActiveModal(null); setSelectedOffer(null); }} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="overflow-y-auto flex-1 pr-2 space-y-4">
-              {offers.filter(o => o.applicationId === selectedOffer.applicationId).sort((a,b) => (b.version || 1) - (a.version || 1)).map(version => (
-                <div key={version.id} className={cn("border rounded-xl p-4", version.id === selectedOffer.id ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-200")}>
-                  <div className="flex justify-between items-start mb-3">
+                <div className="space-y-6 flex-1">
+                  {/* Locked Context */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm grid grid-cols-2 gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800 text-base">Version {version.version || 1}</span>
-                        {version.id === selectedOffer.id && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded uppercase tracking-wider">Current</span>}
+                      <span className="text-slate-500 block text-xs mb-0.5">Candidate</span>
+                      <span className="font-semibold text-slate-800">{candidateName}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-xs mb-0.5">Job</span>
+                      <span className="font-semibold text-slate-800">{jobTitle}</span>
+                    </div>
+                    {clientName && (
+                      <div>
+                        <span className="text-slate-500 block text-xs mb-0.5">Client</span>
+                        <span className="font-semibold text-slate-800">{clientName}</span>
                       </div>
-                      <p className="text-sm text-slate-500 mt-1">Status: <span className="font-medium text-slate-700">{version.status}</span></p>
+                    )}
+                    {projectName && (
+                      <div>
+                        <span className="text-slate-500 block text-xs mb-0.5">Project</span>
+                        <span className="font-semibold text-slate-800">{projectName}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-slate-500 block text-xs mb-0.5">Application Ref</span>
+                      <span className="font-semibold text-slate-800 text-xs font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{appId}</span>
                     </div>
-                    <div className="text-right text-xs text-slate-500 space-y-1">
-                      {version.sentDate && <p>Issued: {formatDate(version.sentDate)}</p>}
-                      {version.acceptedAt && <p>Accepted: {formatDate(version.acceptedAt)}</p>}
-                      {version.rejectedAt && <p>Declined: {formatDate(version.rejectedAt)}</p>}
+                  </div>
+
+                  {/* Editable Fields */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Compensation <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        placeholder="e.g. $120,000/year"
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm"
+                        value={draftData.offeredCompensation}
+                        onChange={(e) => setDraftData({ ...draftData, offeredCompensation: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          Employment Type <span className="text-red-500">*</span>
+                        </label>
+                        <select 
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm bg-white"
+                          value={draftData.employmentType}
+                          onChange={(e) => setDraftData({ ...draftData, employmentType: e.target.value })}
+                        >
+                          <option value="Full-time">Full-time</option>
+                          <option value="Part-time">Part-time</option>
+                          <option value="Contract">Contract</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          Contract Duration
+                        </label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 12 Months"
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm"
+                          value={draftData.contractDuration}
+                          onChange={(e) => setDraftData({ ...draftData, contractDuration: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          Proposed Joining Date <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          type="date"
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm"
+                          value={draftData.proposedJoiningDate}
+                          onChange={(e) => setDraftData({ ...draftData, proposedJoiningDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          Offer Valid Until <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          type="date"
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm"
+                          value={draftData.expiryDate}
+                          onChange={(e) => setDraftData({ ...draftData, expiryDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Notes / Terms
+                      </label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Additional conditions, sign-on bonuses, relocation, etc."
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm resize-none"
+                        value={draftData.notes}
+                        onChange={(e) => setDraftData({ ...draftData, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-100 flex justify-end gap-3">
+                  {selectedOffer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewSource('draft_form');
+                        setActiveModal('letter_preview');
+                      }}
+                      className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2 mr-auto"
+                    >
+                      <Eye className="w-4 h-4" /> Preview Offer Letter
+                    </button>
+                  )}
+                  <button 
+                    type="button" 
+                    onClick={() => { setActiveModal(null); setFormError(''); }}
+                    className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleSaveDraft}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" /> Save Draft
+                  </button>
+                </div>
+              </div>
+              
+              {/* Structured Summary Preview */}
+              <div className="w-80 bg-slate-50 border-l border-slate-200 p-6 overflow-y-auto">
+                <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-indigo-500" /> Offer Summary
+                </h3>
+                
+                <div className="space-y-4 text-sm">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Candidate</span>
+                      <span className="font-semibold text-slate-700 block truncate" title={candidateName}>{candidateName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Job</span>
+                      <span className="font-semibold text-slate-700 block truncate" title={jobTitle}>{jobTitle}</span>
+                    </div>
+                    {clientName && (
+                      <div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Client</span>
+                        <span className="font-semibold text-slate-700 block truncate" title={clientName}>{clientName}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Compensation</span>
+                      <span className="font-bold text-indigo-700 block break-words">
+                        {draftData.offeredCompensation || <span className="text-slate-300 italic">Not set</span>}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Type</span>
+                        <span className="font-medium text-slate-700 block">{draftData.employmentType}</span>
+                      </div>
+                      {draftData.contractDuration && (
+                        <div>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Duration</span>
+                          <span className="font-medium text-slate-700 block">{draftData.contractDuration}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm mt-4 bg-slate-50 rounded-lg p-3">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Compensation</span>
-                      <span className="font-medium text-slate-800">{version.offeredCompensation || version.annualCTC || 'Not specified'}</span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Joining Date</span>
+                      <span className="font-medium text-slate-700 block">
+                        {draftData.proposedJoiningDate ? formatDate(draftData.proposedJoiningDate) : <span className="text-slate-300 italic">Not set</span>}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Proposed Joining</span>
-                      <span className="font-medium text-slate-800">{version.proposedJoiningDate ? formatDate(version.proposedJoiningDate) : 'Not specified'}</span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Valid Until</span>
+                      <span className="font-medium text-slate-700 block">
+                        {draftData.expiryDate ? formatDate(draftData.expiryDate) : <span className="text-slate-300 italic">Not set</span>}
+                      </span>
                     </div>
                   </div>
-                  
-                  {version.negotiationNote && (
-                    <div className="mt-3 text-sm border-t border-slate-100 pt-3">
-                      <span className="text-slate-500 font-medium block mb-1">Negotiation Note:</span>
-                      <p className="text-slate-700 italic">{version.negotiationNote}</p>
+
+                  {draftData.notes && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Notes / Terms</span>
+                      <p className="font-medium text-slate-700 text-xs whitespace-pre-wrap">{draftData.notes}</p>
                     </div>
                   )}
                 </div>
-              ))}
+              </div>
             </div>
-            
-            <div className="pt-4 mt-4 border-t border-slate-200 flex justify-end shrink-0">
+          </div>
+        );
+      })()}
+
+      {/* RETURN TO DRAFT COMMENT MODAL */}
+      {activeModal === 'return_comment' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Return to Draft</h3>
+            <p className="text-sm text-slate-600 mb-4">Please provide a reason for returning this offer to draft status (optional).</p>
+            <textarea
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 outline-none text-sm resize-none"
+              rows={4}
+              placeholder="Enter reason..."
+              value={returnComment}
+              onChange={e => setReturnComment(e.target.value)}
+            />
+            <div className="flex justify-end gap-3 mt-6">
               <button 
-                onClick={() => { setActiveModal(null); setSelectedOffer(null); }}
+                type="button" 
+                onClick={() => { setActiveModal('view'); setReturnComment(''); }}
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                Close History
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleReturnToDraft}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Return to Draft
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* LETTER PREVIEW MODAL */}
+      {activeModal === 'letter_preview' && selectedOffer && (() => {
+        const candidate = candidates.find(c => c.id === selectedOffer.candidateId);
+        const clientName = clients.find(c => c.id === selectedOffer.clientId)?.name || 'Not provided';
+        const reference = `REF-${selectedOffer.id.substring(0, 8).toUpperCase()}`;
+        
+        let statusBadge = '';
+        if (selectedOffer.status === 'Offer Draft') statusBadge = 'Draft — Not issued';
+        else if (selectedOffer.status === 'Sent') statusBadge = `Issued (Version ${selectedOffer.version || 1})`;
+        else statusBadge = selectedOffer.status;
+
+        const dateUpdated = selectedOffer.activities?.length 
+          ? selectedOffer.activities[selectedOffer.activities.length - 1].date 
+          : selectedOffer.offerDate;
+
+        return (
+          <div className="fixed inset-0 z-50 flex flex-col items-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+            {/* Header Actions */}
+            <div className="w-full max-w-3xl flex justify-between items-center mb-4 sticky top-0 bg-slate-900/40 p-4 rounded-xl shadow-sm z-10 backdrop-blur-md">
+              <h2 className="text-white font-bold text-lg">Offer Letter Preview</h2>
+              <button 
+                onClick={() => {
+                  if (previewSource === 'draft_form') setActiveModal('draft_form');
+                  else if (previewSource === 'view') setActiveModal('view');
+                  else { setActiveModal(null); setSelectedOffer(null); }
+                }}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <X className="w-4 h-4" /> Close Preview
+              </button>
+            </div>
+            
+            {/* Document Body */}
+            <div className="w-full max-w-3xl bg-white shadow-2xl rounded-sm mb-12">
+              <div className="p-12 md:p-16">
+                
+                {/* Branding & Header */}
+                <div className="flex justify-between items-start border-b-2 border-slate-900 pb-8 mb-8">
+                  <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">SPC WORKFORCE</h1>
+                    <p className="text-sm text-slate-500 font-medium mt-1">Recruitment & Talent Management</p>
+                  </div>
+                  <div className="text-right flex flex-col items-end">
+                    <span className={cn(
+                      "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border mb-3",
+                      selectedOffer.status === 'Offer Draft' ? "bg-amber-100 text-amber-800 border-amber-200" :
+                      selectedOffer.status === 'Sent' ? "bg-blue-100 text-blue-800 border-blue-200" :
+                      "bg-slate-100 text-slate-800 border-slate-200"
+                    )}>
+                      {statusBadge}
+                    </span>
+                    <p className="text-sm text-slate-600">Ref: <strong>{reference}</strong></p>
+                    <p className="text-sm text-slate-600 mt-1">Date: {dateUpdated ? formatDate(dateUpdated) : 'Not provided'}</p>
+                  </div>
+                </div>
+
+                {/* Candidate Address Block */}
+                <div className="mb-10 text-slate-800">
+                  <p className="font-bold text-lg mb-1">{candidate?.fullName}</p>
+                  <p className="text-sm">{candidate?.email}</p>
+                  <p className="text-sm">{candidate?.phone || 'Phone not provided'}</p>
+                </div>
+
+                {/* Subject */}
+                <div className="mb-8">
+                  <p className="font-bold text-slate-900 underline underline-offset-4">Subject: Offer for {selectedOffer.offeredRole}</p>
+                </div>
+
+                {/* Body Text */}
+                <div className="space-y-4 text-slate-700 text-sm leading-relaxed mb-10">
+                  <p>Dear {candidate?.fullName?.split(' ')[0] || 'Candidate'},</p>
+                  <p>
+                    We are pleased to offer you the position of <strong>{selectedOffer.offeredRole}</strong>. 
+                    This position is in connection with our client engagement at <strong>{clientName}</strong>.
+                  </p>
+                  <p>
+                    Your employment terms and conditions are outlined in the summary below. Please review these details carefully.
+                  </p>
+                </div>
+
+                {/* Terms Summary Table */}
+                <div className="mb-10 border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <tbody className="divide-y divide-slate-200">
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700 w-1/3">Job Title</th>
+                        <td className="py-3 px-4 text-slate-900 font-medium">{selectedOffer.offeredRole}</td>
+                      </tr>
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Client / Assignment</th>
+                        <td className="py-3 px-4 text-slate-900">{clientName}</td>
+                      </tr>
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Employment Type</th>
+                        <td className="py-3 px-4 text-slate-900">{selectedOffer.employmentType || 'Not provided'}</td>
+                      </tr>
+                      {selectedOffer.contractDuration && (
+                        <tr>
+                          <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Contract Duration</th>
+                          <td className="py-3 px-4 text-slate-900">{selectedOffer.contractDuration}</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Compensation</th>
+                        <td className="py-3 px-4 text-slate-900 font-bold">{selectedOffer.offeredCompensation || 'Not provided'}</td>
+                      </tr>
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Proposed Joining Date</th>
+                        <td className="py-3 px-4 text-slate-900">{selectedOffer.proposedJoiningDate ? formatDate(selectedOffer.proposedJoiningDate) : 'Not provided'}</td>
+                      </tr>
+                      <tr>
+                        <th className="bg-slate-50 py-3 px-4 font-semibold text-slate-700">Offer Valid Until</th>
+                        <td className="py-3 px-4 text-slate-900">{selectedOffer.expiryDate ? formatDate(selectedOffer.expiryDate) : 'Not provided'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Notes/Terms */}
+                {selectedOffer.notes && (
+                  <div className="mb-12 space-y-2">
+                    <h4 className="font-bold text-slate-900 text-sm">Additional Terms & Conditions:</h4>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {selectedOffer.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Signatures */}
+                <div className="mt-16 pt-8 border-t border-slate-100 flex justify-between">
+                  <div className="w-64">
+                    <div className="border-b border-slate-400 pb-8 mb-2">
+                      <span className="text-slate-400 italic text-sm">Authorized Signature</span>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">SPC Workforce Management</p>
+                    <p className="text-xs text-slate-500">Authorized Signatory</p>
+                  </div>
+                  <div className="w-64">
+                    <div className="border-b border-slate-400 pb-8 mb-2">
+                      <span className="text-slate-400 italic text-sm">Candidate Signature</span>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">{candidate?.fullName}</p>
+                    <p className="text-xs text-slate-500">Date: ________________</p>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }

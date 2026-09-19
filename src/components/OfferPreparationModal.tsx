@@ -51,7 +51,7 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
 
     // Load existing draft if exists
     const existingOffer = offers.find(o => o.applicationId === applicationId && 
-      (o.status === 'Offer Draft' || o.status === 'Approval Pending' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress'));
+      (o.status === 'Offer Draft' || o.status === 'Pending Approval' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress'));
       
     if (existingOffer) {
       if (existingOffer.status === 'Negotiation in Progress') {
@@ -508,7 +508,7 @@ Date: ____________________
               ) : (() => {
                  const currentOffer = offers.find(o => o.id === draftId);
                  const isApproved = currentOffer?.status === 'Approved' || currentOffer?.status === 'Offer Issued';
-                 const isPendingApproval = currentOffer?.status === 'Approval Pending';
+                 const isPendingApproval = currentOffer?.status === 'Pending Approval';
                  
                  return (
                    <div className="flex gap-2">

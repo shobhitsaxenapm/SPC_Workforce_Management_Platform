@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Application, Candidate } from '../types';
 import { useApp } from '../context/AppContext';
-import { FileText, Eye, CheckCircle2, XCircle, ArrowRightCircle } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, XCircle, ArrowRight, SearchX } from 'lucide-react';
 import ResumeModal from './ResumeModal';
 import { cn, formatDate } from '../lib/utils';
 import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
 import { isDateInPreset } from '../lib/dateUtils';
-import { SearchX } from 'lucide-react';
 
 interface JobApplicantsTabProps {
   jobId: string;
@@ -94,8 +93,11 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
     updateApplicationStage(appId, 'Under Review');
   };
 
-  const handleMoveToScreening = (appId: string) => {
-    updateApplicationStage(appId, 'Screening');
+  const handleMoveToPipeline = (appId: string) => {
+    const confirmed = window.confirm('Are you sure you want to move this applicant to the pipeline?');
+    if (confirmed) {
+      updateApplicationStage(appId, 'Sourced');
+    }
   };
 
   const handleReject = (appId: string) => {
@@ -217,13 +219,15 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                                 <CheckCircle2 className="w-4 h-4" />
                               </button>
                             )}
-                            <button
-                              onClick={() => handleMoveToScreening(app.id)}
-                              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Move to Screening"
-                            >
-                              <ArrowRightCircle className="w-4 h-4" />
-                            </button>
+                            {!isMovedToPipeline && (
+                              <button 
+                                onClick={() => handleMoveToPipeline(app.id)}
+                                className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
+                                title="Move to Pipeline"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleReject(app.id)}
                               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
