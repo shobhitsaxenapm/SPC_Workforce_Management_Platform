@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
-  Search, AlertCircle, X, CheckCircle2, Calendar, Clock, 
+  Search, AlertCircle, X, CheckCircle2, CheckCircle, Calendar, Clock, 
   User, DollarSign, Briefcase, FileText, ArrowRight, Eye, 
   RefreshCw, Send, Check, ShieldAlert, AlertTriangle, Users, HelpCircle, Save
 } from 'lucide-react';
@@ -28,7 +28,9 @@ export default function OffersList() {
     extendOfferExpiry, 
     startOnboardingFromOffer,
     createOffer,
-    updateOffer
+    updateOffer,
+    startNegotiation,
+    createRevisedOffer
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,10 +50,15 @@ export default function OffersList() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Active Modals
-  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'draft_form' | 'return_comment' | 'letter_preview' | null>(null);
+  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'draft_form' | 'return_comment' | 'letter_preview' | 'start_negotiation' | 'create_revision' | 'record_response' | 'submit_approval' | null>(null);
+  const [approvalEmail, setApprovalEmail] = useState('');
   const [previewSource, setPreviewSource] = useState<'view' | 'draft_form' | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [returnComment, setReturnComment] = useState('');
+  const [negotiationNote, setNegotiationNote] = useState('');
+  const [responseOutcome, setResponseOutcome] = useState<'Accepted' | 'Declined' | ''>('');
+  const [responseDate, setResponseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [responseNote, setResponseNote] = useState('');
   const [draftData, setDraftData] = useState({
     offeredCompensation: '',
     employmentType: 'Full-time',
@@ -74,6 +81,17 @@ export default function OffersList() {
         }
       } else if (location.state.candidateId) {
         setHandoffState(location.state);
+        // Reset draft data for new cases
+        if (location.state.forceNewCase || !offers.find(o => o.applicationId === location.state.applicationId)) {
+          setDraftData({
+            offeredCompensation: '',
+            employmentType: 'Full-time',
+            contractDuration: '',
+            proposedJoiningDate: '',
+            expiryDate: '',
+            notes: ''
+          });
+        }
       }
       // Clear state from history so it doesn't trigger on refresh
       window.history.replaceState({}, document.title);
@@ -94,7 +112,7 @@ export default function OffersList() {
     if (status === 'Pending Approval') return 'Pending Approval';
     if (status === 'Approved') return 'Approved';
     if (['Offer Issued', 'Sent', 'Viewed'].includes(status)) return 'Sent';
-    if (['Negotiation in Progress', 'Revised Draft', 'Revised Offer Issued'].includes(status)) return 'Negotiating';
+    if (['Negotiating', 'Revised Draft', 'Revised Offer Issued'].includes(status)) return 'Negotiating';
     if (status === 'Accepted') return 'Accepted';
     if (status === 'Declined') return 'Declined';
     if (status === 'Expired') return 'Expired';
@@ -142,12 +160,13 @@ export default function OffersList() {
     { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expiring soon', 'Expired', 'No expiry date'].map(r => ({ value: r, label: r })) }
   ];
 
-  // Deduplicate offers by applicationId, taking the latest version
+  // Deduplicate offers by case identity, taking the latest version
   const latestOffersMap = new Map<string, Offer>();
   offers.forEach(o => {
-    const existing = latestOffersMap.get(o.applicationId);
+    const caseId = o.parentOfferId || o.id;
+    const existing = latestOffersMap.get(caseId);
     if (!existing || (o.version || 1) > (existing.version || 1)) {
-      latestOffersMap.set(o.applicationId, o);
+      latestOffersMap.set(caseId, o);
     }
   });
   const latestOffers = Array.from(latestOffersMap.values());
@@ -277,23 +296,32 @@ export default function OffersList() {
       setFormError('Cannot submit: Compensation, employment type, joining date, and expiry date are required.');
       return;
     }
-    if (window.confirm('Are you sure you want to submit this offer for approval?')) {
-      updateOffer(selectedOffer.id, {
-        status: 'Pending Approval',
-        activities: [
-          ...(selectedOffer.activities || []),
-          {
-            id: Date.now().toString(),
-            action: 'Submitted for approval',
-            date: new Date().toISOString(),
-            actor: 'Current user'
-          }
-        ]
-      });
-      triggerToast('Offer submitted for approval.');
-      setActiveModal(null);
-      setSelectedOffer(null);
+    setApprovalEmail('');
+    setFormError('');
+    setActiveModal('submit_approval');
+  };
+
+  const confirmSubmitForApproval = () => {
+    if (!selectedOffer) return;
+    if (!approvalEmail) {
+      setFormError('Please enter an email address for approval.');
+      return;
     }
+    updateOffer(selectedOffer.id, {
+      status: 'Pending Approval',
+      activities: [
+        ...(selectedOffer.activities || []),
+        {
+          id: Date.now().toString(),
+          action: `Submitted for approval to ${approvalEmail}`,
+          date: new Date().toISOString(),
+          actor: 'Current user'
+        }
+      ]
+    });
+    triggerToast('Offer submitted for approval.');
+    setActiveModal(null);
+    setSelectedOffer(null);
   };
 
   const handleApproveOffer = () => {
@@ -341,23 +369,71 @@ export default function OffersList() {
   const handleIssueOffer = () => {
     if (!selectedOffer) return;
     if (window.confirm('Are you sure you want to issue this offer to the candidate?')) {
-      updateOffer(selectedOffer.id, {
-        status: 'Sent',
-        sentDate: new Date().toISOString(),
-        activities: [
-          ...(selectedOffer.activities || []),
-          {
-            id: Date.now().toString(),
-            action: 'Offer issued',
-            date: new Date().toISOString(),
-            actor: 'Current user'
-          }
-        ]
-      });
+      issueOffer(selectedOffer.id);
       triggerToast('Offer sent to candidate.');
       setActiveModal(null);
       setSelectedOffer(null);
     }
+  };
+
+  const handleStartNegotiation = () => {
+    if (!selectedOffer) return;
+    if (!negotiationNote.trim()) {
+      setFormError('Please provide a note for this negotiation.');
+      return;
+    }
+    startNegotiation(selectedOffer.id, negotiationNote);
+    triggerToast('Negotiation started.');
+    setActiveModal(null);
+    setSelectedOffer(null);
+    setNegotiationNote('');
+    setFormError('');
+  };
+
+  const handleCreateRevision = () => {
+    if (!selectedOffer) return;
+    // We create a revised offer passing the parentOfferId, copying the previous data
+    const { id, status, version, parentOfferId, activities, ...offerData } = selectedOffer;
+    createRevisedOffer(selectedOffer.id, offerData);
+    triggerToast('Revised Draft created. Previous version is now superseded.');
+    setActiveModal(null);
+    setSelectedOffer(null);
+  };
+
+  const handleRecordResponse = () => {
+    if (!selectedOffer) return;
+    if (!responseOutcome) {
+      setFormError('Please select a response outcome.');
+      return;
+    }
+    
+    const issueDate = new Date(selectedOffer.sentDate || selectedOffer.activities?.find(a => a.action === 'Offer issued')?.date || Date.now());
+    const selectedDate = new Date(responseDate);
+    
+    if (selectedDate < new Date(issueDate.setHours(0,0,0,0))) {
+      setFormError('Response date cannot be before the offer was issued.');
+      return;
+    }
+    
+    if (selectedDate > new Date()) {
+      setFormError('Response date cannot be in the future.');
+      return;
+    }
+
+    recordOfferResponse(selectedOffer.id, responseOutcome as 'Accepted' | 'Declined', responseNote);
+    
+    if (responseOutcome === 'Accepted') {
+      triggerToast('Candidate Accepted! Application moved to Completed Outcomes.');
+    } else {
+      triggerToast('Candidate Declined. Recorded successfully.');
+    }
+    
+    setActiveModal(null);
+    setSelectedOffer(null);
+    setResponseOutcome('');
+    setResponseDate(new Date().toISOString().split('T')[0]);
+    setResponseNote('');
+    setFormError('');
   };
 
   return (
@@ -374,7 +450,21 @@ export default function OffersList() {
       )}
 
       {handoffState && handoffState.candidateId && !handoffState.openOfferId && (() => {
-        const existingOffer = offers.find(o => o.applicationId === handoffState.applicationId);
+        const appOffers = offers.filter(o => o.applicationId === handoffState.applicationId);
+        
+        const caseMap = new Map<string, Offer>();
+        appOffers.forEach(o => {
+          const caseId = o.parentOfferId || o.id;
+          const existing = caseMap.get(caseId);
+          if (!existing || (o.version || 1) > (existing.version || 1)) {
+            caseMap.set(caseId, o);
+          }
+        });
+        
+        const cases = Array.from(caseMap.values());
+        const activeOffer = cases[0] || null;
+        
+        const forceNewCase = (handoffState as any).forceNewCase;
         
         return (
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
@@ -387,10 +477,10 @@ export default function OffersList() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {existingOffer ? (
+              {activeOffer && !forceNewCase ? (
                 <button
                   onClick={() => {
-                    setSelectedOffer(existingOffer);
+                    setSelectedOffer(activeOffer);
                     setActiveModal('view');
                   }}
                   className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-lg shadow-sm"
@@ -399,7 +489,17 @@ export default function OffersList() {
                 </button>
               ) : (
                 <button
-                  onClick={() => setActiveModal('draft_form')}
+                  onClick={() => {
+                    setDraftData({
+                      offeredCompensation: '',
+                      employmentType: 'Full-time',
+                      contractDuration: '',
+                      proposedJoiningDate: '',
+                      expiryDate: '',
+                      notes: ''
+                    });
+                    setActiveModal('draft_form');
+                  }}
                   className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm"
                 >
                   Prepare Offer
@@ -700,6 +800,56 @@ export default function OffersList() {
                 )}
               </div>
 
+              {/* Offer Versions History */}
+              {(() => {
+                const offerVersions = offers
+                  .filter(o => o.applicationId === selectedOffer.applicationId)
+                  .sort((a, b) => (a.version || 1) - (b.version || 1));
+                
+                if (offerVersions.length > 1) {
+                  return (
+                    <div className="mt-8 border-t border-slate-100 pt-6">
+                      <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-500" /> Offer Versions
+                      </h3>
+                      <div className="space-y-3">
+                        {offerVersions.map(version => (
+                          <div key={version.id} className={cn(
+                            "flex items-center justify-between p-3 rounded-lg border",
+                            version.id === selectedOffer.id 
+                              ? "bg-indigo-50 border-indigo-200" 
+                              : "bg-slate-50 border-slate-200"
+                          )}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center font-bold text-xs text-slate-500">
+                                v{version.version || 1}
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-800 block text-xs">
+                                  {version.id === selectedOffer.id ? "Current View" : (version.status === 'Superseded' ? "Superseded" : "Active")}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {version.status} · {version.offeredCompensation} · {formatDate(version.proposedJoiningDate || '')}
+                                </span>
+                              </div>
+                            </div>
+                            {version.id !== selectedOffer.id && (
+                              <button 
+                                onClick={() => setSelectedOffer(version)}
+                                className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
+                              >
+                                View Version
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               {/* Activity Timeline */}
               {selectedOffer.activities && selectedOffer.activities.length > 0 && (
                 <div className="mt-8 border-t border-slate-100 pt-6">
@@ -730,12 +880,6 @@ export default function OffersList() {
 
               {/* Status Action Buttons */}
               <div className="pt-6 mt-6 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-white items-center">
-                <button 
-                  onClick={() => { setActiveModal(null); setSelectedOffer(null); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Close Offer
-                </button>
                 <button
                   onClick={() => {
                     setPreviewSource('view');
@@ -796,7 +940,334 @@ export default function OffersList() {
                     Issue Offer
                   </button>
                 )}
+                {selectedOffer.status === 'Sent' && (
+                  <>
+                    {(() => {
+                      const isExpired = selectedOffer.expiryDate && new Date(selectedOffer.expiryDate) < new Date(new Date().setHours(0,0,0,0));
+                      return isExpired ? (
+                        <div className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" /> Validity Expired
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setActiveModal('record_response')}
+                          className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <CheckCircle className="w-4 h-4" /> Record Candidate Response
+                        </button>
+                      );
+                    })()}
+                    <button
+                      onClick={() => setActiveModal('start_negotiation')}
+                      className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Start Negotiation
+                    </button>
+                  </>
+                )}
+                {selectedOffer.status === 'Negotiating' && (
+                  <button
+                    onClick={() => setActiveModal('create_revision')}
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" /> Create Revised Offer
+                  </button>
+                )}
+                {(selectedOffer.status === 'Declined' || selectedOffer.status === 'Expired') && (() => {
+                  const appOffers = offers.filter(o => o.applicationId === selectedOffer.applicationId);
+                  const caseMap = new Map<string, Offer>();
+                  appOffers.forEach(o => {
+                    const caseId = o.parentOfferId || o.id;
+                    const existing = caseMap.get(caseId);
+                    if (!existing || (o.version || 1) > (existing.version || 1)) {
+                      caseMap.set(caseId, o);
+                    }
+                  });
+                  const cases = Array.from(caseMap.values());
+                  const activeOffer = cases[0] || null;
+                  
+                  const isLatestCase = activeOffer && (activeOffer.parentOfferId || activeOffer.id) === (selectedOffer.parentOfferId || selectedOffer.id);
+                  
+                  if (isLatestCase) {
+                    return (
+                      <button
+                        onClick={() => {
+                          const candidate = candidates.find(c => c.id === selectedOffer.candidateId);
+                          const job = jobs.find(j => j.id === selectedOffer.jobId);
+                          setHandoffState({
+                            candidateId: candidate?.id || '',
+                            candidateName: candidate?.fullName || '',
+                            jobId: job?.id || '',
+                            jobTitle: job?.title || '',
+                            clientId: selectedOffer.clientId || '',
+                            projectId: selectedOffer.projectId || '',
+                            applicationId: selectedOffer.applicationId,
+                            forceNewCase: true
+                          } as any);
+                          setDraftData({
+                            offeredCompensation: '',
+                            employmentType: 'Full-time',
+                            contractDuration: '',
+                            proposedJoiningDate: '',
+                            expiryDate: '',
+                            notes: ''
+                          });
+                          setActiveModal('draft_form');
+                          setSelectedOffer(null);
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" /> Prepare New Offer
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* START NEGOTIATION MODAL */}
+      {activeModal === 'start_negotiation' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <RefreshCw className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Start Negotiation</h3>
+            </div>
+            
+            {formError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4" />
+                {formError}
+              </div>
+            )}
+            <p className="text-sm text-slate-600 mb-4">
+              Record a short note about the candidate's request. This will set the offer status to <span className="font-semibold text-slate-800">Negotiating</span> but will keep the issued version active until a revision is created.
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Negotiation Note <span className="text-red-500">*</span></label>
+              <textarea
+                value={negotiationNote}
+                onChange={(e) => setNegotiationNote(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow resize-none text-sm"
+                placeholder="E.g., Candidate requested higher base salary..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setActiveModal(null);
+                  setNegotiationNote('');
+                  setFormError('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStartNegotiation}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+              >
+                Start Negotiation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE REVISED OFFER MODAL */}
+      {activeModal === 'create_revision' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Create Revised Offer</h3>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl mb-6 flex gap-3 items-start">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold mb-1">This will invalidate the current version.</p>
+                <p>Creating a revision will mark the currently issued version as <strong>Superseded</strong> and it will no longer be valid for acceptance.</p>
+                <p className="mt-2">A new draft (Version {(selectedOffer.version || 1) + 1}) will be created with the terms copied from the previous version.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateRevision}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+              >
+                Confirm & Create Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECORD CANDIDATE RESPONSE MODAL */}
+      {activeModal === 'record_response' && selectedOffer && (() => {
+        const candidate = candidates.find(c => c.id === selectedOffer.candidateId);
+        const job = jobs.find(j => j.id === selectedOffer.jobId);
+        const client = clients.find(c => c.id === selectedOffer.clientId);
+        
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Record Candidate Response</h3>
+              </div>
+              
+              {formError && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4" />
+                  {formError}
+                </div>
+              )}
+              
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs mb-5 space-y-2 text-slate-700">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Candidate</span>
+                  <span className="font-semibold">{candidate?.fullName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Job & Client</span>
+                  <span className="font-semibold">{job?.title} at {client?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Offer Version</span>
+                  <span className="font-semibold">Version {selectedOffer.version || 1} ({selectedOffer.offerReference})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Validity Date</span>
+                  <span className="font-semibold">{selectedOffer.expiryDate ? formatDate(selectedOffer.expiryDate) : 'Not specified'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Candidate's Decision <span className="text-red-500">*</span></label>
+                  <div className="flex gap-3">
+                    <label className={cn("flex-1 cursor-pointer border rounded-lg p-3 text-sm font-medium transition-colors flex items-center gap-2", responseOutcome === 'Accepted' ? "bg-green-50 border-green-200 text-green-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")}>
+                      <input type="radio" name="response" value="Accepted" checked={responseOutcome === 'Accepted'} onChange={(e) => setResponseOutcome('Accepted')} className="sr-only" />
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", responseOutcome === 'Accepted' ? "border-green-600" : "border-slate-300")}>
+                        {responseOutcome === 'Accepted' && <div className="w-2 h-2 rounded-full bg-green-600" />}
+                      </div>
+                      Accepted
+                    </label>
+                    <label className={cn("flex-1 cursor-pointer border rounded-lg p-3 text-sm font-medium transition-colors flex items-center gap-2", responseOutcome === 'Declined' ? "bg-red-50 border-red-200 text-red-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")}>
+                      <input type="radio" name="response" value="Declined" checked={responseOutcome === 'Declined'} onChange={(e) => setResponseOutcome('Declined')} className="sr-only" />
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", responseOutcome === 'Declined' ? "border-red-600" : "border-slate-300")}>
+                        {responseOutcome === 'Declined' && <div className="w-2 h-2 rounded-full bg-red-600" />}
+                      </div>
+                      Declined
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Response Date <span className="text-red-500">*</span></label>
+                  <input type="date" value={responseDate} onChange={e => setResponseDate(e.target.value)} max={new Date().toISOString().split('T')[0]} className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Response Note (Optional)</label>
+                  <textarea
+                    value={responseNote}
+                    onChange={(e) => setResponseNote(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow resize-none text-sm"
+                    placeholder="E.g., Candidate signed via email..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setActiveModal(null);
+                    setResponseOutcome('');
+                    setResponseNote('');
+                    setFormError('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRecordResponse}
+                  disabled={!responseOutcome}
+                  className={cn("px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors", responseOutcome ? "bg-indigo-600 hover:bg-indigo-700" : "bg-slate-300 cursor-not-allowed")}
+                >
+                  Confirm Response
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* SUBMIT FOR APPROVAL MODAL */}
+      {activeModal === 'submit_approval' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Send className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Submit for Approval</h3>
+            </div>
+            
+            {formError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4" />
+                {formError}
+              </div>
+            )}
+            
+            <p className="text-sm text-slate-600 mb-4">Please enter the email address of the person who needs to approve this offer.</p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Approver Email <span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                value={approvalEmail}
+                onChange={(e) => setApprovalEmail(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                placeholder="e.g. manager@example.com"
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button 
+                type="button" 
+                onClick={() => { setActiveModal('view'); setApprovalEmail(''); setFormError(''); }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={confirmSubmitForApproval}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" /> Submit Request
+              </button>
             </div>
           </div>
         </div>

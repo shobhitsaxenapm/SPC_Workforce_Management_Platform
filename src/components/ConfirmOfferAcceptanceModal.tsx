@@ -50,7 +50,7 @@ export default function ConfirmOfferAcceptanceModal({ isOpen, onClose, applicati
         return;
       }
       updateOffer(offer.id, {
-        status: 'Negotiation in Progress',
+        status: 'Negotiating',
         negotiationNote: note
       });
       // Candidate remains in 'Offered' stage

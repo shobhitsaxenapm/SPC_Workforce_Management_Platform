@@ -33,7 +33,7 @@ export type ApplicationSubstate =
   | string;
 
 export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'No Show';
-export type OfferStatus = 'Offer Draft' | 'Pending Approval' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn' | 'Negotiation in Progress' | 'Revised Draft' | 'Revised Offer Issued' | 'Superseded';
+export type OfferStatus = 'Offer Draft' | 'Pending Approval' | 'Approved' | 'Offer Issued' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired' | 'Withdrawn' | 'Negotiating' | 'Revised Draft' | 'Revised Offer Issued' | 'Superseded';
 export type OnboardingStatus = 'Documents Requested' | 'Documents Submitted' | 'Verification In Progress' | 'Changes Requested' | 'Approved' | 'Joining Scheduled' | 'Completed';
 export type DeploymentStatus = 'Scheduled' | 'Active' | 'Completed' | 'Terminated';
 export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';

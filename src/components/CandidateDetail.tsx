@@ -177,7 +177,7 @@ export default function CandidateDetail() {
       case 'Offered':
         if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
           primary = 'Start Onboarding';
-        } else if (activeOffer?.status === 'Negotiation in Progress') {
+        } else if (activeOffer?.status === 'Negotiating') {
           primary = 'Revise Offer';
           moreActions = ['View Offer'];
         } else if (activeOffer?.status === 'Offer Draft' || activeOffer?.status === 'Revised Draft') {
@@ -1253,7 +1253,7 @@ export default function CandidateDetail() {
                <h3 className="font-bold text-slate-800">Record Negotiation</h3>
              </div>
              <div className="p-6">
-                <p className="text-slate-600 text-sm mb-4">Record negotiation notes for <strong>{negotiationPrompt.candidateName}</strong>. This will set the offer status to "Negotiation in Progress" and allow you to revise the offer.</p>
+                <p className="text-slate-600 text-sm mb-4">Record negotiation notes for <strong>{negotiationPrompt.candidateName}</strong>. This will set the offer status to "Negotiating" and allow you to revise the offer.</p>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Negotiation Note / Reason</label>
                   <textarea 

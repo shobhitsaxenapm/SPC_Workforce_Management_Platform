@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
@@ -50,6 +50,7 @@ interface AppContextType {
   cancelInformationRequest: (projectId: string, reason?: string) => void;
   createOffer: (offerData: Omit<Offer, 'id' | 'status'>) => string;
   createRevisedOffer: (parentOfferId: string, offerData: Omit<Offer, 'id' | 'status' | 'version' | 'parentOfferId'>) => string;
+  startNegotiation: (offerId: string, note: string) => void;
   updateOffer: (offerId: string, updates: Partial<Offer>) => void;
   submitOfferForApproval: (offerId: string) => void;
   approveOffer: (offerId: string) => void;
@@ -333,6 +334,52 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.removeItem('spc_user');
     }
   }, [currentUser]);
+
+  // Automatic Offer Expiry
+  useEffect(() => {
+    const checkExpiry = () => {
+      setOffers(prevOffers => {
+        let changed = false;
+        const todayStr = new Date(new Date().setHours(0,0,0,0)).toISOString();
+        
+        const evaluated = prevOffers.map(offer => {
+          // Expire only current issued versions ('Sent' or 'Negotiating')
+          if ((offer.status === 'Sent' || offer.status === 'Negotiating') && offer.expiryDate) {
+            const expiry = new Date(offer.expiryDate);
+            // It expires strictly AFTER the validity date passes
+            if (expiry < new Date(todayStr)) {
+              changed = true;
+              return {
+                ...offer,
+                status: 'Expired',
+                activities: [
+                  ...(offer.activities || []),
+                  {
+                    id: 'act_' + Math.random().toString(36).substr(2, 9),
+                    action: 'Offer Expired',
+                    date: new Date().toISOString(),
+                    actor: 'System',
+                    comment: `Offer automatically expired after validity date (${offer.expiryDate}) passed.`
+                  }
+                ]
+              };
+            }
+          }
+          return offer;
+        });
+        
+        if (changed) {
+          localStorage.setItem('spc_offers', JSON.stringify(evaluated));
+          return evaluated;
+        }
+        return prevOffers;
+      });
+    };
+
+    checkExpiry(); // Check immediately
+    const intervalId = setInterval(checkExpiry, 60000); // Check every minute
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Sync data updates to localStorage
   const persistClients = (newClients: Client[]) => {
@@ -951,13 +998,37 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const newOffer: Offer = {
       ...offerData,
       id: `off_gen_${Date.now()}`,
-      status: 'Revised Draft',
+      status: 'Offer Draft',
       version: newVersion,
       parentOfferId: parentOffer?.parentOfferId || parentOfferId, // Link to root parent
       deliveryStatus: 'Not Sent'
     };
-    persistOffers([newOffer, ...offers]);
+
+    const updatedOffers = offers.map(o => 
+      o.id === parentOfferId ? { ...o, status: 'Superseded' as const } : o
+    );
+
+    persistOffers([newOffer, ...updatedOffers]);
     return newOffer.id;
+  };
+
+  const startNegotiation = (offerId: string, note: string) => {
+    const offer = offers.find(o => o.id === offerId);
+    if (!offer) return;
+    
+    const newActivity: OfferActivity = {
+      id: `act_${Date.now()}`,
+      action: 'Started Negotiation',
+      date: new Date().toISOString(),
+      actor: currentUser?.name || 'Admin',
+      comment: note
+    };
+
+    updateOffer(offerId, { 
+      status: 'Negotiating', 
+      negotiationNote: note,
+      activities: [...(offer.activities || []), newActivity]
+    });
   };
 
   const updateOffer = (offerId: string, updates: Partial<Offer>) => {
@@ -976,15 +1047,20 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const offer = offers.find(o => o.id === offerId);
     if (!offer) return;
     
-    const isRevised = offer.status === 'Revised Draft' || offer.status === 'Approved' && offer.version && offer.version > 1;
-
     const updated = offers.map(o => {
       if (o.id === offerId) {
+        const newActivity: OfferActivity = {
+          id: `act_${Date.now()}`,
+          action: 'Issued Offer',
+          date: new Date().toISOString(),
+          actor: currentUser?.name || 'Admin',
+        };
         return { 
           ...o, 
-          status: isRevised ? 'Revised Offer Issued' : 'Offer Issued', 
+          status: 'Sent', 
           sentDate: new Date().toISOString(), 
-          deliveryStatus: 'Delivery Pending' 
+          deliveryStatus: 'Not Sent', // Ensure we don't claim email delivery
+          activities: [...(o.activities || []), newActivity]
         };
       }
       // Supersede older active offers for the same application
@@ -1001,7 +1077,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const recordOfferResponse = (offerId: string, response: 'Accepted' | 'Declined' | 'Negotiation Requested' | 'Expired' | 'Withdrawn' | 'Continue Negotiation', reason?: string) => {
     if (response === 'Negotiation Requested') return;
     if (response === 'Continue Negotiation') {
-       updateOffer(offerId, { status: 'Negotiation in Progress', negotiationNote: reason });
+       updateOffer(offerId, { status: 'Negotiating', negotiationNote: reason });
        return;
     }
     const statusMap: Record<string, OfferStatus> = {
@@ -1018,7 +1094,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (offer) {
       if (response === 'Accepted') {
         updateApplicationStage(offer.applicationId, 'Hired', 'Offer Accepted');
-      } else if (response === 'Declined' || response === 'Expired' || response === 'Withdrawn') {
+      } else if (response === 'Expired' || response === 'Withdrawn') {
         updateApplicationStage(offer.applicationId, 'Rejected', undefined, reason || `Offer ${response}`);
       }
     }
@@ -1240,6 +1316,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateInterviewStatus,
         createOffer,
         createRevisedOffer,
+        startNegotiation,
         updateOffer,
         submitOfferForApproval,
         approveOffer,

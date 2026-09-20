@@ -98,6 +98,23 @@ export default function JobDetail() {
     }, 1000);
   };
 
+  const getActiveOfferCase = (appId: string) => {
+    const appOffers = offers.filter(o => o.applicationId === appId);
+    if (appOffers.length === 0) return null;
+    
+    const caseMap = new Map<string, typeof offers[0]>();
+    appOffers.forEach(o => {
+      const caseId = o.parentOfferId || o.id;
+      const existing = caseMap.get(caseId);
+      if (!existing || (o.version || 1) > (existing.version || 1)) {
+        caseMap.set(caseId, o);
+      }
+    });
+    
+    const cases = Array.from(caseMap.values());
+    return cases[0] || null;
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Bar */}
@@ -372,14 +389,13 @@ export default function JobDetail() {
                         )}
                         
                         {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
-                           const appOffers = offers.filter(o => o.applicationId === app.id);
-                           const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
+                           const activeOffer = getActiveOfferCase(app.id);
                            if (!activeOffer) return null;
                            return (
                              <div className="mb-3 flex gap-2">
                                <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-100 flex items-center gap-1">
                                  <FileText className="w-3 h-3" />
-                                 {['Offer Draft', 'Pending Approval', 'Approved', 'Sent'].includes(activeOffer.status) 
+                                 {['Offer Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Declined', 'Expired'].includes(activeOffer.status) 
                                    ? `Offer: ${activeOffer.status === 'Offer Draft' ? 'Draft' : activeOffer.status}` 
                                    : activeOffer.status}
                                </span>
@@ -400,34 +416,52 @@ export default function JobDetail() {
                             </button>
                             <div className="flex items-center gap-2">
                               {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
-                                const appOffers = offers.filter(o => o.applicationId === app.id);
-                                const activeOffer = appOffers.length > 0 ? [...appOffers].sort((a,b) => (b.version||1) - (a.version||1))[0] : null;
+                                const activeOffer = getActiveOfferCase(app.id);
                                 
-                                let actionLabel = 'Initiate Offer';
-                                if (activeOffer) {
-                                  actionLabel = 'View Offer';
-                                }
+                                const isTerminal = activeOffer && ['Declined', 'Expired', 'Withdrawn'].includes(activeOffer.status);
                                 
                                 return (
-                                  <Link
-                                    to="/offers"
-                                    state={!activeOffer ? {
-                                      candidateId: candidate.id,
-                                      candidateName: candidate.fullName,
-                                      jobId: job.id,
-                                      jobTitle: job.title,
-                                      clientId: job.clientId,
-                                      projectId: job.projectId,
-                                      applicationId: app.id
-                                    } : {
-                                      openOfferId: activeOffer.id
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200 block"
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                    {actionLabel}
-                                  </Link>
+                                  <div className="flex items-center gap-2">
+                                    {isTerminal && (
+                                      <Link
+                                        to="/offers"
+                                        state={{
+                                          candidateId: candidate.id,
+                                          candidateName: candidate.fullName,
+                                          jobId: job.id,
+                                          jobTitle: job.title,
+                                          clientId: job.clientId,
+                                          projectId: job.projectId,
+                                          applicationId: app.id,
+                                          forceNewCase: true
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="px-2 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-bold border border-blue-200 block"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        Prepare New Offer
+                                      </Link>
+                                    )}
+                                    <Link
+                                      to="/offers"
+                                      state={!activeOffer ? {
+                                        candidateId: candidate.id,
+                                        candidateName: candidate.fullName,
+                                        jobId: job.id,
+                                        jobTitle: job.title,
+                                        clientId: job.clientId,
+                                        projectId: job.projectId,
+                                        applicationId: app.id
+                                      } : {
+                                        openOfferId: activeOffer.id
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-medium border border-indigo-200 block"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {isTerminal ? 'View Previous Offer' : (activeOffer ? 'View Offer' : 'Initiate Offer')}
+                                    </Link>
+                                  </div>
                                 );
                               })()}
                               <select 

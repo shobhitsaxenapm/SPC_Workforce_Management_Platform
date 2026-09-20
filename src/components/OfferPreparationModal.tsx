@@ -46,15 +46,17 @@ export default function OfferPreparationModal({ applicationId, isOpen, onClose }
   const job = jobs.find(j => j.id === application?.jobId);
   const client = clients.find(c => c.id === job?.clientId);
 
+  const currentOffer = draftId ? offers.find(o => o.id === draftId) : null;
+
   useEffect(() => {
     if (!isOpen) return;
 
     // Load existing draft if exists
     const existingOffer = offers.find(o => o.applicationId === applicationId && 
-      (o.status === 'Offer Draft' || o.status === 'Pending Approval' || o.status === 'Revised Draft' || o.status === 'Negotiation in Progress'));
+      (o.status === 'Offer Draft' || o.status === 'Pending Approval' || o.status === 'Revised Draft' || o.status === 'Negotiating'));
       
     if (existingOffer) {
-      if (existingOffer.status === 'Negotiation in Progress') {
+      if (existingOffer.status === 'Negotiating') {
         setDraftId(null);
         setParentOfferId(existingOffer.id);
       } else {
@@ -267,7 +269,14 @@ Date: ____________________
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">Prepare Offer: {candidate.fullName}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-slate-800">Prepare Offer: {candidate.fullName}</h2>
+              {currentOffer && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                  Version {currentOffer.version || 1} · {currentOffer.status === 'Offer Draft' ? (currentOffer.version && currentOffer.version > 1 ? 'Revised Draft' : 'Draft — Not issued') : currentOffer.status}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-slate-500">For {job.title} at {client?.name || 'Unknown Client'}</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
