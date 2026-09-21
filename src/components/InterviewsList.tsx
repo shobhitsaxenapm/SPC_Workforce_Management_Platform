@@ -26,7 +26,7 @@ export default function InterviewsList() {
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({ status: '', interviewType: '', mode: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({ status: '', interviewType: '', mode: '', clientId: '' });
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -71,10 +71,12 @@ export default function InterviewsList() {
   const [cancelReason, setCancelReason] = useState('');
 
   const uniqueTypes = Array.from(new Set(interviews.map(i => i.interviewType))).filter(Boolean) as string[];
+  const uniqueClients = Array.from(new Set(interviews.map(i => i.clientId))).map(id => clients.find(c => c.id === id)).filter(Boolean);
   const filterFields: FilterField[] = [
     { key: 'status', label: 'Status', options: ['Scheduled', 'Completed', 'Cancelled', 'No Show'].map(s => ({ value: s, label: s })) },
     { key: 'interviewType', label: 'Type', options: uniqueTypes.map(t => ({ value: t, label: t })) },
     { key: 'mode', label: 'Mode', options: ['Phone', 'Video', 'In-person', 'Manual Link'].map(m => ({ value: m, label: m })) },
+    { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
   ];
 
   const now = new Date();
@@ -129,6 +131,7 @@ export default function InterviewsList() {
     const matchStatus = !filters.status || iv.status === filters.status;
     const matchType = !filters.interviewType || iv.interviewType === filters.interviewType;
     const matchMode = !filters.mode || iv.mode === filters.mode;
+    const matchClient = !filters.clientId || iv.clientId === filters.clientId;
     const matchDate = isDateInPreset(iv.scheduledAt, datePreset, customStart, customEnd);
 
     let matchTab = true;
@@ -142,7 +145,7 @@ export default function InterviewsList() {
       default: matchTab = true;
     }
 
-    return matchSearch && matchStatus && matchType && matchMode && matchDate && matchTab;
+    return matchSearch && matchStatus && matchType && matchMode && matchClient && matchDate && matchTab;
   }).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
@@ -352,7 +355,7 @@ export default function InterviewsList() {
             values={filters}
             onChange={(k, v) => setFilters({ ...filters, [k]: v })}
             onClear={() => {
-              setFilters({ status: '', interviewType: '', mode: '' });
+              setFilters({ status: '', interviewType: '', mode: '', clientId: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
