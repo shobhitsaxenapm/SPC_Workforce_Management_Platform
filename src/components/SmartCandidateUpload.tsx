@@ -61,8 +61,8 @@ export default function SmartCandidateUpload({ onExtractionSuccess, onCancel }: 
       setStatus('Idle');
       
       const mockExtractedData: Partial<Candidate> = {
-        fullName: 'Shobhit Kumar',
-        email: 'shobhit.kumar@example.com',
+        fullName: 'Amit Sharma',
+        email: 'amit.sharma@example.com',
         phone: '+91 90000 00001',
         currentLocation: 'Gurugram, Haryana',
         linkedInUrl: '',

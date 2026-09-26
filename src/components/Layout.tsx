@@ -54,7 +54,7 @@ const navigationConfig: NavModuleConfig[] = [
     items: [
       { title: 'Dashboard', path: '/', icon: LayoutGrid },
       { title: 'Clients', path: '/clients', icon: Building2 },
-      { title: 'Projects', path: '/projects', icon: ClipboardList },
+      // { title: 'Projects', path: '/projects', icon: ClipboardList }, // Temporarily disabled
       { title: 'Jobs', path: '/job-desk', icon: Briefcase },
       { title: 'Candidates', path: '/candidates', icon: Users },
       { title: 'Interviews', path: '/interviews', icon: CalendarDays },

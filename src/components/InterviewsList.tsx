@@ -11,22 +11,25 @@ import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import { Interview, InterviewStatus } from '../types';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 
-type SummaryTab = 'Upcoming' | 'Today' | 'Feedback Pending' | 'Overdue' | 'Completed' | 'Cancelled' | 'All Interviews';
+type SummaryTab = 'Upcoming' | 'Today' | 'Feedback Pending' | 'Overdue' | 'No Show' | 'Completed' | 'Cancelled' | 'All Interviews';
 
 export default function InterviewsList() {
   const { 
     interviews, 
     candidates, 
     jobs, 
-    clients, 
+    clients,
+    applications,
     submitInterviewFeedback, 
     rescheduleInterview, 
     updateInterviewStatus,
-    cancelInterview
+    markInterviewNoShow,
+    cancelInterview,
+    updateApplicationStage
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({ status: '', interviewType: '', mode: '', clientId: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({ clientId: '', jobId: '', interviewerName: '', interviewType: '', roundName: '' });
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -42,7 +45,7 @@ export default function InterviewsList() {
   };
 
   // Modals state
-  const [activeModal, setActiveModal] = useState<'feedback' | 'view_feedback' | 'reschedule' | 'view_detail' | 'cancel' | null>(null);
+  const [activeModal, setActiveModal] = useState<'feedback' | 'view_feedback' | 'reschedule' | 'view_detail' | 'cancel' | 'no_show' | 'confirm_selection' | 'confirm_rejection' | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
 
@@ -69,14 +72,22 @@ export default function InterviewsList() {
   const [rescheduleError, setRescheduleError] = useState('');
 
   const [cancelReason, setCancelReason] = useState('');
+  
+  const [noShowForm, setNoShowForm] = useState({ who: 'Candidate' as 'Candidate' | 'Interviewer' | 'Both', note: '' });
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const uniqueTypes = Array.from(new Set(interviews.map(i => i.interviewType))).filter(Boolean) as string[];
   const uniqueClients = Array.from(new Set(interviews.map(i => i.clientId))).map(id => clients.find(c => c.id === id)).filter(Boolean);
+  const uniqueJobs = Array.from(new Set(interviews.map(i => i.jobId))).map(id => jobs.find(j => j.id === id)).filter(Boolean);
+  const uniqueInterviewers = Array.from(new Set(interviews.map(i => i.interviewerName))).filter(Boolean) as string[];
+  const uniqueRounds = Array.from(new Set(interviews.map(i => i.roundName))).filter(Boolean) as string[];
+
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Status', options: ['Scheduled', 'Completed', 'Cancelled', 'No Show'].map(s => ({ value: s, label: s })) },
-    { key: 'interviewType', label: 'Type', options: uniqueTypes.map(t => ({ value: t, label: t })) },
-    { key: 'mode', label: 'Mode', options: ['Phone', 'Video', 'In-person', 'Manual Link'].map(m => ({ value: m, label: m })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
+    { key: 'jobId', label: 'Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) },
+    { key: 'interviewerName', label: 'Interviewer', options: uniqueInterviewers.map(i => ({ value: i, label: i })) },
+    { key: 'interviewType', label: 'Interview Type', options: uniqueTypes.map(t => ({ value: t, label: t })) },
+    { key: 'roundName', label: 'Interview Round', options: uniqueRounds.map(r => ({ value: r, label: r })) },
   ];
 
   const now = new Date();
@@ -106,10 +117,11 @@ export default function InterviewsList() {
 
   const summaryCounts = useMemo(() => {
     return {
-      'Upcoming': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now).length,
-      'Today': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && !iv.isOverdue && iv.scheduledAt.startsWith(todayStr)).length,
+      'Upcoming': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now && !iv.scheduledAt.startsWith(todayStr)).length,
+      'Today': enrichedInterviews.filter(iv => iv.status === 'Scheduled' && iv.scheduledAt.startsWith(todayStr)).length,
       'Feedback Pending': enrichedInterviews.filter(iv => iv.status === 'Completed' && iv.feedbackStatus !== 'Submitted').length,
-      'Overdue': enrichedInterviews.filter(iv => iv.isOverdue).length,
+      'Overdue': enrichedInterviews.filter(iv => iv.isOverdue && iv.status === 'Scheduled').length,
+      'No Show': enrichedInterviews.filter(iv => iv.status === 'No Show').length,
       'Completed': enrichedInterviews.filter(iv => iv.status === 'Completed').length,
       'Cancelled': enrichedInterviews.filter(iv => iv.status === 'Cancelled').length,
       'All Interviews': enrichedInterviews.length,
@@ -128,24 +140,27 @@ export default function InterviewsList() {
       iv.interviewerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       iv.interviewType.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchStatus = !filters.status || iv.status === filters.status;
-    const matchType = !filters.interviewType || iv.interviewType === filters.interviewType;
-    const matchMode = !filters.mode || iv.mode === filters.mode;
     const matchClient = !filters.clientId || iv.clientId === filters.clientId;
+    const matchJob = !filters.jobId || iv.jobId === filters.jobId;
+    const matchInterviewer = !filters.interviewerName || iv.interviewerName === filters.interviewerName;
+    const matchType = !filters.interviewType || iv.interviewType === filters.interviewType;
+    const matchRound = !filters.roundName || iv.roundName === filters.roundName;
+    
     const matchDate = isDateInPreset(iv.scheduledAt, datePreset, customStart, customEnd);
 
     let matchTab = true;
     switch(activeTab) {
-      case 'Upcoming': matchTab = iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now; break;
-      case 'Today': matchTab = iv.status === 'Scheduled' && !iv.isOverdue && iv.scheduledAt.startsWith(todayStr); break;
+      case 'Upcoming': matchTab = iv.status === 'Scheduled' && !iv.isOverdue && iv.start > now && !iv.scheduledAt.startsWith(todayStr); break;
+      case 'Today': matchTab = iv.status === 'Scheduled' && iv.scheduledAt.startsWith(todayStr); break;
       case 'Feedback Pending': matchTab = iv.status === 'Completed' && iv.feedbackStatus !== 'Submitted'; break;
-      case 'Overdue': matchTab = iv.isOverdue; break;
+      case 'Overdue': matchTab = iv.isOverdue && iv.status === 'Scheduled'; break;
+      case 'No Show': matchTab = iv.status === 'No Show'; break;
       case 'Completed': matchTab = iv.status === 'Completed'; break;
       case 'Cancelled': matchTab = iv.status === 'Cancelled'; break;
       default: matchTab = true;
     }
 
-    return matchSearch && matchStatus && matchType && matchMode && matchClient && matchDate && matchTab;
+    return matchSearch && matchClient && matchJob && matchInterviewer && matchType && matchRound && matchDate && matchTab;
   }).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
@@ -280,6 +295,37 @@ export default function InterviewsList() {
     setSelectedInterview(null);
   };
 
+  const handleNoShowSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInterview) return;
+    markInterviewNoShow(selectedInterview.id, noShowForm.who, noShowForm.note);
+    triggerToast('Interview marked as No Show.');
+    setActiveModal(null);
+    setSelectedInterview(null);
+  };
+
+  const handleConfirmSelection = () => {
+    if (!selectedInterview) return;
+    updateApplicationStage(selectedInterview.applicationId, 'Selected');
+    triggerToast('Candidate selected for the job.');
+    setActiveModal(null);
+    setSelectedInterview(null);
+  };
+
+  const handleConfirmRejection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInterview) return;
+    updateApplicationStage(selectedInterview.applicationId, 'Rejected', undefined, rejectionReason);
+    triggerToast('Candidate rejected.');
+    setActiveModal(null);
+    setSelectedInterview(null);
+  };
+
+  const handleScheduleNextRound = (interview: Interview) => {
+    setSelectedInterview(interview);
+    setIsScheduleModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -355,7 +401,7 @@ export default function InterviewsList() {
             values={filters}
             onChange={(k, v) => setFilters({ ...filters, [k]: v })}
             onClear={() => {
-              setFilters({ status: '', interviewType: '', mode: '', clientId: '' });
+              setFilters({ clientId: '', jobId: '', interviewerName: '', interviewType: '', roundName: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
@@ -395,7 +441,7 @@ export default function InterviewsList() {
                       <div className="font-medium text-slate-800">{candidate?.fullName}</div>
                       <div className="text-xs text-slate-500 mt-1">{job?.title}</div>
                       <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                        {interview.mode === 'Video' ? <Video className="w-3.5 h-3.5" /> : 
+                        {interview.roundName} • {interview.mode === 'Video' ? <Video className="w-3.5 h-3.5" /> : 
                          interview.mode === 'Phone' ? <Phone className="w-3.5 h-3.5" /> : 
                          <Users className="w-3.5 h-3.5" />}
                         {interview.interviewType}
@@ -496,26 +542,26 @@ export default function InterviewsList() {
                            <button className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
                              <MoreHorizontal className="w-4 h-4" />
                            </button>
-                           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
+                           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1 flex flex-col">
                               {interview.status === 'Scheduled' && (
                                 <button 
                                   onClick={() => { setSelectedInterview(interview); setCancelReason(''); setActiveModal('cancel'); }}
-                                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium"
+                                  className="w-full block text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-medium"
                                 >
                                   Cancel Interview
                                 </button>
                               )}
                               {(interview.status === 'Scheduled' || interview.isOverdue) && (
                                 <button 
-                                  onClick={() => handleStatusChange(interview.id, 'No Show')}
-                                  className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                                  onClick={() => { setSelectedInterview(interview); setNoShowForm({ who: 'Candidate', note: '' }); setActiveModal('no_show'); }}
+                                  className="w-full block text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
                                 >
                                   Mark No-Show
                                 </button>
                               )}
                               <button 
                                 onClick={() => { setSelectedInterview(interview); setActiveModal('view_detail'); }}
-                                className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                                className="w-full block text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
                               >
                                 View History
                               </button>
@@ -608,9 +654,30 @@ export default function InterviewsList() {
                 <p><strong>Rating:</strong> {selectedInterview.overallRating}/5</p>
                 <p><strong>Notes:</strong> {selectedInterview.feedbackNotes}</p>
               </div>
-              <div className="flex justify-between border-t pt-4">
-                <button onClick={() => openFeedbackModal(selectedInterview, true)} className="px-4 py-2 text-sm border text-blue-600 border-blue-200 bg-blue-50 rounded-lg">Edit Feedback</button>
-                <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Close</button>
+              <div className="flex flex-col gap-3 border-t pt-4">
+                {selectedInterview.recommendation === 'Hold' && (
+                  <div className="flex flex-wrap gap-2 justify-center mb-2">
+                    <button onClick={() => handleScheduleNextRound(selectedInterview)} className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">Schedule Next Round</button>
+                    <button onClick={() => setActiveModal('confirm_selection')} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">Confirm Selection</button>
+                    <button onClick={() => setActiveModal('confirm_rejection')} className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Confirm Rejection</button>
+                  </div>
+                )}
+                {selectedInterview.recommendation === 'Hire' && (
+                  <div className="flex flex-wrap gap-2 justify-center mb-2">
+                    <button onClick={() => setActiveModal('confirm_selection')} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">Confirm Selection</button>
+                    <button onClick={() => handleScheduleNextRound(selectedInterview)} className="px-4 py-2 text-sm text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shadow-sm">Schedule Next Round Instead</button>
+                  </div>
+                )}
+                {selectedInterview.recommendation === 'Reject' && (
+                  <div className="flex flex-wrap gap-2 justify-center mb-2">
+                    <button onClick={() => setActiveModal('confirm_rejection')} className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Confirm Rejection</button>
+                  </div>
+                )}
+                
+                <div className="flex justify-between">
+                  <button onClick={() => openFeedbackModal(selectedInterview, true)} className="px-4 py-2 text-sm border text-blue-600 border-blue-200 bg-blue-50 rounded-lg">Edit Feedback</button>
+                  <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Close</button>
+                </div>
               </div>
             </div>
           </div>
@@ -677,37 +744,61 @@ export default function InterviewsList() {
         </div>
       )}
 
-      {/* DETAIL MODAL (VIEW DETAIL) */}
+      {/* DETAIL MODAL (VIEW DETAIL / HISTORY) */}
       {activeModal === 'view_detail' && selectedInterview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
-              <h2 className="text-lg font-bold text-slate-800">Interview Details</h2>
+              <h2 className="text-lg font-bold text-slate-800">Interview History</h2>
               <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 overflow-y-auto space-y-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="text-sm border border-slate-200 rounded-lg p-4 bg-slate-50">
+                <div className="font-semibold text-slate-800 mb-2">Application Context</div>
                 <div><strong>Candidate:</strong> {candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}</div>
                 <div><strong>Job:</strong> {jobs.find(j => j.id === selectedInterview.jobId)?.title}</div>
-                <div><strong>Client:</strong> {clients.find(c => c.id === selectedInterview.clientId)?.name}</div>
-                <div><strong>Status:</strong> {selectedInterview.status}</div>
-                <div><strong>Date & Time:</strong> {formatDateTime(selectedInterview.scheduledAt)} ({selectedInterview.timezone || 'Local'})</div>
-                <div><strong>Interviewer:</strong> {selectedInterview.interviewerName}</div>
-                <div className="col-span-2"><strong>Mode:</strong> {selectedInterview.mode} - {selectedInterview.provider || 'No provider'}</div>
-                {selectedInterview.meetingLink && <div className="col-span-2"><strong>Location/Link:</strong> <a href={selectedInterview.meetingLink} target="_blank" rel="noreferrer" className="text-blue-600 underline break-all">{selectedInterview.meetingLink}</a></div>}
-                {selectedInterview.candidateInstructions && <div className="col-span-2 text-slate-600 bg-slate-50 p-2 rounded"><strong>Instructions:</strong> {selectedInterview.candidateInstructions}</div>}
+                <div><strong>Current Stage:</strong> {applications.find(a => a.id === selectedInterview.applicationId)?.currentStage}</div>
               </div>
 
-              {selectedInterview.rescheduleReason && (
-                <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-800">
-                  <strong>Reschedule History:</strong> {selectedInterview.rescheduleReason} ({formatDateTime(selectedInterview.rescheduledAt!)})
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-3 text-sm">All Rounds</h3>
+                <div className="space-y-3">
+                  {interviews
+                    .filter(i => i.applicationId === selectedInterview.applicationId)
+                    .sort((a, b) => (a.roundNumber || 0) - (b.roundNumber || 0))
+                    .map(round => (
+                      <div key={round.id} className={cn(
+                        "p-4 border rounded-lg text-sm",
+                        round.id === selectedInterview.id ? "border-blue-400 bg-blue-50/50 shadow-sm" : "border-slate-200 bg-white"
+                      )}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="font-semibold text-slate-800">{round.roundName} - {round.interviewType}</div>
+                          <span className={cn(
+                            "inline-flex items-center w-fit px-2 py-0.5 rounded text-xs font-medium border",
+                            round.status === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
+                            round.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                            round.status === 'Cancelled' ? "bg-slate-100 text-slate-700 border-slate-300" :
+                            "bg-red-50 text-red-700 border-red-200"
+                          )}>
+                            {round.status}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                          <div><strong>Date & Time:</strong> {formatDateTime(round.scheduledAt)} ({round.timezone || 'Local'})</div>
+                          <div><strong>Interviewer:</strong> {round.interviewerName}</div>
+                          <div><strong>Mode:</strong> {round.mode} - {round.provider || 'No provider'}</div>
+                        </div>
+                        {round.feedbackStatus === 'Submitted' && (
+                          <div className="mt-3 pt-3 border-t border-slate-200 text-xs">
+                            <div className="font-semibold text-slate-700 mb-1">Feedback</div>
+                            <div><strong>Result:</strong> {round.overallResult} ({round.overallRating}/5)</div>
+                            <div><strong>Recommendation:</strong> {round.recommendation}</div>
+                          </div>
+                        )}
+                      </div>
+                  ))}
                 </div>
-              )}
-              {selectedInterview.cancellationReason && (
-                <div className="bg-red-50 p-3 rounded-lg text-sm text-red-800">
-                  <strong>Cancellation Reason:</strong> {selectedInterview.cancellationReason} ({formatDateTime(selectedInterview.cancelledAt!)})
-                </div>
-              )}
+              </div>
 
               <div className="flex justify-end pt-4 border-t">
                 <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Close</button>
@@ -717,10 +808,100 @@ export default function InterviewsList() {
         </div>
       )}
 
+      {/* NO SHOW MODAL */}
+      {activeModal === 'no_show' && selectedInterview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">Mark No-Show</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleNoShowSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Who did not attend? *</label>
+                <select required value={noShowForm.who} onChange={e => setNoShowForm({...noShowForm, who: e.target.value as any})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  <option value="Candidate">Candidate</option>
+                  <option value="Interviewer">Interviewer</option>
+                  <option value="Both">Both</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Optional Note</label>
+                <textarea 
+                  rows={3}
+                  value={noShowForm.note}
+                  onChange={(e) => setNoShowForm({...noShowForm, note: e.target.value})}
+                  placeholder="Provide a note..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Confirm No-Show</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM SELECTION MODAL */}
+      {activeModal === 'confirm_selection' && selectedInterview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">Confirm Selection</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">Are you sure you want to select <strong>{candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}</strong> for the job <strong>{jobs.find(j => j.id === selectedInterview.jobId)?.title}</strong>?</p>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+                <button onClick={handleConfirmSelection} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg">Confirm Selection</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM REJECTION MODAL */}
+      {activeModal === 'confirm_rejection' && selectedInterview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between">
+              <h2 className="text-lg font-bold text-red-600 flex items-center gap-2">Confirm Rejection</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleConfirmRejection} className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">Are you sure you want to reject <strong>{candidates.find(c => c.id === selectedInterview.candidateId)?.fullName}</strong>?</p>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Reason for Rejection *</label>
+                <textarea 
+                  required
+                  rows={3}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Provide a reason..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg">Confirm Rejection</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Global Schedule Interview Modal */}
       <ScheduleInterviewModal 
         isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
+        onClose={() => {
+          setIsScheduleModalOpen(false);
+          setSelectedInterview(null);
+        }}
+        initialCandidateId={selectedInterview?.candidateId}
+        initialJobId={selectedInterview?.jobId}
       />
     </div>
   );

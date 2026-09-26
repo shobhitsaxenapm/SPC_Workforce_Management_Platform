@@ -382,7 +382,7 @@ export default function JobDetail() {
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
                         <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
                         
-                        {app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && (
+                        {app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received' && (
                           <div className="mb-3">
                             <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
                           </div>

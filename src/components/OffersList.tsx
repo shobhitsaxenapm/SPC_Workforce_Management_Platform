@@ -38,8 +38,7 @@ export default function OffersList() {
     status: '', 
     clientId: '', 
     jobId: '', 
-    assignedRecruiterId: '',
-    expiryRisk: ''
+    assignedRecruiterId: ''
   });
 
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
@@ -133,21 +132,7 @@ export default function OffersList() {
     return new Date(Math.max(...dates.map(d => new Date(d).getTime()))).toISOString();
   };
 
-  // Expiry Risk Calculator
-  const getExpiryRisk = (offer: Offer): 'Expired' | 'Expiring soon' | 'No expiry date' | 'No Immediate Risk' => {
-    if (offer.status === 'Expired') return 'Expired';
-    if (!offer.expiryDate) return 'No expiry date';
-    
-    const expiryTime = new Date(offer.expiryDate).getTime();
-    const now = Date.now();
-    const diffMs = expiryTime - now;
-    
-    if (diffMs < 0) return 'Expired';
-    
-    const diffDays = diffMs / (24 * 3600 * 1000);
-    if (diffDays <= 7) return 'Expiring soon';
-    return 'No Immediate Risk';
-  };
+
 
   // Unique lists for Filter Options
   const uniqueClients = Array.from(new Set(offers.map(o => o.clientId))).map(id => clients.find(c => c.id === id)).filter(Boolean);
@@ -156,8 +141,7 @@ export default function OffersList() {
   const filterFields: FilterField[] = [
     { key: 'status', label: 'Status', options: ['Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
-    { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) },
-    { key: 'expiryRisk', label: 'Expiry Risk', options: ['Expiring soon', 'Expired', 'No expiry date'].map(r => ({ value: r, label: r })) }
+    { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) }
   ];
 
   // Deduplicate offers by case identity, taking the latest version
@@ -191,15 +175,11 @@ export default function OffersList() {
     const matchClient = !filters.clientId || offer.clientId === filters.clientId;
     const matchJob = !filters.jobId || offer.jobId === filters.jobId;
     
-    // Expiry Risk filter matching
-    const risk = getExpiryRisk(offer);
-    const matchRisk = !filters.expiryRisk || risk === filters.expiryRisk;
-
     // Date range preset matches
     const lastActivity = getLastActivity(offer);
     const matchDate = lastActivity ? isDateInPreset(lastActivity, datePreset, customStart, customEnd) : (datePreset === 'All Time');
 
-    return matchSearch && matchStatus && matchClient && matchJob && matchRisk && matchDate;
+    return matchSearch && matchStatus && matchClient && matchJob && matchDate;
   });
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
@@ -518,7 +498,7 @@ export default function OffersList() {
       })()}
 
       <div className="flex justify-between items-center">
-        <p className="text-slate-600">Manage offer drafts, approvals, issued offers, expiry risk and candidate responses.</p>
+        <p className="text-slate-600">Manage offer drafts, approvals, issued offers and candidate responses.</p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -549,7 +529,7 @@ export default function OffersList() {
             values={filters}
             onChange={(k, v) => setFilters({ ...filters, [k]: v })}
             onClear={() => {
-              setFilters({ status: '', clientId: '', jobId: '', assignedRecruiterId: '', expiryRisk: '' });
+              setFilters({ status: '', clientId: '', jobId: '', assignedRecruiterId: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
@@ -600,7 +580,6 @@ export default function OffersList() {
                 const candidate = candidates.find(c => c.id === offer.candidateId);
                 const job = jobs.find(j => j.id === offer.jobId);
                 const client = clients.find(c => c.id === offer.clientId);
-                const risk = getExpiryRisk(offer);
                 const displayStatus = getDisplayStatus(offer.status);
                 const lastActivityDate = getLastActivity(offer);
 
@@ -634,12 +613,7 @@ export default function OffersList() {
                           {displayStatus}
                         </span>
                         {(displayStatus === 'Sent' || displayStatus === 'Negotiating') && offer.expiryDate && (
-                          <span className={cn(
-                            "inline-flex items-center w-fit gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded",
-                            risk === 'Expired' ? "bg-red-50 text-red-600 border border-red-100" :
-                            risk === 'Expiring soon' ? "bg-amber-50 text-amber-700 border border-amber-100 animate-pulse" :
-                            "text-slate-500"
-                          )}>
+                          <span className="inline-flex items-center w-fit gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded text-slate-500">
                             <AlertCircle className="w-3 h-3 shrink-0" /> <span className="truncate">Offer expires: {formatDate(offer.expiryDate)}</span>
                           </span>
                         )}

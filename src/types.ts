@@ -339,6 +339,7 @@ export interface Interview {
   candidateId: string;
   clientId: string;
   roundName?: string;
+  roundNumber?: number;
   interviewType?: string;
   interviewerId?: string;
   scheduledAt: string;
@@ -361,6 +362,8 @@ export interface Interview {
   rescheduledAt?: string;
   cancellationReason?: string;
   cancelledAt?: string;
+  noShowWho?: 'Candidate' | 'Interviewer' | 'Both';
+  noShowNote?: string;
   candidateInstructions?: string;
   internalNotes?: string;
 }

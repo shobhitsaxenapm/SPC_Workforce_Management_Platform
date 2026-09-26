@@ -12,7 +12,7 @@ interface ScheduleInterviewModalProps {
 }
 
 export default function ScheduleInterviewModal({ isOpen, onClose, initialCandidateId, initialJobId }: ScheduleInterviewModalProps) {
-  const { candidates, jobs, clients, applications, scheduleInterview, addMatchToPipeline, setQuickViewJobId } = useApp();
+  const { candidates, jobs, clients, applications, interviews, scheduleInterview, addMatchToPipeline, setQuickViewJobId } = useApp();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
@@ -26,6 +26,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   
   const [details, setDetails] = useState({
     roundName: 'Round 1',
+    roundNumber: 1,
     interviewType: 'HR Screening',
     date: '',
     time: '',
@@ -56,6 +57,18 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   const selectedClient = clients.find(c => c.id === selectedJob?.clientId);
   const currentApplication = candidateApplications.find(a => a.jobId === selectedJobId);
 
+  // Auto-calculate next round when application changes
+  useEffect(() => {
+    if (currentApplication && isOpen) {
+      const existingInterviews = interviews.filter(i => i.applicationId === currentApplication.id);
+      const highestRound = existingInterviews.reduce((max, i) => Math.max(max, i.roundNumber || 0), 0);
+      const nextRound = highestRound + 1;
+      setDetails(d => ({ ...d, roundName: `Round ${nextRound}`, roundNumber: nextRound }));
+    } else {
+      setDetails(d => ({ ...d, roundName: 'Round 1', roundNumber: 1 }));
+    }
+  }, [currentApplication?.id, isOpen, interviews]);
+
   useEffect(() => {
     if (isOpen) {
       setStep(1);
@@ -65,7 +78,8 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
       setStagedNewJobLink('');
       setShowJobLinkPanel(false);
       setJobSearchQuery('');
-      setDetails({
+      setDetails(d => ({
+        ...d,
         interviewType: 'HR Screening',
         date: '',
         time: '',
@@ -75,7 +89,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         interviewerEmail: '',
         candidateInstructions: '',
         internalNotes: ''
-      });
+      }));
       setModeConfig({
         mode: 'Video',
         provider: 'None',
@@ -172,6 +186,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         jobId: selectedJobId,
         clientId: selectedJob?.clientId || '',
         roundName: details.roundName,
+        roundNumber: details.roundNumber,
         interviewType: details.interviewType,
         scheduledAt,
         durationMinutes: details.durationMinutes,
@@ -366,16 +381,12 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
               <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Round Name</label>
-                    <select 
+                    <input 
+                      type="text"
                       value={details.roundName}
-                      onChange={e => setDetails(d => ({ ...d, roundName: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="Round 1">Round 1</option>
-                      <option value="Round 2">Round 2</option>
-                      <option value="Round 3">Round 3</option>
-                      <option value="Final Round">Final Round</option>
-                    </select>
+                      disabled
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-600 outline-none"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Interview Type</label>

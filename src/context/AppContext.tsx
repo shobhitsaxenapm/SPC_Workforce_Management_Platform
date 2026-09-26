@@ -63,6 +63,7 @@ interface AppContextType {
   rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
   cancelInterview: (interviewId: string, reason: string) => void;
   updateInterviewStatus: (interviewId: string, status: InterviewStatus) => void;
+  markInterviewNoShow: (interviewId: string, who: 'Candidate' | 'Interviewer' | 'Both', note?: string) => void;
   updateOfferStatus: (offerId: string, status: OfferStatus, metadata?: Partial<Offer>) => void;
   extendOfferExpiry: (offerId: string, newExpiryDate: string) => void;
   startOnboardingFromOffer: (offerId: string) => { success: boolean; error?: string };
@@ -944,11 +945,24 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Automatically update the application stage to the correct Interviewing substate
     if (newInterview.applicationId) {
-      const substate = newInterview.roundName ? `${newInterview.roundName} Scheduled` : 'Round 1 Scheduled';
-      updateApplicationStage(newInterview.applicationId, 'Interviewing', substate);
+      const isFirstInterview = !interviews.some(i => i.applicationId === newInterview.applicationId);
+      if (isFirstInterview) {
+        const substate = newInterview.roundName ? `${newInterview.roundName} Scheduled` : 'Round 1 Scheduled';
+        updateApplicationStage(newInterview.applicationId, 'Interviewing', substate);
+      }
     }
 
     return { success: true };
+  };
+
+  const markInterviewNoShow = (interviewId: string, who: 'Candidate' | 'Interviewer' | 'Both', note?: string) => {
+    const updated = interviews.map(i => i.id === interviewId ? {
+      ...i,
+      status: 'No Show' as InterviewStatus,
+      noShowWho: who,
+      noShowNote: note
+    } : i);
+    persistInterviews(updated);
   };
 
   const cancelInterview = (interviewId: string, reason: string) => {
@@ -1314,6 +1328,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         rescheduleInterview,
         cancelInterview,
         updateInterviewStatus,
+        markInterviewNoShow,
         createOffer,
         createRevisedOffer,
         startNegotiation,
