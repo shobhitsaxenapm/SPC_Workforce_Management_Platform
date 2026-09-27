@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Search, MapPin, Briefcase, X, CheckCircle2 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Job, JobVisibility, JobStatus } from '../types';
 import FilterPanel, { FilterField } from './FilterPanel';
@@ -11,11 +11,11 @@ import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
 import InlineClientForm from './InlineClientForm';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, MoreVertical } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
-  const { jobs, projects, clients, createJob } = useApp();
+  const { jobs, projects, clients, createJob, updateJob, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilters, setJobFilters] = useState<Record<string, string>>({ status: '', clientId: '', employmentType: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,8 +26,26 @@ export default function JobsList() {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
-  // Smart Job State
   const [creationMode, setCreationMode] = useState<'manual' | 'smart' | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLTableDataCellElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdownId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [jobToClose, setJobToClose] = useState<string | null>(null);
+  const [closeReason, setCloseReason] = useState('Position Filled');
+  const [closeNote, setCloseNote] = useState('');
+  const navigate = useNavigate();
   const [smartJobStep, setSmartJobStep] = useState<'upload' | 'review'>('upload');
   const [extractedData, setExtractedData] = useState<ExtractedJobData | null>(null);
   const [sourceText, setSourceText] = useState('');
@@ -170,7 +188,8 @@ export default function JobsList() {
     return { value: cid, label: (c?.name || cid) as string };
   });
   const jobFilterFields: FilterField[] = [
-    { key: 'status', label: 'Status', options: ['Draft', 'Published', 'Paused', 'Filled', 'Closed'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Status', options: ['Draft', 'Open', 'On Hold', 'Closed'].map(s => ({ value: s, label: s })) },
+    { key: 'isPublished', label: 'Publication', options: [{ value: 'true', label: 'Published' }, { value: 'false', label: 'Unpublished' }] },
     { key: 'clientId', label: 'Client', options: clientOptions },
     { key: 'employmentType', label: 'Employment Type', options: ['Contract', 'Full-time', 'Part-time'].map(s => ({ value: s, label: s })) },
   ];
@@ -184,10 +203,11 @@ export default function JobsList() {
     const clientMatch = client?.name?.toLowerCase().includes(searchLower) || false;
     const matchSearch = !searchTerm || titleMatch || codeMatch || clientMatch;
     const matchStatus = !jobFilters.status || job.status === jobFilters.status;
+    const matchPublished = !jobFilters.isPublished || (jobFilters.isPublished === 'true' ? job.isPublished === true : job.isPublished !== true);
     const matchClient = !jobFilters.clientId || job.clientId === jobFilters.clientId;
     const matchType = !jobFilters.employmentType || job.employmentType === jobFilters.employmentType;
     const matchDate = isDateInPreset(job.publishedAt || job.targetJoiningDate, datePreset, customStart, customEnd);
-    return matchSearch && matchStatus && matchClient && matchType && matchDate;
+    return matchSearch && matchStatus && matchPublished && matchClient && matchType && matchDate;
   });
 
   return (
@@ -230,7 +250,7 @@ export default function JobsList() {
             values={jobFilters}
             onChange={(k, v) => setJobFilters({ ...jobFilters, [k]: v })}
             onClear={() => {
-              setJobFilters({ status: '', clientId: '', employmentType: '' });
+              setJobFilters({ status: '', isPublished: '', clientId: '', employmentType: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
@@ -257,8 +277,8 @@ export default function JobsList() {
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div className="overflow-x-visible">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
               <tr>
@@ -267,7 +287,8 @@ export default function JobsList() {
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Fulfillment</th>
                 <th className="px-6 py-4">Target Date</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Job Status</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -279,7 +300,12 @@ export default function JobsList() {
                   <tr key={job.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
                     <td className="px-6 py-4">
                       <Link to={`/job-desk/${job.id}`} className="block">
-                        <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{job.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{job.title}</p>
+                          {job.isPublished && (
+                            <span className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Published</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
                           <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{job.code}</span>
                           <span>•</span>
@@ -317,13 +343,95 @@ export default function JobsList() {
                     <td className="px-6 py-4">
                       <span className={cn(
                         "px-2.5 py-1 rounded-full text-xs font-medium border",
-                        job.status === 'Published' ? "bg-green-50 text-green-700 border-green-200" :
+                        job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
+                        job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
                         job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
-                        job.status === 'Paused' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                        "bg-slate-50 text-slate-700 border-slate-200"
+                        "bg-slate-50 text-slate-500 border-slate-200"
                       )}>
                         {job.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right relative z-50" ref={dropdownRef}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdownId(activeDropdownId === job.id ? null : job.id);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {activeDropdownId === job.id && (
+                        <div className="absolute right-8 top-10 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 text-sm text-left">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); navigate(`/job-desk/${job.id}`); }}
+                            className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                          >
+                            Edit Job
+                          </button>
+                          {job.status === 'Draft' && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                            >
+                              Open Job
+                            </button>
+                          )}
+                          {job.status === 'Open' && !job.isPublished && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                            >
+                              Publish Job
+                            </button>
+                          )}
+                          {job.status === 'Open' && job.isPublished && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { isPublished: false }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                            >
+                              Unpublish Job
+                            </button>
+                          )}
+                          {job.status === 'Open' && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { status: 'On Hold', isPublished: false }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                            >
+                              Put on Hold
+                            </button>
+                          )}
+                          {job.status === 'On Hold' && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                            >
+                              Resume Job
+                            </button>
+                          )}
+                          {(job.status === 'Open' || job.status === 'On Hold') && (
+                            <button 
+                              onClick={() => { 
+                                setJobToClose(job.id); 
+                                setShowCloseModal(true); 
+                                setActiveDropdownId(null); 
+                              }}
+                              className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
+                            >
+                              Close Job
+                            </button>
+                          )}
+                          {job.status === 'Closed' && (
+                            <button 
+                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
+                              className="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50"
+                            >
+                              Reopen Job
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -689,7 +797,7 @@ export default function JobsList() {
                 <button 
                   type="submit" 
                   form="createJobForm" 
-                  onClick={(e) => handleCreateJob(e, 'Published')}
+                  onClick={(e) => handleCreateJob(e, 'Open')}
                   disabled={req ? availableToAllocate === 0 : false}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
                 >
@@ -699,6 +807,77 @@ export default function JobsList() {
             </div>
           </div>
           )}
+        </div>
+      )}
+
+      {showCloseModal && jobToClose && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-lg font-bold text-slate-800">Close Job Opening</h2>
+              <button onClick={() => { setShowCloseModal(false); setJobToClose(null); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                <p><strong>Warning:</strong> Closing this job will prevent any new applications, matching runs, or interview scheduling. Existing applicants and history will be preserved.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Close Reason <span className="text-red-500">*</span></label>
+                <select 
+                  value={closeReason}
+                  onChange={(e) => setCloseReason(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm bg-white"
+                >
+                  <option value="Position Filled">Position Filled</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Client Requirement Withdrawn">Client Requirement Withdrawn</option>
+                  <option value="Duplicate">Duplicate</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Optional Note</label>
+                <textarea 
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm resize-none"
+                  rows={3}
+                  placeholder="Add any additional context here..."
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => { setShowCloseModal(false); setJobToClose(null); }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  updateJob(jobToClose, { 
+                    status: 'Closed', 
+                    isPublished: false,
+                    closedAt: new Date().toISOString(),
+                    closedBy: currentUser?.id,
+                    closeReason,
+                    closeNote
+                  });
+                  setShowCloseModal(false);
+                  setJobToClose(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Confirm & Close Job
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

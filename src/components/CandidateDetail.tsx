@@ -114,7 +114,7 @@ export default function CandidateDetail() {
     
     const job = mockJobs.find(j => j.id === insight.jobId);
     if (!job) return false;
-    if (job.status !== 'Published') return false; 
+    if (job.status !== 'Open' || !job.isPublished) return false; 
     if (job.openings - job.filled <= 0) return false;
 
     if (locationFilter && job.location !== locationFilter) return false;
@@ -498,7 +498,7 @@ export default function CandidateDetail() {
               </button>
             </div>
             <div className="text-xs text-slate-500 space-y-1">
-              <p><span className="font-medium text-slate-700">Origin: {originLabel}</span> • Added {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
+              <p><span className="font-medium text-slate-700">Application Source: {originLabel}</span> • Added {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
               <p>Last Activity: {formatDate(lastActivity)}</p>
               {appInterview && currentStage === 'Interviewing' && (
                 <p>
@@ -595,7 +595,7 @@ export default function CandidateDetail() {
               <button disabled={isProcessing === app.jobId} className="px-2 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
                 <MoreHorizontal className="w-5 h-5" />
               </button>
-              <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
+              <div className="absolute right-0 bottom-full mb-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1 origin-bottom-right">
                 {actionConfig.moreActions.filter(ma => ma !== 'Schedule Next Round').map((ma, idx) => (
                    <button 
                      key={idx} 

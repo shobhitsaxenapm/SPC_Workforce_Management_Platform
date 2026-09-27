@@ -946,7 +946,7 @@ User clicks 'Publish Job' in form or details screen.
 
 **Expected Behaviour**
 
-Job status transitions to `Published` and renders on public careers page.
+~~Job status transitions to `Published`~~ Job `isPublished` flag transitions to `true` and renders on public careers page.
 
 **Validation Rules**
 
@@ -3428,7 +3428,7 @@ Displays list cards of published jobs with title, location, type, and deadline.
 
 **Validation Rules**
 
-- Only jobs with visibility == 'Public' and status == 'Published' are listed.
+- Only jobs with visibility == 'Public' and ~~status == 'Published'~~ `isPublished == true` are listed.
 
 **Cross-Module Impact / Dependencies**
 

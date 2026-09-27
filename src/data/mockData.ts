@@ -152,7 +152,8 @@ export const mockJobs: Job[] = [
     targetJoiningDate: '2026-07-15T00:00:00Z',
     applicationDeadline: '2026-07-12T00:00:00Z',
     visibility: 'Public',
-    status: 'Published',
+    status: 'Open',
+    isPublished: true,
     publishedAt: '2026-06-16T10:00:00Z'
   },
   {
@@ -176,7 +177,8 @@ export const mockJobs: Job[] = [
     targetJoiningDate: '2026-07-15T00:00:00Z',
     applicationDeadline: '2026-07-12T00:00:00Z',
     visibility: 'Public',
-    status: 'Published'
+    status: 'Open',
+    isPublished: true
   },
   {
     id: 'j3',
@@ -199,7 +201,8 @@ export const mockJobs: Job[] = [
     targetJoiningDate: '2026-07-20T00:00:00Z',
     applicationDeadline: '2026-07-15T00:00:00Z',
     visibility: 'Public',
-    status: 'Published'
+    status: 'Open',
+    isPublished: true
   },
   {
     id: 'j4',
@@ -222,7 +225,8 @@ export const mockJobs: Job[] = [
     targetJoiningDate: '2026-07-25T00:00:00Z',
     applicationDeadline: '2026-07-20T00:00:00Z',
     visibility: 'Public',
-    status: 'Published'
+    status: 'Open',
+    isPublished: true
   }
 ];
 

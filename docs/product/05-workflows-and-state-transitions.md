@@ -23,7 +23,7 @@ This document outlines the operational flows, triggers, side effects, and state 
 - **Trigger**: HR clicks "Post New Job"
 - **Current State**: Creator form panel
 - **Allowed Action**: Fill details and select status to Publish
-- **Next State**: Job Desk Status: `Published`
+- **Next State**: Job Desk Status: ~~`Published`~~ `Open` + `isPublished: true`
 - **Side Effects**: Adds job description to careers portal immediately.
 - **Invalid Transitions**: Creating standalone jobs without linking to client demands (under target spec).
 - **Related Requirement IDs**: JOB-001, PUB-001

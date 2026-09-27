@@ -3,7 +3,7 @@ export type ProjectStatus = 'Draft' | 'Active' | 'On Hold' | 'Completed' | 'Canc
 export type EngagementType = 'Direct Recruitment' | 'Staffing – SPC Payroll';
 export type AgreementStatus = 'Draft' | 'Signed';
 export type ProjectFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
-export type JobStatus = 'Draft' | 'Published' | 'Paused' | 'Filled' | 'Closed';
+export type JobStatus = 'Draft' | 'Open' | 'On Hold' | 'Closed';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
   | 'New'
@@ -193,8 +193,13 @@ export interface Job {
   assignedRecruiterId: string;
   visibility: JobVisibility;
   status: JobStatus;
+  isPublished?: boolean;
   publishedAt?: string;
   sourceMetadata?: JobSourceMetadata;
+  closedAt?: string;
+  closedBy?: string;
+  closeReason?: string;
+  closeNote?: string;
 }
 
 export interface EmploymentEntry {

@@ -36,7 +36,6 @@ interface AppContextType {
   deleteCandidate: (candidateId: string) => void;
   createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled' | 'engagementType'>, projectId?: string) => void;
   updateJob: (jobId: string, updates: Partial<Job>) => void;
-  updateJobStatus: (jobId: string, status: JobStatus) => void;
   submitApplication: (
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
     jobId: string
@@ -207,9 +206,17 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.setItem('spc_jobs', JSON.stringify(mockJobs));
     }
     const parsedJobs = safeParse<Job[]>('spc_jobs', mockJobs);
-    const healedJobs = parsedJobs.map(j => ({ ...j, title: j.title || j.projectName || '' }));
+    const healedJobs = parsedJobs.map(j => {
+      let healed = { ...j, title: j.title || j.projectName || '' };
+      // Migrate old 'Published' status to 'Open' + isPublished
+      if (healed.status === 'Published' as any) {
+        healed.status = 'Open';
+        healed.isPublished = true;
+      }
+      return healed;
+    });
     // If any were healed, save back to storage so they persist
-    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title)) {
+    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status)) {
       localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
     }
     return healedJobs;
@@ -636,19 +643,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistJobs(newJobs);
   };
 
-  const updateJobStatus = (jobId: string, status: JobStatus) => {
-    const updatedJobs = jobs.map(j => {
-      if (j.id === jobId) {
-        return { 
-          ...j, 
-          status, 
-          publishedAt: status === 'Published' && j.status !== 'Published' ? new Date().toISOString() : j.publishedAt 
-        };
-      }
-      return j;
-    });
-    persistJobs(updatedJobs);
-  };
 
   const updateJob = (jobId: string, updates: Partial<Job>) => {
     const updatedJobs = jobs.map(j => {
@@ -1312,7 +1306,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteCandidate,
         createJob,
         updateJob,
-        updateJobStatus,
         submitApplication,
         updateApplicationStage,
         updateApplicationScreening,

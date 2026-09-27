@@ -17,11 +17,11 @@ export default function CandidatesList() {
   const [candidateToDelete, setCandidateToDelete] = useState<any>(null);
   const [activePopoverId, setActivePopoverId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({ 
-    stage: '', 
-    location: '', 
-    availability: '', 
-    designation: '' 
+  const [filters, setFilters] = useState<Record<string, string>>({
+    stage: '',
+    location: '',
+    availability: '',
+    designation: ''
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,11 +32,11 @@ export default function CandidatesList() {
   const sources = [...new Set(candidates.map(c => c.source).filter(Boolean))] as string[];
   const locations = [...new Set(candidates.map(c => c.currentLocation).filter(Boolean))] as string[];
   const availabilities = [...new Set(candidates.map(c => c.noticePeriod).filter(Boolean))] as string[];
-  
 
-  
+
+
   const designations = [...new Set(candidates.map(c => c.currentRole).filter(Boolean))] as string[];
-  
+
   const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
 
   const filterFields: FilterField[] = [
@@ -54,12 +54,12 @@ export default function CandidatesList() {
       c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
       c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
     const matchLocation = !filters.location || c.currentLocation === filters.location;
     const matchAvailability = !filters.availability || c.noticePeriod === filters.availability;
     const matchStage = !filters.stage || candidateApps.some(a => a.currentStage === filters.stage);
     const matchDesignation = !filters.designation || c.currentRole === filters.designation;
-    
+
     return matchSearch && matchLocation && matchAvailability && matchStage && matchDesignation;
   });
 
@@ -84,9 +84,9 @@ export default function CandidatesList() {
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search by name, skills, location..." 
+            <input
+              type="text"
+              placeholder="Search by name, skills, location..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
@@ -174,14 +174,14 @@ export default function CandidatesList() {
               Showing <span className="font-medium text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-slate-700">{Math.min(currentPage * itemsPerPage, filteredCandidates.length)}</span> of <span className="font-medium text-slate-700">{filteredCandidates.length}</span> candidates
             </span>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
               >
                 Previous
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
@@ -197,16 +197,16 @@ export default function CandidatesList() {
       {showUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-4xl max-h-[95vh] flex flex-col bg-slate-50 rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-            <button 
-              onClick={() => setShowUpload(false)} 
+            <button
+              onClick={() => setShowUpload(false)}
               className="absolute top-4 right-4 z-10 p-2 bg-white text-slate-400 hover:text-slate-600 rounded-full shadow-sm hover:shadow border border-slate-200 transition-all"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex-1 overflow-y-auto flex items-center justify-center p-8">
-              <SmartCandidateUpload 
+              <SmartCandidateUpload
                 onExtractionSuccess={(data, meta) => {
-                  setExtractedData({...data, resumeUrl: meta.originalFilename});
+                  setExtractedData({ ...data, resumeUrl: meta.originalFilename });
                   setShowUpload(false);
                   setShowReviewForm(true);
                 }}
@@ -219,7 +219,7 @@ export default function CandidatesList() {
 
       {/* Full-Screen Review Form Modal */}
       {showReviewForm && extractedData && (
-        <CandidateFormModal 
+        <CandidateFormModal
           isOpen={showReviewForm}
           onClose={() => setShowReviewForm(false)}
           initialData={extractedData}
@@ -241,13 +241,13 @@ export default function CandidatesList() {
               </p>
             </div>
             <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setCandidateToDelete(null)}
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => {
                   deleteCandidate(candidateToDelete.id);
                   setCandidateToDelete(null);

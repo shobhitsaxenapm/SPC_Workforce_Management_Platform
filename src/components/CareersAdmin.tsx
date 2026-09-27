@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom';
 import AIInsightCard from './AIInsightCard';
 
 export default function CareersAdmin() {
-  const published = mockJobs.filter(j => j.status === 'Published').length;
+  const published = mockJobs.filter(j => j.status === 'Open' && j.isPublished).length;
   const draft = mockJobs.filter(j => j.status === 'Draft').length;
-  const paused = mockJobs.filter(j => j.status === 'Paused').length;
+  const paused = mockJobs.filter(j => j.status === 'On Hold').length;
 
   return (
     <div className="space-y-6">

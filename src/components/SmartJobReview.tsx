@@ -117,7 +117,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       assignedRecruiterId: currentUser?.id || '',
       visibility: formData.visibility,
       status: status,
-      publishedAt: status === 'Published' ? new Date().toISOString() : undefined,
+      isPublished: false,
       sourceMetadata: metadata,
     }, formData.projectId);
 
@@ -157,9 +157,9 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
             <button onClick={() => handleSave('Draft')} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2">
               Save as Draft
             </button>
-            <button onClick={() => handleSave('Published')} className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-900 transition-colors flex items-center gap-2">
+            <button onClick={() => handleSave('Open')} className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-900 transition-colors flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              Save & Publish
+              Save & Open
             </button>
           </div>
         </div>

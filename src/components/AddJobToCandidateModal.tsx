@@ -60,8 +60,7 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
   };
 
   const getDisabledReason = (job: Job) => {
-    if (job.status === 'Paused') return 'Cannot add candidates to a paused job.';
-    if (job.status === 'Filled') return 'Cannot add candidates to a filled job.';
+    if (job.status === 'On Hold') return 'Cannot add candidates to an on-hold job.';
     if (job.status === 'Closed') return 'Cannot add candidates to a closed job.';
     return null;
   };

@@ -11,7 +11,7 @@ interface ConfirmSelectionModalProps {
 export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }: ConfirmSelectionModalProps) {
   const { applications, candidates, jobs, clients, updateApplicationStage, interviews } = useApp();
   
-  const [employingEntity, setEmployingEntity] = useState<'SPC' | 'Client'>('SPC');
+
   
   const application = applications.find(a => a.id === applicationId);
   const candidate = candidates.find(c => c.id === application?.candidateId);
@@ -63,34 +63,7 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Employing Entity</label>
-            <p className="text-xs text-slate-500 mb-2">Select who will legally employ this candidate.</p>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="employingEntity" 
-                  value="SPC"
-                  checked={employingEntity === 'SPC'}
-                  onChange={() => setEmployingEntity('SPC')}
-                  className="text-blue-600 focus:ring-blue-600"
-                />
-                <span className="text-sm font-medium text-slate-700">SPC Workforce Solutions</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="employingEntity" 
-                  value="Client"
-                  checked={employingEntity === 'Client'}
-                  onChange={() => setEmployingEntity('Client')}
-                  className="text-blue-600 focus:ring-blue-600"
-                />
-                <span className="text-sm font-medium text-slate-700">{client?.name || 'Unknown Client'} (Direct)</span>
-              </label>
-            </div>
-          </div>
+
 
           {!isFeedbackComplete && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">

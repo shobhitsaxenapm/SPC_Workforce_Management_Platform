@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage } from '../types';
 import { useApp } from '../context/AppContext';
@@ -12,10 +12,11 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 import AddCandidateToJobModal from './AddCandidateToJobModal';
 import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
 import JobApplicantsTab from './JobApplicantsTab';
+import CandidateScreeningModal from './CandidateScreeningModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJobStatus, setQuickViewProjectId, setQuickViewCandidateId } = useApp();
+  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Applicants' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -23,6 +24,24 @@ export default function JobDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
+  const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setShowActionMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closeReason, setCloseReason] = useState('Position Filled');
+  const [closeNote, setCloseNote] = useState('');
   
   if (!job) return <div>Job not found</div>;
 
@@ -38,7 +57,8 @@ export default function JobDetail() {
   const currentMatchRun = matchRuns.find(r => r.jobId === job.id);
   const activeMatches = currentMatchRun?.matches.filter(m => !m.dismissed) || [];
   
-  const canRunMatching = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
+  const isJobActive = job.status !== 'Closed' && job.status !== 'On Hold';
+  const canRunMatching = (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId) && isJobActive;
   const canAction = canRunMatching;
 
   const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Rejected'] as const;
@@ -127,27 +147,87 @@ export default function JobDetail() {
           <span className="font-medium text-slate-800 font-mono">{job.code}</span>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => setIsEditModalOpen(true)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            Edit Job
-          </button>
-          
-          {job.status === 'Published' ? (
+          {job.status === 'Draft' ? (
             <button 
-              onClick={() => updateJobStatus(job.id, 'Draft')}
-              className="px-4 py-2 bg-white border border-slate-300 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+              onClick={() => updateJob(job.id, { status: 'Open', isPublished: false })}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
-              Unpublish
+              Open Job
             </button>
           ) : (
             <button 
-              onClick={() => updateJobStatus(job.id, 'Published')}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              onClick={() => setIsEditModalOpen(true)}
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
             >
-              Publish
+              Edit Job
             </button>
+          )}
+
+          {job.status !== 'Draft' && (
+            <div className="relative z-50" ref={actionMenuRef}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActionMenu(!showActionMenu);
+                }}
+                className="p-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm h-full"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              
+              {showActionMenu && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 text-sm">
+                  {job.status === 'Open' && !job.isPublished && (
+                    <button 
+                      onClick={() => updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() })}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                    >
+                      Publish Job
+                    </button>
+                  )}
+                  {job.status === 'Open' && job.isPublished && (
+                    <button 
+                      onClick={() => updateJob(job.id, { isPublished: false })}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                    >
+                      Unpublish Job
+                    </button>
+                  )}
+                  {job.status === 'Open' && (
+                    <button 
+                      onClick={() => updateJob(job.id, { status: 'On Hold', isPublished: false })}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                    >
+                      Put on Hold
+                    </button>
+                  )}
+                  {job.status === 'On Hold' && (
+                    <button 
+                      onClick={() => updateJob(job.id, { status: 'Open', isPublished: false })}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                    >
+                      Resume Job
+                    </button>
+                  )}
+                  {(job.status === 'Open' || job.status === 'On Hold') && (
+                    <button 
+                      onClick={() => setShowCloseModal(true)}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
+                    >
+                      Close Job
+                    </button>
+                  )}
+                  {job.status === 'Closed' && (
+                    <button 
+                      onClick={() => updateJob(job.id, { status: 'Open', isPublished: false })}
+                      className="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50"
+                    >
+                      Reopen Job
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -201,13 +281,22 @@ export default function JobDetail() {
                     <span>{job.experienceRange}</span>
                   </div>
                 </div>
-                <span className={cn(
-                  "px-3 py-1 rounded-full text-sm font-medium border",
-                  job.status === 'Published' ? "bg-green-50 text-green-700 border-green-200" :
-                  "bg-slate-50 text-slate-700 border-slate-200"
-                )}>
-                  {job.status}
-                </span>
+                <div className="flex gap-2">
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-sm font-medium border",
+                    job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
+                    job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                    job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                    "bg-slate-50 text-slate-500 border-slate-200"
+                  )}>
+                    {job.status}
+                  </span>
+                  {job.isPublished && (
+                    <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
+                      Published
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="prose prose-slate prose-sm max-w-none">
@@ -407,6 +496,16 @@ export default function JobDetail() {
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
                           
                           <div className="flex gap-2">
+                            {(app.currentStage === 'Sourced' || app.currentStage === 'Screening') && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setShowScreeningModal(app.id); }}
+                                className="px-2 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200 text-[10px] font-bold flex items-center gap-1"
+                                title={app.currentStage === 'Sourced' ? 'Begin Screening' : 'Continue Screening'}
+                              >
+                                <ClipboardCheck className="w-3 h-3" />
+                                {app.currentStage === 'Sourced' ? 'Begin Screening' : 'Continue Screening'}
+                              </button>
+                            )}
                             <button 
                               onClick={(e) => { e.stopPropagation(); setScheduleCandidateId(candidate?.id || null); }}
                               className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
@@ -465,9 +564,20 @@ export default function JobDetail() {
                                 );
                               })()}
                               <select 
-                                className="text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                className={cn(
+                                  "text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors",
+                                  app.currentStage === 'Screening' && "opacity-50 cursor-not-allowed"
+                                )}
                                 value={app.currentStage === 'Offered' ? 'Selected' : app.currentStage}
-                                onChange={(e) => updateStage(app.id, e.target.value as ApplicationStage)}
+                                disabled={app.currentStage === 'Screening'}
+                                onChange={(e) => {
+                                  const newStage = e.target.value as ApplicationStage;
+                                  if (newStage === 'Screening') {
+                                    setShowScreeningModal(app.id);
+                                  } else {
+                                    updateStage(app.id, newStage);
+                                  }
+                                }}
                               >
                                 {getSelectableStages(app.currentStage).map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
@@ -551,6 +661,91 @@ export default function JobDetail() {
           jobId={job.id} 
           isOpen={showAddCandidateModal} 
           onClose={() => setShowAddCandidateModal(false)} 
+        />
+      )}
+
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-lg font-bold text-slate-800">Close Job Opening</h2>
+              <button onClick={() => setShowCloseModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <ChevronRight className="w-5 h-5 opacity-0" /> {/* Spacer */}
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                <p><strong>Warning:</strong> Closing this job will prevent any new applications, matching runs, or interview scheduling. Existing applicants and history will be preserved.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Close Reason <span className="text-red-500">*</span></label>
+                <select 
+                  value={closeReason}
+                  onChange={(e) => setCloseReason(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm bg-white"
+                >
+                  <option value="Position Filled">Position Filled</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Client Requirement Withdrawn">Client Requirement Withdrawn</option>
+                  <option value="Duplicate">Duplicate</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Optional Note</label>
+                <textarea 
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm resize-none"
+                  rows={3}
+                  placeholder="Add any additional context here..."
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => setShowCloseModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  updateJob(job.id, { 
+                    status: 'Closed', 
+                    isPublished: false,
+                    closedAt: new Date().toISOString(),
+                    closedBy: currentUser?.id,
+                    closeReason,
+                    closeNote
+                  });
+                  setShowCloseModal(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Confirm & Close Job
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showScreeningModal && (
+        <CandidateScreeningModal
+          applicationId={showScreeningModal}
+          isOpen={true}
+          onClose={() => setShowScreeningModal(null)}
+          onProceedToInterview={() => {
+            const app = jobApplications.find(a => a.id === showScreeningModal);
+            if (app) {
+              setScheduleCandidateId(app.candidateId);
+            }
+          }}
         />
       )}
     </div>

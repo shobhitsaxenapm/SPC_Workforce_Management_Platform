@@ -1157,7 +1157,7 @@ export default function OffersList() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Response Date <span className="text-red-500">*</span></label>
-                  <input type="date" value={responseDate} onChange={e => setResponseDate(e.target.value)} max={new Date().toISOString().split('T')[0]} className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                  <input type="date" value={responseDate} onChange={e => setResponseDate(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
                 </div>
 
                 <div>
