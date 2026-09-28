@@ -139,7 +139,7 @@ export default function OffersList() {
   const uniqueJobs = Array.from(new Set(offers.map(o => o.jobId))).map(id => jobs.find(j => j.id === id)).filter(Boolean);
 
   const filterFields: FilterField[] = [
-    { key: 'status', label: 'Status', options: ['Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Accepted', 'Declined', 'Expired', 'Withdrawn'].map(s => ({ value: s, label: s })) },
+    { key: 'status', label: 'Status', options: ['Draft', 'Pending Approval', 'Approved', 'Sent', 'Accepted', 'Declined', 'Expired'].map(s => ({ value: s, label: s })) },
     { key: 'clientId', label: 'Client', options: uniqueClients.map(c => ({ value: c!.id, label: c!.name })) },
     { key: 'jobId', label: 'Role / Job', options: uniqueJobs.map(j => ({ value: j!.id, label: j!.title })) }
   ];

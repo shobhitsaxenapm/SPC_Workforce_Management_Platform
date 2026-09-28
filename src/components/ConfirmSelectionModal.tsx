@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 interface ConfirmSelectionModalProps {
@@ -10,6 +11,7 @@ interface ConfirmSelectionModalProps {
 
 export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }: ConfirmSelectionModalProps) {
   const { applications, candidates, jobs, clients, updateApplicationStage, interviews } = useApp();
+  const navigate = useNavigate();
   
 
   
@@ -27,6 +29,18 @@ export default function ConfirmSelectionModal({ applicationId, isOpen, onClose }
   const handleConfirm = () => {
     updateApplicationStage(application.id, 'Selected');
     onClose();
+    navigate('/offers', { 
+      state: { 
+        jobId: job.id, 
+        candidateId: candidate.id,
+        applicationId: application.id,
+        candidateName: candidate.firstName + ' ' + candidate.lastName,
+        jobTitle: job.title,
+        clientId: job.clientId,
+        projectId: job.projectId,
+        autoOpen: true 
+      } 
+    });
   };
 
   return (

@@ -288,7 +288,7 @@ export default function JobsList() {
                 <th className="px-6 py-4">Fulfillment</th>
                 <th className="px-6 py-4">Target Date</th>
                 <th className="px-6 py-4">Job Status</th>
-                <th className="px-6 py-4 text-right"></th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -351,88 +351,7 @@ export default function JobsList() {
                         {job.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right relative z-50" ref={dropdownRef}>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveDropdownId(activeDropdownId === job.id ? null : job.id);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                      
-                      {activeDropdownId === job.id && (
-                        <div className="absolute right-8 top-10 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 text-sm text-left">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); navigate(`/job-desk/${job.id}`); }}
-                            className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                          >
-                            Edit Job
-                          </button>
-                          {job.status === 'Draft' && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                            >
-                              Open Job
-                            </button>
-                          )}
-                          {job.status === 'Open' && !job.isPublished && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                            >
-                              Publish Job
-                            </button>
-                          )}
-                          {job.status === 'Open' && job.isPublished && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { isPublished: false }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                            >
-                              Unpublish Job
-                            </button>
-                          )}
-                          {job.status === 'Open' && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { status: 'On Hold', isPublished: false }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                            >
-                              Put on Hold
-                            </button>
-                          )}
-                          {job.status === 'On Hold' && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
-                            >
-                              Resume Job
-                            </button>
-                          )}
-                          {(job.status === 'Open' || job.status === 'On Hold') && (
-                            <button 
-                              onClick={() => { 
-                                setJobToClose(job.id); 
-                                setShowCloseModal(true); 
-                                setActiveDropdownId(null); 
-                              }}
-                              className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
-                            >
-                              Close Job
-                            </button>
-                          )}
-                          {job.status === 'Closed' && (
-                            <button 
-                              onClick={() => { updateJob(job.id, { status: 'Open', isPublished: false }); setActiveDropdownId(null); }}
-                              className="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50"
-                            >
-                              Reopen Job
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
+
                   </tr>
                 );
               })}

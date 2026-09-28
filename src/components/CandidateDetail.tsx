@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
 import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar } from 'lucide-react';
@@ -29,6 +29,7 @@ interface ActionConfig {
 
 export default function CandidateDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline, recordOfferResponse } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
@@ -171,7 +172,7 @@ export default function CandidateDetail() {
         } else if (activeOffer?.status === 'Offer Issued' || activeOffer?.status === 'Revised Offer Issued' || activeOffer?.status === 'Sent') {
           primary = 'View Offer';
         } else {
-          primary = 'Prepare Offer';
+          primary = 'Initiate Offer';
         }
         break;
       case 'Offered':
@@ -222,6 +223,22 @@ export default function CandidateDetail() {
       case 'Confirm Selection':
         setShowConfirmSelectionModal(app.id);
         break;
+      case 'Initiate Offer': {
+        const offerJob = jobs.find(j => j.id === app.jobId);
+        navigate('/offers', { 
+          state: { 
+            jobId: app.jobId, 
+            candidateId: app.candidateId,
+            applicationId: app.id,
+            candidateName: candidate.fullName,
+            jobTitle: offerJob?.title || 'Unknown Job',
+            clientId: offerJob?.clientId,
+            projectId: offerJob?.projectId,
+            autoOpen: true 
+          } 
+        });
+        break;
+      }
       case 'Prepare Offer':
       case 'Continue Offer':
       case 'Revise Offer':
