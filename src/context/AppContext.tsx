@@ -3,6 +3,7 @@ import { User, Job, Candidate, Application, Project, Client, ApplicationStage, A
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
+import { normalizeJob, normalizeApplication, normalizeOffer } from '../lib/statusNormalization';
 
 interface AppContextType {
   currentUser: User | null;
@@ -208,12 +209,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const parsedJobs = safeParse<Job[]>('spc_jobs', mockJobs);
     const healedJobs = parsedJobs.map(j => {
       let healed = { ...j, title: j.title || j.projectName || '' };
-      // Migrate old 'Published' status to 'Open' + isPublished
-      if (healed.status === 'Published' as any) {
-        healed.status = 'Open';
-        healed.isPublished = true;
-      }
-      return healed;
+      return normalizeJob(healed);
     });
     // If any were healed, save back to storage so they persist
     if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status)) {
@@ -272,10 +268,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const hasIssuedOffer = parsedOffers.some(o => o.applicationId === app.id && o.status === 'Sent');
         if (!hasIssuedOffer) {
           repaired = true;
-          return { ...app, currentStage: 'Interviewing', currentSubstate: undefined };
+          return normalizeApplication({ ...app, currentStage: 'Interviewing', currentSubstate: undefined });
         }
       }
-      return app;
+      return normalizeApplication(app);
     });
     if (repaired) {
        localStorage.setItem('spc_applications', JSON.stringify(base));
@@ -313,7 +309,18 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (localStorage.getItem('spc_offers') === null) {
       localStorage.setItem('spc_offers', JSON.stringify(mockOffers));
     }
-    return safeParse<Offer[]>('spc_offers', mockOffers);
+    const parsedOffers = safeParse<Offer[]>('spc_offers', mockOffers);
+    const healedOffers = parsedOffers.map(o => normalizeOffer(o));
+    
+    let changed = false;
+    healedOffers.forEach((o, i) => {
+      if (o.status !== parsedOffers[i].status) changed = true;
+    });
+    
+    if (changed) {
+      localStorage.setItem('spc_offers', JSON.stringify(healedOffers));
+    }
+    return healedOffers;
   });
 
   const [onboardings, setOnboardings] = useState<Onboarding[]>(() => {
@@ -1101,7 +1108,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const offer = offers.find(o => o.id === offerId);
     if (offer) {
       if (response === 'Accepted') {
-        updateApplicationStage(offer.applicationId, 'Hired', 'Offer Accepted');
+        updateApplicationStage(offer.applicationId, 'Joining Pending', 'Offer Accepted');
       } else if (response === 'Expired' || response === 'Withdrawn') {
         updateApplicationStage(offer.applicationId, 'Rejected', undefined, reason || `Offer ${response}`);
       }

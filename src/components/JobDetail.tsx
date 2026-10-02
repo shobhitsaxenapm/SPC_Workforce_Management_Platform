@@ -40,8 +40,11 @@ export default function JobDetail() {
     };
   }, []);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [closeReason, setCloseReason] = useState('Position Filled');
+  const [closeReason, setCloseReason] = useState<any>('Positions Filled/Placed');
   const [closeNote, setCloseNote] = useState('');
+  
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [holdReason, setHoldReason] = useState<any>('Client Hold');
   
   if (!job) return <div>Job not found</div>;
 
@@ -195,7 +198,7 @@ export default function JobDetail() {
                   )}
                   {job.status === 'Open' && (
                     <button 
-                      onClick={() => updateJob(job.id, { status: 'On Hold', isPublished: false })}
+                      onClick={() => { setShowActionMenu(false); setShowHoldModal(true); }}
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
                     >
                       Put on Hold
@@ -211,7 +214,7 @@ export default function JobDetail() {
                   )}
                   {(job.status === 'Open' || job.status === 'On Hold') && (
                     <button 
-                      onClick={() => setShowCloseModal(true)}
+                      onClick={() => { setShowActionMenu(false); setShowCloseModal(true); }}
                       className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
                     >
                       Close Job
@@ -281,19 +284,47 @@ export default function JobDetail() {
                     <span>{job.experienceRange}</span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <span className={cn(
-                    "px-3 py-1 rounded-full text-sm font-medium border",
-                    job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
-                    job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                    job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
-                    "bg-slate-50 text-slate-500 border-slate-200"
-                  )}>
-                    {job.status}
-                  </span>
-                  {job.isPublished && (
-                    <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
-                      Published
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-2 items-center">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-sm font-medium border",
+                      job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
+                      job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                      "bg-slate-50 text-slate-500 border-slate-200"
+                    )}>
+                      {job.status}
+                    </span>
+                    {job.isPublished && (
+                      <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
+                        Published
+                      </span>
+                    )}
+                    {(() => {
+                      if (job.status !== 'Open') return null;
+                      const jobApps = applications.filter(a => a.jobId === job.id);
+                      let latestActivity = job.publishedAt ? new Date(job.publishedAt).getTime() : 0;
+                      jobApps.forEach(a => {
+                        const act = new Date(a.lastActivity).getTime();
+                        if (act > latestActivity) latestActivity = act;
+                      });
+                      if (latestActivity === 0) return null;
+                      const now = new Date('2026-07-13T12:00:00Z').getTime();
+                      const isDormant = (now - latestActivity) >= 15 * 24 * 60 * 60 * 1000;
+                      if (isDormant) {
+                        return <span className="px-3 py-1 rounded-full text-sm uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 border border-amber-200 flex items-center gap-1" title="No Activity for 15+ Days"><AlertCircle className="w-3.5 h-3.5" /> Dormant</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
+                  {job.status === 'On Hold' && job.holdReason && (
+                    <span className="text-sm text-amber-700 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {job.holdReason}
+                    </span>
+                  )}
+                  {job.status === 'Closed' && job.closeReason && (
+                    <span className="text-sm text-slate-500 font-medium">
+                      {job.closeReason}
                     </span>
                   )}
                 </div>
@@ -687,11 +718,9 @@ export default function JobDetail() {
                   onChange={(e) => setCloseReason(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm bg-white"
                 >
-                  <option value="Position Filled">Position Filled</option>
-                  <option value="Cancelled">Cancelled</option>
-                  <option value="Client Requirement Withdrawn">Client Requirement Withdrawn</option>
-                  <option value="Duplicate">Duplicate</option>
-                  <option value="Other">Other</option>
+                  <option value="Positions Filled/Placed">Positions Filled/Placed</option>
+                  <option value="Lost to Competitor">Lost to Competitor</option>
+                  <option value="Client Cancelled">Client Cancelled</option>
                 </select>
               </div>
 
@@ -729,6 +758,60 @@ export default function JobDetail() {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Confirm & Close Job
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHoldModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-lg font-semibold text-slate-800">Put Job on Hold</h2>
+              <button onClick={() => setShowHoldModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                <p><strong>Note:</strong> Placing this job on hold will hide it from the active pipeline but preserve all data.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Hold Reason <span className="text-red-500">*</span></label>
+                <select 
+                  value={holdReason}
+                  onChange={(e) => setHoldReason(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm bg-white"
+                >
+                  <option value="Client Hold">Client Hold</option>
+                  <option value="Internal Hold">Internal Hold</option>
+                  <option value="Sourcing Difficulty">Sourcing Difficulty</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => setShowHoldModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  updateJob(job.id, { 
+                    status: 'On Hold', 
+                    isPublished: false,
+                    holdReason
+                  });
+                  setShowHoldModal(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                Confirm Hold
               </button>
             </div>
           </div>

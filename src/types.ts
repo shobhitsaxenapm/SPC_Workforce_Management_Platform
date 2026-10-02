@@ -4,6 +4,8 @@ export type EngagementType = 'Direct Recruitment' | 'Staffing – SPC Payroll';
 export type AgreementStatus = 'Draft' | 'Signed';
 export type ProjectFulfilmentStatus = 'Unfilled' | 'Partially Filled' | 'Fulfilled';
 export type JobStatus = 'Draft' | 'Open' | 'On Hold' | 'Closed';
+export type JobHoldReason = 'Client Hold' | 'Internal Hold' | 'Sourcing Difficulty';
+export type JobCloseReason = 'Positions Filled/Placed' | 'Lost to Competitor' | 'Client Cancelled';
 export type JobVisibility = 'Public' | 'Private';
 export type ApplicationStage = 
   | 'New'
@@ -14,7 +16,8 @@ export type ApplicationStage =
   | 'Interviewing'
   | 'Selected'
   | 'Offered'
-  | 'Hired'
+  | 'Joining Pending'
+  | 'Hired/Placed'
   | 'Joined'
   | 'Rejected'
   | 'Withdrawn';
@@ -196,9 +199,10 @@ export interface Job {
   isPublished?: boolean;
   publishedAt?: string;
   sourceMetadata?: JobSourceMetadata;
+  holdReason?: JobHoldReason;
   closedAt?: string;
   closedBy?: string;
-  closeReason?: string;
+  closeReason?: JobCloseReason;
   closeNote?: string;
 }
 
@@ -307,6 +311,7 @@ export interface Application {
   matchGaps?: string[];
   rejectionReason?: string;
   screeningData?: ScreeningData;
+  clientReviewStatus?: 'CV Shared' | 'Feedback Pending';
   lastActivity: string;
 }
 export interface MatchScoreBreakdown {

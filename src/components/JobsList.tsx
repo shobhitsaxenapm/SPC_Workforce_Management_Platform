@@ -15,7 +15,7 @@ import { AlertTriangle, MoreVertical } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
-  const { jobs, projects, clients, createJob, updateJob, currentUser } = useApp();
+  const { jobs, projects, clients, applications, createJob, updateJob, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilters, setJobFilters] = useState<Record<string, string>>({ status: '', clientId: '', employmentType: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -305,6 +305,22 @@ export default function JobsList() {
                           {job.isPublished && (
                             <span className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Published</span>
                           )}
+                          {(() => {
+                            if (job.status !== 'Open') return null;
+                            const jobApps = applications.filter(a => a.jobId === job.id);
+                            let latestActivity = job.publishedAt ? new Date(job.publishedAt).getTime() : 0;
+                            jobApps.forEach(a => {
+                              const act = new Date(a.lastActivity).getTime();
+                              if (act > latestActivity) latestActivity = act;
+                            });
+                            if (latestActivity === 0) return null;
+                            const now = new Date('2026-07-13T12:00:00Z').getTime();
+                            const isDormant = (now - latestActivity) >= 15 * 24 * 60 * 60 * 1000;
+                            if (isDormant) {
+                              return <span className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1" title="No Activity for 15+ Days"><AlertCircle className="w-3 h-3" /> Dormant</span>;
+                            }
+                            return null;
+                          })()}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
                           <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{job.code}</span>
@@ -341,15 +357,27 @@ export default function JobsList() {
                       {formatDate(job.targetJoiningDate)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium border",
-                        job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
-                        job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                        job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
-                        "bg-slate-50 text-slate-500 border-slate-200"
-                      )}>
-                        {job.status}
-                      </span>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-full text-xs font-medium border",
+                          job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
+                          job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                          "bg-slate-50 text-slate-500 border-slate-200"
+                        )}>
+                          {job.status}
+                        </span>
+                        {job.status === 'On Hold' && job.holdReason && (
+                           <span className="text-[10px] text-amber-700/80 font-medium ml-1 flex items-center gap-1">
+                             <AlertCircle className="w-3 h-3" /> {job.holdReason}
+                           </span>
+                        )}
+                        {job.status === 'Closed' && job.closeReason && (
+                           <span className="text-[10px] text-slate-500 font-medium ml-1">
+                             {job.closeReason}
+                           </span>
+                        )}
+                      </div>
                     </td>
 
                   </tr>

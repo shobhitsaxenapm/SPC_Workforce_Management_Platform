@@ -190,7 +190,8 @@ export default function CandidateDetail() {
           primary = 'Record Response';
         }
         break;
-      case 'Hired':
+      case 'Joining Pending':
+      case 'Hired/Placed':
       case 'Joined':
         if (activeOffer?.status === 'Accepted' || substate === 'Offer Accepted') {
           primary = 'Start Onboarding';
@@ -528,9 +529,16 @@ export default function CandidateDetail() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
-              {currentStage}
-            </span>
+            <div className="flex gap-2">
+              {app.clientReviewStatus && (
+                <span className="px-3 py-1 rounded-full text-sm font-medium border bg-amber-50 text-amber-700 border-amber-200">
+                  {app.clientReviewStatus}
+                </span>
+              )}
+              <span className="px-3 py-1 rounded-full text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200">
+                {currentStage}
+              </span>
+            </div>
             {appOffer && (
               <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
                 Offer: {appOffer.status}
