@@ -23,6 +23,7 @@ import RouteGuard from './components/RouteGuard';
 // Operations
 import OnboardingList from './components/OnboardingList';
 import EmployeesList from './components/EmployeesList';
+import ClientReviewPortal from './components/ClientReviewPortal';
 import DeploymentsList from './components/DeploymentsList';
 import AttendanceList from './components/AttendanceList';
 import BillingList from './components/BillingList';
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/jobs" element={<CareersPage />} />
+      <Route path="/client-review/:token" element={<ClientReviewPortal />} />
       
       <Route path="/" element={<RouteGuard><Layout /></RouteGuard>}>
         <Route index element={<Dashboard />} />

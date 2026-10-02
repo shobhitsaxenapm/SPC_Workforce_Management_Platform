@@ -30,7 +30,7 @@ interface ActionConfig {
 export default function CandidateDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline, recordOfferResponse } = useApp();
+  const { candidates, applications, interviews, offers, onboardings, matchRuns, jobs, clients, clientReviewBatches, setQuickViewJobId, setQuickViewClientId, addMatchToPipeline, recordOfferResponse } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   
@@ -370,6 +370,71 @@ export default function CandidateDetail() {
       });
     }
 
+    const appBatches = clientReviewBatches.filter(b => b.applicationIds.includes(app.id));
+    appBatches.forEach(batch => {
+      candidateActivities.push({
+        id: `act-crb-${batch.id}-submit`,
+        action: `Client-review batch submitted`,
+        date: batch.createdAt,
+        actor: 'Recruiter',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: 'Client Review'
+      });
+      candidateActivities.push({
+        id: `act-crb-${batch.id}-link`,
+        action: `Client-review link created`,
+        date: batch.createdAt,
+        actor: 'System',
+        jobId: job?.id,
+        jobTitle: relatedStr,
+        stage: 'Client Review'
+      });
+      if (batch.viewedAt) {
+        candidateActivities.push({
+          id: `act-crb-${batch.id}-viewed`,
+          action: `Client viewed the batch for the first time`,
+          date: batch.viewedAt,
+          actor: 'Client',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Client Review'
+        });
+      }
+      if (batch.status === 'Submitted') {
+        candidateActivities.push({
+          id: `act-crb-${batch.id}-partial`,
+          action: `Client submitted partial feedback`,
+          date: app.lastActivity,
+          actor: 'Client',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Client Review'
+        });
+      } else if (batch.status === 'Completed') {
+        candidateActivities.push({
+          id: `act-crb-${batch.id}-complete`,
+          action: `Client completed the batch`,
+          date: app.lastActivity,
+          actor: 'Client',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Client Review'
+        });
+      }
+      if (app.clientReviewStatus && !['Submitted', 'Feedback Pending', 'CV Shared'].includes(app.clientReviewStatus)) {
+        candidateActivities.push({
+          id: `act-crb-${batch.id}-decision-${app.id}`,
+          action: `Client submitted a candidate decision: ${app.clientReviewStatus}`,
+          date: app.lastActivity,
+          actor: 'Client',
+          jobId: job?.id,
+          jobTitle: relatedStr,
+          stage: 'Client Review'
+        });
+      }
+    });
+
     const appInterviews = interviews.filter(i => i.applicationId === app.id);
     appInterviews.forEach(iv => {
       candidateActivities.push({
@@ -485,18 +550,19 @@ export default function CandidateDetail() {
     const isExpanded = expandedTimelineId === app.id;
     const insight = candidateInsights.find(i => i.jobId === app.jobId);
 
-    const timelineStages = ['Added', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined'];
+    const timelineStages = ['Added', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined'];
     const getStageIndex = (stage: string) => {
       if (['Rejected', 'Withdrawn'].includes(stage)) return -1;
       switch (stage) {
         case 'Sourced':
         case 'Applied': return 0;
         case 'Screening': return 1;
-        case 'Interviewing': return 2;
-        case 'Selected': return 3;
-        case 'Offered': return 4;
-        case 'Hired': return 5;
-        case 'Joined': return 6;
+        case 'Client Review': return 2;
+        case 'Interviewing': return 3;
+        case 'Selected': return 4;
+        case 'Offered': return 5;
+        case 'Hired': return 6;
+        case 'Joined': return 7;
         default: return -1;
       }
     };

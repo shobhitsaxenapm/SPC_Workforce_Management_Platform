@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse } from '../types';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
@@ -17,6 +17,7 @@ interface AppContextType {
   onboardings: Onboarding[];
   matchRuns: JobMatchRun[];
   informationRequests: InformationRequest[];
+  clientReviewBatches: ClientReviewBatch[];
   quickViewProjectId: string | null;
   setQuickViewProjectId: (id: string | null) => void;
   quickViewClientId: string | null;
@@ -43,6 +44,9 @@ interface AppContextType {
   ) => { success: boolean; error?: string };
   updateApplicationStage: (appId: string, stage: ApplicationStage, substate?: ApplicationSubstate, rejectionReason?: string) => void;
   updateApplicationScreening: (appId: string, data: any) => void;
+  createClientReviewBatch: (batch: Omit<ClientReviewBatch, 'id' | 'token' | 'createdAt' | 'status' | 'candidateStatuses'>) => string;
+  submitClientReviewFeedback: (batchId: string, feedback: Record<string, { status: string; comment?: string }>) => void;
+  markClientReviewBatchViewed: (batchId: string) => void;
   createInformationRequest: (reqData: Omit<InformationRequest, 'id' | 'status' | 'responses'>) => void;
   recordInformationResponse: (projectId: string, response: Omit<RequestResponse, 'id' | 'requestId'>) => void;
   updateInformationRequestStatus: (projectId: string, status: InformationRequest['status'], reason?: string) => void;
@@ -340,6 +344,24 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     return safeParse<InformationRequest[]>('spc_info_reqs', []);
   });
+
+  const [clientReviewBatches, setClientReviewBatches] = useState<ClientReviewBatch[]>(() => {
+    if (localStorage.getItem('spc_client_review_batches') === null) {
+      localStorage.setItem('spc_client_review_batches', JSON.stringify([]));
+    }
+    return safeParse<ClientReviewBatch[]>('spc_client_review_batches', []);
+  });
+
+  // Cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'spc_client_review_batches' && e.newValue) {
+        setClientReviewBatches(JSON.parse(e.newValue));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Sync session changes
   useEffect(() => {
@@ -758,6 +780,98 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return a;
       });
       localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const createClientReviewBatch = (batchData: Omit<ClientReviewBatch, 'id' | 'token' | 'createdAt' | 'status' | 'candidateStatuses'>) => {
+    const newBatch: ClientReviewBatch = {
+      ...batchData,
+      id: `crb_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      token: `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
+      createdAt: new Date().toISOString(),
+      status: 'Submitted',
+      candidateStatuses: {}
+    };
+
+    batchData.applicationIds.forEach(id => {
+      newBatch.candidateStatuses[id] = 'Submitted';
+    });
+
+    setClientReviewBatches(prev => {
+      const updated = [newBatch, ...prev];
+      localStorage.setItem('spc_client_review_batches', JSON.stringify(updated));
+      return updated;
+    });
+
+    setApplications(prev => {
+      const updated = prev.map(a => {
+        if (batchData.applicationIds.includes(a.id)) {
+          return { ...a, clientReviewStatus: 'Submitted', lastActivity: new Date().toISOString() };
+        }
+        return a;
+      });
+      localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
+    });
+
+    return newBatch.token;
+  };
+
+  const submitClientReviewFeedback = (batchId: string, feedback: Record<string, { status: string; comment?: string }>) => {
+    setClientReviewBatches(prev => {
+      const updated = prev.map(b => {
+        if (b.id === batchId) {
+          const newCandidateStatuses = { ...b.candidateStatuses };
+          let hasPending = false;
+          b.applicationIds.forEach(appId => {
+            if (feedback[appId]) {
+              newCandidateStatuses[appId] = feedback[appId].status as any;
+            }
+            if (newCandidateStatuses[appId] === 'Submitted' || newCandidateStatuses[appId] === 'Feedback Pending') {
+              hasPending = true;
+            }
+          });
+          return {
+            ...b,
+            status: hasPending ? 'Submitted' : 'Completed',
+            candidateStatuses: newCandidateStatuses
+          };
+        }
+        return b;
+      });
+      localStorage.setItem('spc_client_review_batches', JSON.stringify(updated));
+      return updated;
+    });
+
+    setApplications(prev => {
+      const updated = prev.map(a => {
+        if (feedback[a.id]) {
+          const fb = feedback[a.id];
+          return { 
+            ...a, 
+            clientReviewStatus: fb.status, 
+            clientReviewComment: fb.comment,
+            currentSubstate: fb.status,
+            lastActivity: new Date().toISOString() 
+          };
+        }
+        return a;
+      });
+      localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const markClientReviewBatchViewed = (batchId: string) => {
+    setClientReviewBatches(prev => {
+      const updated = prev.map(b => {
+        if (b.id === batchId && !b.viewedAt) {
+          return { ...b, viewedAt: new Date().toISOString() };
+        }
+        return b;
+      });
+      localStorage.setItem('spc_client_review_batches', JSON.stringify(updated));
       return updated;
     });
   };
@@ -1293,6 +1407,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         onboardings,
         matchRuns,
         informationRequests,
+        clientReviewBatches,
         quickViewProjectId,
         setQuickViewProjectId,
         quickViewClientId,
@@ -1316,6 +1431,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         submitApplication,
         updateApplicationStage,
         updateApplicationScreening,
+        createClientReviewBatch,
+        submitClientReviewFeedback,
+        markClientReviewBatchViewed,
         createInformationRequest,
         recordInformationResponse,
         updateInformationRequestStatus,

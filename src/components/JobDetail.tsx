@@ -16,7 +16,7 @@ import CandidateScreeningModal from './CandidateScreeningModal';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId } = useApp();
+  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId, createClientReviewBatch, clientReviewBatches } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Applicants' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -25,6 +25,12 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null);
+  
+  const [isPreparingClientReview, setIsPreparingClientReview] = useState(false);
+  const [selectedForClientReview, setSelectedForClientReview] = useState<string[]>([]);
+  const [clientReviewMessage, setClientReviewMessage] = useState('');
+  const [clientReviewSuccess, setClientReviewSuccess] = useState<{token: string, count: number, date: string} | null>(null);
+
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +70,7 @@ export default function JobDetail() {
   const canRunMatching = (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId) && isJobActive;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Rejected'] as const;
+  const canonicalStages = ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
@@ -98,7 +104,7 @@ export default function JobDetail() {
     switch (currentStage) {
       case 'Rejected':
       case 'Withdrawn': return [currentStage, 'Sourced']; // Allow reopening
-      default: return ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Rejected'];
+      default: return ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected'];
     }
   };
 
@@ -467,6 +473,46 @@ export default function JobDetail() {
               </button>
             )}
           </div>
+          
+          {clientReviewSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in shadow-sm mx-2">
+              <div>
+                <h4 className="text-sm font-bold text-green-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Client review link created
+                </h4>
+                <p className="text-xs text-green-700 mt-1">
+                  Submitted {clientReviewSuccess.count} candidate(s) on {formatDate(clientReviewSuccess.date)}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <input 
+                    readOnly 
+                    value={`${window.location.origin}/client-review/${clientReviewSuccess.token}`}
+                    className="w-full text-xs font-mono bg-white border border-green-200 text-green-900 rounded-md py-1.5 px-3 pr-16 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/client-review/${clientReviewSuccess.token}`);
+                      alert('Link copied to clipboard!');
+                    }}
+                    className="absolute right-1 top-1 text-[10px] font-semibold bg-green-100 hover:bg-green-200 text-green-800 px-2 py-0.5 rounded transition-colors"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+                <a 
+                  href={`/client-review/${clientReviewSuccess.token}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="shrink-0 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700 transition-colors flex items-center gap-1.5"
+                >
+                  <Share className="w-3.5 h-3.5" /> Open Client View
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px] w-full">
           {canonicalStages.map(stage => {
             const appsInStage = groupedApps[stage] || [];
@@ -474,16 +520,93 @@ export default function JobDetail() {
             return (
               <div key={stage} className="w-[320px] flex-shrink-0 flex flex-col">
                 <div className="flex items-center justify-between mb-4 px-2">
-                  <h4 className="font-semibold text-slate-700 text-sm">{stage}</h4>
-                  <span className="bg-slate-200/70 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{appsInStage.length}</span>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-700 text-sm">{stage}</h4>
+                    <span className="bg-slate-200/70 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{appsInStage.length}</span>
+                  </div>
+                  
+                  {stage === 'Client Review' && (
+                    <button
+                      onClick={() => setIsPreparingClientReview(!isPreparingClientReview)}
+                      className={cn(
+                        "text-[10px] font-bold px-2 py-1 rounded transition-colors",
+                        isPreparingClientReview 
+                          ? "bg-slate-700 text-white hover:bg-slate-800" 
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      )}
+                    >
+                      {isPreparingClientReview ? 'Cancel' : 'Prepare Client Submission'}
+                    </button>
+                  )}
                 </div>
+                
+                {stage === 'Client Review' && isPreparingClientReview && (
+                  <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 mx-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-blue-800">
+                        {selectedForClientReview.length} of 10 selected
+                      </span>
+                      <button
+                        disabled={selectedForClientReview.length === 0}
+                        onClick={() => {
+                          if (window.confirm(`Submit ${selectedForClientReview.length} candidate(s) to client?`)) {
+                            const token = createClientReviewBatch({
+                              jobId: job.id,
+                              clientId: job.clientId,
+                              applicationIds: selectedForClientReview,
+                              targetCount: 10,
+                              message: clientReviewMessage
+                            });
+                            setClientReviewSuccess({ token, count: selectedForClientReview.length, date: new Date().toISOString() });
+                            setIsPreparingClientReview(false);
+                            setSelectedForClientReview([]);
+                            setClientReviewMessage('');
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                    <textarea 
+                      placeholder="Optional message to client..."
+                      className="w-full text-xs p-2 border border-blue-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      rows={2}
+                      value={clientReviewMessage}
+                      onChange={e => setClientReviewMessage(e.target.value)}
+                    />
+                  </div>
+                )}
                 
                 <div className="flex-1 space-y-3">
                   {appsInStage.map(app => {
                     const candidate = candidates.find(c => c.id === app.candidateId);
                     if (!candidate) return null;
+                    const isSelected = selectedForClientReview.includes(app.id);
+                    const canSelect = app.clientReviewStatus !== 'Submitted';
+                    
                     return (
-                      <div key={app.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+                      <div key={app.id} className={cn(
+                        "bg-white p-4 rounded-xl border shadow-sm hover:shadow-md transition-all group relative",
+                        isSelected ? "border-blue-400 ring-1 ring-blue-400" : "border-slate-200"
+                      )}>
+                        {stage === 'Client Review' && isPreparingClientReview && (
+                          <div className="absolute top-3 right-3 z-10">
+                            <input 
+                              type="checkbox"
+                              disabled={!canSelect}
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedForClientReview(prev => [...prev, app.id]);
+                                } else {
+                                  setSelectedForClientReview(prev => prev.filter(id => id !== app.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
+                            />
+                          </div>
+                        )}
                         <div className="flex justify-between items-start mb-2">
                             <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-slate-800 hover:text-blue-600 truncate mr-2 outline-none text-left">
                             {candidate.fullName}
@@ -502,7 +625,40 @@ export default function JobDetail() {
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
                         <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
                         
-                        {app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received' && (
+                        {app.currentStage === 'Client Review' && (() => {
+                          const batch = clientReviewBatches.find(b => b.applicationIds.includes(app.id));
+                          if (!batch) return null;
+                          return (
+                            <div className="mb-3 space-y-2 bg-slate-50 p-3 rounded-md border border-slate-200">
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-slate-700 text-xs">Client Review Batch</span>
+                                <a href={`/client-review/${batch.token}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 text-[10px] font-semibold bg-white px-2 py-0.5 rounded border border-blue-200">Open Link <Share className="w-3 h-3"/></a>
+                              </div>
+                              <div className="text-[10px] text-slate-500">Submitted: {formatDate(batch.createdAt)}</div>
+                              {app.clientReviewStatus && app.clientReviewStatus !== 'Submitted' && app.clientReviewStatus !== 'Feedback Pending' && (
+                                <div className="pt-2 border-t border-slate-200">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className={cn(
+                                      "text-[10px] font-bold px-2 py-0.5 rounded",
+                                      app.clientReviewStatus === 'Shortlisted' ? 'bg-green-100 text-green-800' :
+                                      app.clientReviewStatus === 'Client Rejected' ? 'bg-red-100 text-red-800' :
+                                      app.clientReviewStatus === 'More Info Requested' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-amber-100 text-amber-800'
+                                    )}>{app.clientReviewStatus}</span>
+                                    <span className="text-[10px] text-slate-500">{formatDate(app.lastActivity)}</span>
+                                  </div>
+                                  {app.clientReviewComment && (
+                                    <div className="bg-white p-2 rounded border border-slate-100 mt-1.5 shadow-sm">
+                                      <p className="text-[10px] text-slate-600 italic">"{app.clientReviewComment}"</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {app.currentStage !== 'Client Review' && app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received' && (
                           <div className="mb-3">
                             <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
                           </div>
@@ -594,6 +750,34 @@ export default function JobDetail() {
                                   </div>
                                 );
                               })()}
+                              {app.currentStage === 'Client Review' && app.clientReviewStatus === 'Shortlisted' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Move candidate to Interviewing?')) {
+                                      updateStage(app.id, 'Interviewing');
+                                    }
+                                  }}
+                                  className="px-2 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors text-[10px] font-bold"
+                                >
+                                  Move to Interviewing
+                                </button>
+                              )}
+                              
+                              {app.currentStage === 'Client Review' && app.clientReviewStatus === 'Client Rejected' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Move candidate to Rejected?')) {
+                                      updateStage(app.id, 'Rejected');
+                                    }
+                                  }}
+                                  className="px-2 py-1.5 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors text-[10px] font-bold"
+                                >
+                                  Move to Rejected
+                                </button>
+                              )}
+                              
                               <select 
                                 className={cn(
                                   "text-xs border-slate-200 rounded-md text-slate-700 font-medium outline-none p-1.5 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-blue-100 transition-colors",

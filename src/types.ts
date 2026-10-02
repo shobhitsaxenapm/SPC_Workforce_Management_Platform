@@ -13,6 +13,7 @@ export type ApplicationStage =
   | 'Application Rejected'
   | 'Sourced'
   | 'Screening'
+  | 'Client Review'
   | 'Interviewing'
   | 'Selected'
   | 'Offered'
@@ -311,8 +312,24 @@ export interface Application {
   matchGaps?: string[];
   rejectionReason?: string;
   screeningData?: ScreeningData;
-  clientReviewStatus?: 'CV Shared' | 'Feedback Pending';
+  clientReviewStatus?: 'Submitted' | 'Feedback Pending' | 'Approved' | 'Rejected' | 'CV Shared' | 'Shortlisted' | 'Client Rejected' | 'More Info Requested' | 'On Hold' | string;
+  clientReviewComment?: string;
   lastActivity: string;
+}
+
+export interface ClientReviewBatch {
+  id: string;
+  token: string;
+  jobId: string;
+  clientId: string;
+  applicationIds: string[];
+  createdAt: string;
+  submittedAt?: string;
+  targetCount: number; // usually 10
+  message?: string;
+  status: 'Draft' | 'Submitted';
+  candidateStatuses: Record<string, string>;
+  viewedAt?: string;
 }
 export interface MatchScoreBreakdown {
   skills: number;

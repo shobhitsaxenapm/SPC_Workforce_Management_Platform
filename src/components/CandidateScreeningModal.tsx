@@ -98,7 +98,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
     }
   };
 
-  const handleProceedToInterview = async () => {
+  const handleProceedToClientReview = async () => {
     if (activeInfoRequest) {
       setAttemptedProceed(true);
       return; // Validation error handled in UI
@@ -117,10 +117,14 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
       return;
     }
 
+    if (!window.confirm("Are you sure you want to move this candidate to Client Review?")) {
+      return;
+    }
+
     setIsProceeding(true);
     await new Promise(r => setTimeout(r, 600));
     updateApplicationScreening(application.id, { ...formData, status: 'Passed' });
-    updateApplicationStage(application.id, 'Interviewing', 'Round 1 To Schedule');
+    updateApplicationStage(application.id, 'Client Review');
     setIsProceeding(false);
     if (onProceedToInterview) {
       onProceedToInterview();
@@ -417,7 +421,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
                   Save Screening
                 </button>
                 <button 
-                  onClick={handleProceedToInterview}
+                  onClick={handleProceedToClientReview}
                   disabled={isProcessing || isProceeding}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
@@ -426,7 +430,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Saving screening...
                     </>
-                  ) : 'Proceed to Interview'}
+                  ) : 'Proceed to Client Review'}
                 </button>
               </>
             )}
@@ -436,7 +440,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
         {/* Render Proceed Validation Warning below footer if attempted */}
         {attemptedProceed && activeInfoRequest && (
            <div className="absolute bottom-20 left-0 right-0 mx-auto w-fit bg-red-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-20 animate-fade-in">
-             <AlertCircle className="w-4 h-4" /> Resolve the outstanding candidate information request before proceeding to interview.
+             <AlertCircle className="w-4 h-4" /> Resolve the outstanding candidate information request before proceeding to Client Review.
            </div>
         )}
       </div>
