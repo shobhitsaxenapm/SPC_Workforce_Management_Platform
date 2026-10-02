@@ -11,7 +11,7 @@ import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
 import InlineClientForm from './InlineClientForm';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
-import { AlertTriangle, MoreVertical } from 'lucide-react';
+import { AlertTriangle, MoreVertical, AlertCircle } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
 
 export default function JobsList() {
