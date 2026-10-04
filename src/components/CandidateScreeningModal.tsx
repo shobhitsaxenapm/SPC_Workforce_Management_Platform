@@ -10,10 +10,9 @@ interface CandidateScreeningModalProps {
   applicationId: string;
   isOpen: boolean;
   onClose: () => void;
-  onProceedToInterview?: () => void;
 }
 
-export default function CandidateScreeningModal({ applicationId, isOpen, onClose, onProceedToInterview }: CandidateScreeningModalProps) {
+export default function CandidateScreeningModal({ applicationId, isOpen, onClose }: CandidateScreeningModalProps) {
   const { applications, candidates, jobs, clients, updateApplicationStage, updateApplicationScreening, informationRequests, resolveInformationRequest, cancelInformationRequest, currentUser } = useApp();
   
   const application = applications.find(a => a.id === applicationId);
@@ -126,9 +125,6 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
     updateApplicationScreening(application.id, { ...formData, status: 'Passed' });
     updateApplicationStage(application.id, 'Client Review');
     setIsProceeding(false);
-    if (onProceedToInterview) {
-      onProceedToInterview();
-    }
     onClose();
   };
 
@@ -305,13 +301,14 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
                     )}
 
                     <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
-                      <button onClick={handleCopyRequestMessage} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition-colors">
-                        <Copy className="w-4 h-4" /> Copy Message
-                      </button>
                       <button onClick={() => setShowRecordResponseModal(true)} className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm">
                         <MessageSquare className="w-4 h-4" /> Record Response
                       </button>
-                      <button onClick={() => resolveInformationRequest(activeInfoRequest.id)} className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg flex items-center gap-1.5 transition-colors ml-auto">
+                      <button 
+                        onClick={() => resolveInformationRequest(activeInfoRequest.id)} 
+                        disabled={activeInfoRequest.status !== 'Response Received'}
+                        className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg flex items-center gap-1.5 transition-colors ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
                         <CheckCircle2 className="w-4 h-4" /> Mark Resolved
                       </button>
                       <button onClick={() => {
