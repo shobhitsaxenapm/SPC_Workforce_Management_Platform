@@ -78,7 +78,7 @@ export default function JobDetail() {
   let groupedCount = 0;
   pipelineApps.forEach(app => {
     let canonical = app.currentStage as string;
-    if (canonical === 'Offered') {
+    if (['Offered', 'Offer', 'Joining Pending', 'Hired', 'Joined', 'Offer Accepted'].includes(canonical)) {
       canonical = 'Selected';
     }
     

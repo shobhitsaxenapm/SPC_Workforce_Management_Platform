@@ -3,8 +3,9 @@ import { Job, JobStatus, JobVisibility } from '../types';
 import { X, CheckCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
-import { getAllocatedOpenings, getFulfilledPositionsForJob } from '../lib/headcount';
-import { AlertTriangle } from 'lucide-react';
+import { getFulfilledPositionsForJob } from '../lib/headcount';
+import { AlertTriangle, Users } from 'lucide-react';
+import { mockUsers } from '../data/mockData';
 
 interface JobFormModalProps {
   isOpen: boolean;
@@ -13,14 +14,8 @@ interface JobFormModalProps {
 }
 
 export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps) {
-  const { updateJob, projects, clients, jobs, applications } = useApp();
-  const req = projects.find(r => r.id === job.projectId);
-  const client = req ? clients.find(c => c.id === req.clientId) : null;
+  const { updateJob, jobs, applications } = useApp();
 
-  // Headcount validation logic
-  const totalRequested = req?.totalRequestedHeadcount || 0;
-  const openingsAllocatedToOtherJobs = req ? getAllocatedOpenings(req.id, jobs.filter(j => j.id !== job.id)) : 0;
-  const maximumForEditedJob = totalRequested - openingsAllocatedToOtherJobs;
   const fulfilledPositions = getFulfilledPositionsForJob(job.id, applications);
 
   const [formData, setFormData] = useState({
@@ -30,6 +25,11 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
     employmentType: job.employmentType,
     experienceRange: job.experienceRange,
     summary: job.summary,
+    assignedRecruiterId: job.assignedRecruiterId || '',
+    responsibilities: job.responsibilities?.join('\n') || '',
+    qualifications: job.qualifications?.join(', ') || '',
+    requiredSkills: job.requiredSkills?.join(', ') || '',
+    preferredSkills: job.preferredSkills?.join(', ') || '',
     targetJoiningDate: job.targetJoiningDate ? job.targetJoiningDate.split('T')[0] : '',
     applicationDeadline: job.applicationDeadline ? job.applicationDeadline.split('T')[0] : '',
   });
@@ -43,12 +43,9 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
     if (!formData.title) newErrors.title = 'Title is required';
     if (!formData.location) newErrors.location = 'Location is required';
     if (!formData.summary) newErrors.summary = 'Summary is required';
-    
     const openingValue = Number(formData.openings) || 0;
     if (openingValue < fulfilledPositions) {
       newErrors.openings = `This Job already has ${fulfilledPositions} fulfilled positions. Number of openings cannot be reduced below ${fulfilledPositions}.`;
-    } else if (req && openingValue > maximumForEditedJob) {
-      newErrors.openings = `Only ${maximumForEditedJob} positions remain available for this Job. Reduce openings or update Project headcount.`;
     }
 
     setErrors(newErrors);
@@ -65,6 +62,11 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
       employmentType: formData.employmentType,
       experienceRange: formData.experienceRange,
       summary: formData.summary,
+      assignedRecruiterId: formData.assignedRecruiterId,
+      responsibilities: formData.responsibilities.split('\n').map(s => s.trim()).filter(Boolean),
+      qualifications: formData.qualifications.split(',').map(s => s.trim()).filter(Boolean),
+      requiredSkills: formData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
+      preferredSkills: formData.preferredSkills.split(',').map(s => s.trim()).filter(Boolean),
       targetJoiningDate: formData.targetJoiningDate ? new Date(formData.targetJoiningDate).toISOString() : job.targetJoiningDate,
       applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline).toISOString() : job.applicationDeadline,
     });
@@ -86,17 +88,6 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
         </div>
         
         <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
-          {req && (
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
-              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Project</span>
-              <p className="text-sm text-slate-700 font-medium">{client?.name} • {req.title}</p>
-              <div className="flex gap-6 mt-1">
-                <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
-                <div className="text-xs text-slate-600">Max Available for this Job: <span className="font-semibold text-blue-700">{maximumForEditedJob}</span></div>
-              </div>
-            </div>
-          )}
-
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <h4 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Core Details</h4>
             <div className="space-y-4">
@@ -134,9 +125,25 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
                     onChange={e => setFormData({...formData, openings: Number(e.target.value)})}
                     className={cn("w-full rounded-lg border p-2.5 text-sm", errors.openings ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Project.</p>
                   {errors.openings && <p className="text-red-500 text-xs mt-1 flex items-start gap-1"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/> {errors.openings}</p>}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  Owner (Recruiter)
+                </label>
+                <select
+                  value={formData.assignedRecruiterId}
+                  onChange={(e) => setFormData({...formData, assignedRecruiterId: e.target.value})}
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                >
+                  <option value="">-- Select Owner --</option>
+                  {mockUsers.map(user => (
+                    <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -191,14 +198,71 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h4 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Summary</h4>
-            <textarea 
-              rows={4}
-              value={formData.summary} 
-              onChange={e => setFormData({...formData, summary: e.target.value})}
-              className={cn("w-full rounded-lg border p-2.5 text-sm", errors.summary ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
-            />
-            {errors.summary && <p className="text-red-500 text-xs mt-1">{errors.summary}</p>}
+            <h4 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Description & Skills</h4>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Summary <span className="text-red-500">*</span>
+                </label>
+                <textarea 
+                  rows={4}
+                  value={formData.summary} 
+                  onChange={e => setFormData({...formData, summary: e.target.value})}
+                  className={cn("w-full rounded-lg border p-2.5 text-sm", errors.summary ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                />
+                {errors.summary && <p className="text-red-500 text-xs mt-1">{errors.summary}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Responsibilities <span className="text-slate-400 font-normal text-xs ml-1">(One per line)</span>
+                </label>
+                <textarea 
+                  rows={6}
+                  value={formData.responsibilities} 
+                  onChange={e => setFormData({...formData, responsibilities: e.target.value})}
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Qualifications <span className="text-slate-400 font-normal text-xs ml-1">(Comma separated)</span>
+                </label>
+                <input 
+                  type="text" 
+                  value={formData.qualifications} 
+                  onChange={e => setFormData({...formData, qualifications: e.target.value})}
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Required Skills <span className="text-slate-400 font-normal text-xs ml-1">(Comma separated)</span>
+                  </label>
+                  <textarea 
+                    rows={3}
+                    value={formData.requiredSkills} 
+                    onChange={e => setFormData({...formData, requiredSkills: e.target.value})}
+                    className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Preferred Skills <span className="text-slate-400 font-normal text-xs ml-1">(Comma separated)</span>
+                  </label>
+                  <textarea 
+                    rows={3}
+                    value={formData.preferredSkills} 
+                    onChange={e => setFormData({...formData, preferredSkills: e.target.value})}
+                    className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>

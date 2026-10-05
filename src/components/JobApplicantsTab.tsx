@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Application, Candidate } from '../types';
 import { useApp } from '../context/AppContext';
-import { FileText, Eye, CheckCircle2, XCircle, ArrowRight, SearchX } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, XCircle, ArrowRight, SearchX, RefreshCw } from 'lucide-react';
 import ResumeModal from './ResumeModal';
 import { cn, formatDate } from '../lib/utils';
 import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
@@ -17,6 +17,7 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
   const { updateApplicationStage, setQuickViewCandidateId } = useApp();
   const [viewResumeId, setViewResumeId] = useState<string | null>(null);
   const [filters, setFilters] = useState<ApplicantFilters>(createEmptyFilters());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Reset filters when changing jobs
   useEffect(() => {
@@ -107,6 +108,13 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // Simulate database check
+    await new Promise(r => setTimeout(r, 1200));
+    setIsRefreshing(false);
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
       <ApplicantFilterToolbar 
@@ -119,6 +127,14 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
         <span className="text-sm font-medium text-slate-500">
           Showing {filteredApplications.length} of {applications.length} applicants
         </span>
+        <button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+        >
+          <RefreshCw className={cn("w-4 h-4", isRefreshing ? "animate-spin text-blue-500" : "text-slate-400")} />
+          Refresh
+        </button>
       </div>
       <div className="rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">

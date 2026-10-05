@@ -1274,12 +1274,6 @@ export default function CandidateDetail() {
           applicationId={showScreeningModal}
           isOpen={true}
           onClose={() => setShowScreeningModal(null)}
-          onProceedToInterview={() => {
-            const app = applications.find(a => a.id === showScreeningModal);
-            if (app) {
-              setShowScheduleInterviewModal({ jobId: app.jobId });
-            }
-          }}
         />
       )}
 

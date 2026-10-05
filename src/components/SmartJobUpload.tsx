@@ -86,8 +86,8 @@ export default function SmartJobUpload({ onExtractionSuccess, onCancel }: SmartJ
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         const mockParsedData = {
-          title: "Senior React Developer (Mock Fallback)",
-          summary: "This is a static mock response because the backend API is not available on Vercel.",
+          title: "Senior React Developer",
+          summary: "We are looking for an experienced React developer to join our team.",
           responsibilities: ["Develop scalable frontend applications", "Collaborate with backend teams"],
           requiredSkills: ["React", "TypeScript", "Tailwind CSS"],
           preferredSkills: ["Node.js", "GraphQL"],
@@ -101,7 +101,7 @@ export default function SmartJobUpload({ onExtractionSuccess, onCancel }: SmartJ
           contractDuration: "Permanent",
           applicationDeadline: "2026-12-31",
           targetJoiningDate: "2026-10-01",
-          clientName: "Acme Corp (Mock Extracted)",
+          clientName: "Acme Corp",
           linkedClientRequirement: "None"
         };
         

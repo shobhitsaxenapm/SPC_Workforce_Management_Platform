@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { mockUsers } from '../data/mockData';
 import { Plus, Search, MapPin, Briefcase, X, CheckCircle2 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
@@ -81,6 +82,7 @@ export default function JobsList() {
         title: '',
         clientId: '',
         projectName: '',
+        assignedRecruiterId: '',
         location: '',
         openings: 1,
         employmentType: 'Contract',
@@ -142,9 +144,10 @@ export default function JobsList() {
       ...formData,
       requiredSkills: reqSkillsArray,
       preferredSkills: prefSkillsArray,
+      projectName: formData.projectName || formData.title,
       responsibilities: ['Support digitisation objectives', 'Validate source entries'],
       qualifications: ['Any Graduate'],
-      assignedRecruiterId: 'u3', // Recruit Manager Priya Desai defaults
+      assignedRecruiterId: formData.assignedRecruiterId || 'u3', // Default to u3 if none selected
       status,
     }, selectedReqId);
 
@@ -159,6 +162,7 @@ export default function JobsList() {
         title: '',
         clientId: '',
         projectName: '',
+        assignedRecruiterId: '',
         location: '',
         openings: 1,
         employmentType: 'Contract',
@@ -507,45 +511,9 @@ export default function JobsList() {
                     </div>
                   )}
 
-                  {req && (
-                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col gap-2">
-                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Inherited from Project</span>
-                      <p className="text-sm text-slate-700 font-medium">{clientForReq?.name} • {req.title}</p>
-                      <div className="flex gap-6 mt-1">
-                        <div className="text-xs text-slate-600">Total Requested: <span className="font-semibold">{totalRequested}</span></div>
-                        <div className="text-xs text-slate-600">Already Allocated: <span className="font-semibold">{alreadyAllocated}</span></div>
-                        <div className="text-xs text-slate-600">Available to Allocate: <span className="font-semibold text-blue-700">{availableToAllocate}</span></div>
-                      </div>
-                      
-                      {availableToAllocate === 0 && (
-                        <div className="mt-2 text-xs text-red-600 font-medium bg-white p-2 rounded border border-red-100">
-                          All requested headcount has already been allocated to Jobs. Increase the Project headcount or adjust an existing Job before creating another Job.
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* Link Project (Optional) */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      Link Project (Optional)
-                    </label>
-                    <select
-                      value={selectedReqId}
-                      onChange={e => handleReqChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                    >
-                      <option value="none">-- None (Independent Job Posting) --</option>
-                      {projects.map(r => {
-                        const client = clients.find(c => c.id === r.clientId);
-                        return (
-                          <option key={r.id} value={r.id}>
-                            {r.code} - {r.title} ({client?.name})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+
+
 
                   <div className="space-y-4">
                     <h3 className="font-semibold text-slate-800 text-sm border-b border-slate-100 pb-2">
@@ -576,9 +544,23 @@ export default function JobsList() {
                           <option value="Gurugram">Gurugram</option>
                         </select>
                       </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                          Owner (Recruiter)
+                        </label>
+                        <select
+                          value={formData.assignedRecruiterId}
+                          onChange={(e) => setFormData({...formData, assignedRecruiterId: e.target.value})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                        >
+                          <option value="">-- Select Owner --</option>
+                          {mockUsers.map(user => (
+                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                          ))}
+                        </select>
+                      </div>
 
-                      {selectedReqId === 'none' ? (
-                        <>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Client *</label>
                             {showClientForm ? (
@@ -608,18 +590,6 @@ export default function JobsList() {
                               </select>
                             )}
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Project Name *</label>
-                            <input 
-                              type="text" 
-                              required 
-                              value={formData.projectName} 
-                              onChange={e => setFormData({...formData, projectName: e.target.value})} 
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" 
-                            />
-                          </div>
-                        </>
-                      ) : null}
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Number of Openings *</label>
@@ -632,9 +602,7 @@ export default function JobsList() {
                           onChange={e => setFormData({...formData, openings: parseInt(e.target.value) || 0})} 
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400" 
                         />
-                        {req && (
-                          <p className="text-[10px] text-slate-500 mt-1">Positions allocated to this Job from the linked Project.</p>
-                        )}
+
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>

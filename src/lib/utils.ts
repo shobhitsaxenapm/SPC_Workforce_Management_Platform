@@ -6,7 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string) {
+  if (!dateString) return 'N/A';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Invalid Date';
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -15,7 +17,9 @@ export function formatDate(dateString: string) {
 }
 
 export function formatDateTime(dateString: string) {
+  if (!dateString) return 'N/A';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Invalid Date';
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
