@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Link } from 'react-router-dom';
 import { 
-  Briefcase, 
+  Briefcase,
+  X, 
   Users, 
   AlertTriangle, 
   CalendarDays, 
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [filterRecruiterId, setFilterRecruiterId] = useState(defaultScope === 'My Work' ? currentUser?.id || '' : '');
   const [filterJobId, setFilterJobId] = useState('');
   const [activityPeriod, setActivityPeriod] = useState<'Today' | 'Last 7 Days' | 'Last 30 Days' | 'Custom'>('Last 7 Days');
+  const [isAttentionDrawerOpen, setIsAttentionDrawerOpen] = useState(false);
 
   const handleScopeChange = (newScope: 'My Work' | 'Team') => {
     setScope(newScope);
@@ -424,7 +426,7 @@ export default function Dashboard() {
               <AlertTriangle className="w-4 h-4 text-rose-500" />
               Attention Required
             </h2>
-            {hasMoreAttention && <span className="text-xs font-medium text-blue-600 hover:underline cursor-pointer">View all ({attentionItems.length})</span>}
+            {hasMoreAttention && <button onClick={() => setIsAttentionDrawerOpen(true)} className="text-xs font-medium text-blue-600 hover:underline cursor-pointer">View all ({attentionItems.length})</button>}
           </div>
           <div className="divide-y divide-gray-50 flex-1">
             {topAttention.length > 0 ? topAttention.map(item => (
@@ -725,6 +727,50 @@ export default function Dashboard() {
         </div>
       </div>
 
+
+      {/* ── Attention Required Drawer ── */}
+      {isAttentionDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setIsAttentionDrawerOpen(false)} />
+          <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-rose-50/40">
+              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-rose-500" />
+                All Attention Required ({attentionItems.length})
+              </h2>
+              <button onClick={() => setIsAttentionDrawerOpen(false)} className="p-2 text-gray-400 hover:bg-white hover:text-gray-600 rounded-lg transition-colors shadow-sm border border-transparent hover:border-gray-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+              {attentionItems.map(item => (
+                <div key={item.id} className="p-5 flex flex-col gap-3 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start gap-3 justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{item.subject}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {item.clientName} <span className="mx-1">•</span> {item.recruiterName}
+                      </p>
+                    </div>
+                    <div className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0", 
+                      item.label === 'Critical' ? "bg-rose-100 text-rose-700" :
+                      item.label === 'Overdue' ? "bg-amber-100 text-amber-700" :
+                      item.label === 'Warning' ? "bg-orange-100 text-orange-700" :
+                      "bg-blue-100 text-blue-700"
+                    )}>{item.label}</div>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm text-gray-900 font-medium">{item.issue}</span>
+                    <Link onClick={() => setIsAttentionDrawerOpen(false)} to={item.actionLink} className="shrink-0 text-xs font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 px-3 py-1.5 rounded-lg transition-colors">
+                      {item.actionText}
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
