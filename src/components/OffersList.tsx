@@ -387,15 +387,21 @@ export default function OffersList() {
       return;
     }
     
-    const issueDate = new Date(selectedOffer.sentDate || selectedOffer.activities?.find(a => a.action === 'Offer issued')?.date || Date.now());
-    const selectedDate = new Date(responseDate);
+    const getLocalMidnight = (dateString: string | number) => {
+      const d = new Date(dateString);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    };
+
+    const issueTime = getLocalMidnight(selectedOffer.sentDate || selectedOffer.activities?.find(a => a.action === 'Offer issued')?.date || Date.now());
+    const selectedTime = getLocalMidnight(responseDate + 'T00:00:00'); // Ensure local parse
+    const todayTime = getLocalMidnight(Date.now());
     
-    if (selectedDate < new Date(issueDate.setHours(0,0,0,0))) {
+    if (selectedTime < issueTime) {
       setFormError('Response date cannot be before the offer was issued.');
       return;
     }
     
-    if (selectedDate > new Date()) {
+    if (selectedTime > todayTime) {
       setFormError('Response date cannot be in the future.');
       return;
     }
