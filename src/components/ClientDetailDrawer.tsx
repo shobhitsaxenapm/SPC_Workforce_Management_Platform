@@ -18,18 +18,17 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { useApp } from '../context/AppContext';
-import { Client, Project } from '../types';
+import { Client, Job } from '../types';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
 import { Link } from 'react-router-dom';
 
 interface ClientDetailDrawerProps {
   clientId: string | null;
   onClose: () => void;
-  onCreateProject: (clientId: string) => void;
 }
 
-export default function ClientDetailDrawer({ clientId, onClose, onCreateProject }: ClientDetailDrawerProps) {
-  const { clients, projects, jobs, applications, setQuickViewProjectId } = useApp();
+export default function ClientDetailDrawer({ clientId, onClose }: ClientDetailDrawerProps) {
+  const { clients, jobs, applications } = useApp();
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'activity'>('overview');
 
   if (!clientId) return null;
@@ -37,35 +36,35 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
   const client = clients.find(c => c.id === clientId);
   if (!client) return null;
 
-  const clientProjects = projects.filter(r => r.clientId === client.id);
+  const clientJobs = jobs.filter(r => r.clientId === client.id);
 
   const calculateFilled = (projectId: string) => {
-    return applications.filter(a => a.projectId === projectId && a.currentStage === 'Joined').length;
+    return applications.filter(a => a.jobId === projectId && a.currentStage === 'Joined').length;
   };
 
-  const activeProjectsCount = clientProjects.filter(r => r.status !== 'Closed').length;
-  const openPositionsCount = clientProjects.reduce((acc, r) => acc + Math.max(r.totalRequestedHeadcount - calculateFilled(r.id), 0), 0);
+  const activeJobsCount = clientJobs.filter(j => j.status !== 'Closed').length;
+  const openPositionsCount = clientJobs.reduce((acc, j) => acc + Math.max(j.openings - calculateFilled(j.id), 0), 0);
 
   // Generate dynamic activity timeline items for this client
   const activities: { id: string; title: string; details: string; date: string; icon: any; iconBg: string }[] = [];
 
-  clientProjects.forEach(req => {
+  clientJobs.forEach(job => {
     activities.push({
-      id: `act_req_${req.id}`,
-      title: `Project Created`,
-      details: `Project "${req.title}" (${req.code}) created for ${req.totalRequestedHeadcount} positions.`,
-      date: req.createdAt,
+      id: `act_job_${job.id}`,
+      title: `Job Created`,
+      details: `Job "${job.title}" created for ${job.openings} positions.`,
+      date: job.createdAt,
       icon: ClipboardList,
       iconBg: 'bg-blue-50 text-blue-600 border-blue-200'
     });
 
-    const reqApps = applications.filter(a => a.projectId === req.id);
-    reqApps.forEach(app => {
+    const jobApps = applications.filter(a => a.jobId === job.id);
+    jobApps.forEach(app => {
       if (app.currentStage === 'Joined') {
         activities.push({
           id: `act_app_${app.id}`,
           title: `Candidate Placed`,
-          details: `Candidate successfully joined for ${req.title}.`,
+          details: `Candidate successfully joined for ${job.title}.`,
           date: app.lastActivity || app.appliedDate,
           icon: CheckCircle2,
           iconBg: 'bg-green-50 text-green-600 border-green-200'
@@ -73,8 +72,8 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
       } else if (app.currentStage === 'Sourced') {
         activities.push({
           id: `act_app_src_${app.id}`,
-          title: `Candidate Shortlisted`,
-          details: `Candidate pipeline updated for ${req.title}.`,
+          title: `Candidate Sourced`,
+          details: `Candidate added to pipeline for ${job.title}.`,
           date: app.appliedDate,
           icon: Users,
           iconBg: 'bg-indigo-50 text-indigo-600 border-indigo-200'
@@ -123,13 +122,6 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => onCreateProject(client.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Create Project
-            </button>
-            <button
               onClick={onClose}
               className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               title="Close Drawer"
@@ -145,8 +137,8 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
           {/* Top Metric Bar */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-              <p className="text-xs font-medium text-gray-500 mb-1">Active Projects</p>
-              <p className="text-2xl font-bold text-gray-900">{activeProjectsCount}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Active Jobs</p>
+              <p className="text-2xl font-bold text-gray-900">{activeJobsCount}</p>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
               <p className="text-xs font-medium text-gray-500 mb-1">Open Positions</p>
@@ -214,9 +206,9 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 )}
               >
-                Linked Projects
+                Linked Jobs
                 <span className="px-1.5 py-0.2 rounded-full text-xs bg-slate-100 text-slate-600 font-medium">
-                  {clientProjects.length}
+                  {clientJobs.length}
                 </span>
               </button>
               <button
@@ -252,59 +244,59 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
                       <span className="font-medium text-gray-900">{formatDate(client.lastActivity)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Total Projects Logged:</span>
-                      <span className="font-medium text-gray-900">{clientProjects.length}</span>
+                      <span className="text-slate-500">Total Jobs Logged:</span>
+                      <span className="font-medium text-gray-900">{clientJobs.length}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: LINKED REQUIREMENTS */}
+              {/* TAB 2: LINKED JOBS */}
               {activeTab === 'projects' && (
                 <div className="space-y-3">
-                  {clientProjects.length > 0 ? (
+                  {clientJobs.length > 0 ? (
                     <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                      {clientProjects.map(req => {
-                        const filled = calculateFilled(req.id);
-                        const progress = (filled / req.totalRequestedHeadcount) * 100;
+                      {clientJobs.map(job => {
+                        const filled = calculateFilled(job.id);
+                        const progress = (filled / job.openings) * 100;
                         return (
-                          <div key={req.id} className="p-4 hover:bg-slate-50 transition-colors">
+                          <div key={job.id} className="p-4 hover:bg-slate-50 transition-colors">
                             <div className="flex justify-between items-start gap-3">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <button 
-                                    onClick={() => setQuickViewProjectId(req.id)}
+                                  <Link 
+                                    to={`/job-desk/${job.id}`}
                                     className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left outline-none focus-visible:underline"
                                   >
-                                    {req.title}
-                                  </button>
+                                    {job.title}
+                                  </Link>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{req.code}</span>
+                                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{job.id}</span>
                                   <span>•</span>
-                                  <span>{req.projectName}</span>
+                                  <span>{job.location}</span>
                                 </div>
                               </div>
 
                               <span className={cn(
                                 "px-2.5 py-0.5 rounded-full text-xs font-medium border shrink-0",
-                                req.status === 'In Progress' ? "bg-green-50 text-green-700 border-green-200/60" :
-                                req.status === 'Open' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
-                                req.status === 'Partially Filled' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
+                                job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200/60" :
+                                job.status === 'Draft' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
+                                job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
                                 "bg-slate-50 text-slate-700 border-slate-200/60"
                               )}>
-                                {req.status}
+                                {job.status}
                               </span>
                             </div>
 
                             <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                               <div className="flex items-center gap-1.5">
                                 <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-                                {filled} / {req.totalRequestedHeadcount} Joined
+                                {filled} / {job.openings} Joined
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                Target: {formatDate(req.targetJoiningDate)}
+                                Target: {formatDate(job.targetJoiningDate || job.createdAt)}
                               </div>
                             </div>
 
@@ -321,7 +313,7 @@ export default function ClientDetailDrawer({ clientId, onClose, onCreateProject 
                   ) : (
                     <div className="p-8 text-center text-slate-500 border border-dashed border-slate-200 rounded-xl">
                       <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm font-medium">No linked projects for this client.</p>
+                      <p className="text-sm font-medium">No linked jobs for this client.</p>
                     </div>
                   )}
                 </div>
