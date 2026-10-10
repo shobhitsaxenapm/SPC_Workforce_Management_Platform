@@ -47,6 +47,9 @@ export default function Dashboard() {
   const [filterRecruiterId, setFilterRecruiterId] = useState(defaultScope === 'My Work' ? currentUser?.id || '' : '');
   const [filterJobId, setFilterJobId] = useState('');
   const [activityPeriod, setActivityPeriod] = useState<'Today' | 'Last 7 Days' | 'Last 30 Days' | 'Custom'>('Last 7 Days');
+  const [upcomingPeriod, setUpcomingPeriod] = useState<'Next 7 Days' | 'Next 14 Days' | 'Next 30 Days' | 'Custom'>('Next 7 Days');
+  const [attentionFilter, setAttentionFilter] = useState<'All' | 'Critical' | 'Overdue' | 'Pending' | 'Warning'>('All');
+  const [jobHealthFilter, setJobHealthFilter] = useState<'All' | 'Has Bottlenecks' | 'On Track'>('All');
   const [isAttentionDrawerOpen, setIsAttentionDrawerOpen] = useState(false);
 
   const handleScopeChange = (newScope: 'My Work' | 'Team') => {
@@ -96,10 +99,13 @@ export default function Dashboard() {
     a.currentStage === 'Client Review' && overdueBatches.some(b => b.applicationIds.includes(a.id))
   ).length;
 
+  const upcomingDaysMap: Record<string, number> = { 'Next 7 Days': 7, 'Next 14 Days': 14, 'Next 30 Days': 30, 'Custom': 90 };
+  const upcomingDays = upcomingDaysMap[upcomingPeriod] || 7;
+  
   const upcomingInterviewsCount = interviews.filter(i => {
     if (!baseJobIds.has(i.jobId)) return false;
     const dt = safeTime(i.scheduledAt);
-    return !isNaN(dt) && dt > now && dt <= now + 7 * 24 * 60 * 60 * 1000;
+    return !isNaN(dt) && dt > now && dt <= now + upcomingDays * 24 * 60 * 60 * 1000;
   }).length;
 
   const joiningPendingCount = offers.filter(o => {
@@ -223,7 +229,7 @@ export default function Dashboard() {
   const topAttention = attentionItems.slice(0, 5);
   const hasMoreAttention = attentionItems.length > 5;
 
-  // ── 5. Upcoming Work (Next 7 Days ONLY) ──
+  // ── 5. Upcoming Work ──
   type UpcomingItem = { type: string; title: string; dateDt: number; link: string };
   const upcomingWorkList: UpcomingItem[] = [];
 
@@ -402,7 +408,7 @@ export default function Dashboard() {
           { label: 'Positions Remaining', value: positionsRemaining, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/job-desk' },
           { label: 'Active Pipeline', value: activePipelineCount, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50', link: '/candidates' },
           { label: 'Feedback Overdue', value: feedbackOverdueCount, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50', link: '/candidates' },
-          { label: 'Interviews Next 7 Days', value: upcomingInterviewsCount, icon: CalendarDays, color: 'text-amber-600', bg: 'bg-amber-50', link: '/interviews' },
+          { label: `Interviews ${upcomingPeriod}`, value: upcomingInterviewsCount, icon: CalendarDays, color: 'text-amber-600', bg: 'bg-amber-50', link: '/interviews' },
           { label: 'Joining Pending', value: joiningPendingCount, icon: CheckCircle2, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/offers' },
         ].map((kpi, idx) => (
           <Link to={kpi.link} key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:border-gray-300 transition-colors block group">
@@ -604,8 +610,17 @@ export default function Dashboard() {
 
       {/* ── Job Health Table ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
           <h2 className="text-sm font-semibold text-gray-900">Job Health</h2>
+          <select 
+            value={jobHealthFilter} 
+            onChange={e => setJobHealthFilter(e.target.value as any)}
+            className="text-xs border-gray-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option>All</option>
+            <option>Has Bottlenecks</option>
+            <option>On Track</option>
+          </select>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -623,7 +638,12 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {jobHealth.map(job => (
+              {jobHealth.filter(job => {
+                if (jobHealthFilter === 'All') return true;
+                if (jobHealthFilter === 'Has Bottlenecks') return job.bottleneck !== 'None';
+                if (jobHealthFilter === 'On Track') return job.bottleneck === 'None';
+                return true;
+              }).map(job => (
                 <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-5 py-3">
                     <Link to={`/job-desk/${job.id}`} className="text-sm font-semibold text-blue-600 hover:underline">{job.title}</Link>
@@ -664,7 +684,12 @@ export default function Dashboard() {
                   </td>
                 </tr>
               ))}
-              {jobHealth.length === 0 && (
+              {jobHealth.filter(job => {
+                if (jobHealthFilter === 'All') return true;
+                if (jobHealthFilter === 'Has Bottlenecks') return job.bottleneck !== 'None';
+                if (jobHealthFilter === 'On Track') return job.bottleneck === 'None';
+                return true;
+              }).length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-5 py-8 text-center text-sm text-gray-500">
                     No jobs found matching the selected filters.
