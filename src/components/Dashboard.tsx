@@ -299,7 +299,7 @@ export default function Dashboard() {
 
     return {
       id: job.id, title: job.title, clientName: client?.name || 'Unknown', recruiterName: recruiter?.name || 'Unassigned',
-      lifecycle: job.status, published: job.isPublished, positionsRem, actPipe, bottleneck,
+      lifecycle: job.status, published: job.isPublished, publishedAt: job.publishedAt, positionsRem, actPipe, bottleneck,
       lastActivityDt: dt, isOverdue, targetLabel
     };
   });
@@ -645,6 +645,7 @@ export default function Dashboard() {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bottleneck</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Activity</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target Date</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Published Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -701,7 +702,7 @@ export default function Dashboard() {
                 return true;
               }).length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-5 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={10} className="px-5 py-8 text-center text-sm text-gray-500">
                     No jobs found matching the selected filters.
                   </td>
                 </tr>
