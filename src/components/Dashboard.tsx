@@ -235,7 +235,7 @@ export default function Dashboard() {
 
   interviews.filter(i => baseJobIds.has(i.jobId)).forEach(i => {
     const dt = safeTime(i.scheduledAt);
-    if (!isNaN(dt) && dt > now && dt <= now + 7 * 24 * 60 * 60 * 1000) {
+    if (!isNaN(dt) && dt > now && dt <= now + upcomingDays * 24 * 60 * 60 * 1000) {
       const job = jobs.find(j => j.id === i.jobId);
       const app = applications.find(a => a.id === i.applicationId);
       const candidate = candidates.find(c => c.id === app?.candidateId);
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
   offers.filter(o => o.status === 'Sent' && baseJobIds.has(o.jobId)).forEach(o => {
     const dt = safeTime(o.expiryDate);
-    if (!isNaN(dt) && dt > now && dt <= now + 7 * 24 * 60 * 60 * 1000) {
+    if (!isNaN(dt) && dt > now && dt <= now + upcomingDays * 24 * 60 * 60 * 1000) {
       const app = applications.find(a => a.id === o.applicationId);
       const candidate = candidates.find(c => c.id === app?.candidateId);
       upcomingWorkList.push({ type: 'Offer Expiry', title: `${candidate?.fullName} Offer`, dateDt: dt, link: '/offers' });
@@ -256,7 +256,7 @@ export default function Dashboard() {
     const app = applications.find(a => a.id === o.applicationId);
     if (app?.currentStage !== 'Joined') {
       const dt = safeTime(o.proposedJoiningDate);
-      if (!isNaN(dt) && dt > now && dt <= now + 7 * 24 * 60 * 60 * 1000) {
+      if (!isNaN(dt) && dt > now && dt <= now + upcomingDays * 24 * 60 * 60 * 1000) {
         const candidate = candidates.find(c => c.id === app?.candidateId);
         const job = jobs.find(j => j.id === o.jobId);
         upcomingWorkList.push({ type: 'Candidate Joining', title: `${candidate?.fullName} — ${job?.title}`, dateDt: dt, link: `/candidates/${candidate?.id}` });
@@ -266,7 +266,7 @@ export default function Dashboard() {
 
   baseJobs.filter(j => j.status === 'Open').forEach(j => {
     const dt = safeTime(j.targetJoiningDate);
-    if (!isNaN(dt) && dt > now && dt <= now + 7 * 24 * 60 * 60 * 1000) {
+    if (!isNaN(dt) && dt > now && dt <= now + upcomingDays * 24 * 60 * 60 * 1000) {
       upcomingWorkList.push({ type: 'Job Target Date', title: j.title, dateDt: dt, link: `/job-desk/${j.id}` });
     }
   });
@@ -468,11 +468,21 @@ export default function Dashboard() {
 
         {/* ── Upcoming Work ── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100">
+          <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
             <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-blue-500" />
-              Upcoming
+              Upcoming <span className="text-gray-400 font-normal ml-1">· {upcomingPeriod}</span>
             </h2>
+            <select 
+              value={upcomingPeriod} 
+              onChange={e => setUpcomingPeriod(e.target.value as any)}
+              className="text-xs border-gray-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option>Next 7 Days</option>
+              <option>Next 14 Days</option>
+              <option>Next 30 Days</option>
+              <option>Custom</option>
+            </select>
           </div>
           <div className="divide-y divide-gray-50 flex-1">
             {upcomingWorkList.length > 0 ? upcomingWorkList.slice(0, 5).map((item, idx) => (
