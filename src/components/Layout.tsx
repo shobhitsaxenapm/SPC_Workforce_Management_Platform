@@ -62,27 +62,6 @@ const navigationConfig: NavModuleConfig[] = [
     ],
   },
   {
-    id: 'operations',
-    label: 'Operations',
-    icon: Layers,
-    items: [
-      { title: 'Onboarding', path: '/onboarding', icon: CheckSquare },
-      { title: 'Employees', path: '/employees', icon: UserCheck },
-      { title: 'Deployments', path: '/deployments', icon: MapPin },
-      { title: 'Attendance', path: '/attendance', icon: Clock },
-      { title: 'Billing Drafts', path: '/billing', icon: CreditCard },
-      { title: 'Offboarding', path: '/offboarding', icon: LogOut },
-    ],
-  },
-  {
-    id: 'intelligence',
-    label: 'Intelligence',
-    icon: LineChart,
-    items: [
-      { title: 'Reports & Insights', path: '/reports', icon: LineChart },
-    ],
-  },
-  {
     id: 'administration',
     label: 'Administration',
     icon: Settings,
