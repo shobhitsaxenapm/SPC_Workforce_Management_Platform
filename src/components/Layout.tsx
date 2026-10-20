@@ -45,6 +45,7 @@ type NavModuleConfig = {
   items: NavItem[];
   requiredRole?: 'ADMIN' | 'MANAGER' | 'RECRUITER';
   isComingSoon?: boolean;
+  defaultOpen?: boolean;
 };
 
 const navigationConfig: NavModuleConfig[] = [
@@ -52,8 +53,8 @@ const navigationConfig: NavModuleConfig[] = [
     id: 'recruitment',
     label: 'Recruitment',
     icon: Briefcase,
+    defaultOpen: true,
     items: [
-      { title: 'Dashboard', path: '/', icon: LayoutGrid },
       { title: 'Clients', path: '/clients', icon: Building2 },
       // { title: 'Projects', path: '/projects', icon: ClipboardList }, // Temporarily disabled
       { title: 'Jobs', path: '/job-desk', icon: Briefcase },
@@ -66,8 +67,9 @@ const navigationConfig: NavModuleConfig[] = [
     id: 'intelligence',
     label: 'Intelligence',
     icon: LineChart,
+    defaultOpen: true,
     items: [
-      { title: 'Reports & Insights', path: '/reports', icon: LineChart },
+      { title: 'Dashboard', path: '/', icon: LayoutGrid },
     ],
   },
   {
@@ -93,7 +95,7 @@ const NavModule: React.FC<{
   currentPath, 
   forceOpen 
 }) => {
-  const [isExpanded, setIsExpanded] = useState(forceOpen && !module.isComingSoon);
+  const [isExpanded, setIsExpanded] = useState((forceOpen || !!module.defaultOpen) && !module.isComingSoon);
 
   // Auto-expand if a child route becomes active, but don't auto-collapse if user opened it
   useEffect(() => {
@@ -201,7 +203,7 @@ export default function Layout() {
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/') return 'Recruitment Dashboard';
+    if (path === '/') return 'Dashboard';
     
     // Search through all modules for the active item title
     for (const mod of navigationConfig) {

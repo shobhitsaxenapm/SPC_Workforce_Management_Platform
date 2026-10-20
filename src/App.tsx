@@ -15,7 +15,6 @@ import Settings from './components/Settings';
 import UsersList from './components/UsersList';
 import CareersAdmin from './components/CareersAdmin';
 import CareersPage from './components/CareersPage';
-import Reports from './components/Reports';
 import Login from './components/Login';
 import Unauthorized from './components/Unauthorized';
 import RouteGuard from './components/RouteGuard';
@@ -65,7 +64,8 @@ export default function App() {
         <Route path="billing" element={<BillingList />} />
         <Route path="offboarding" element={<OffboardingList />} />
         
-        <Route path="reports" element={<Reports />} />
+        <Route path="reports" element={<Navigate replace to="/" />} />
+        <Route path="dashboard" element={<Navigate replace to="/" />} />
         <Route path="careers-page" element={<CareersAdmin />} />
         
         <Route path="users" element={

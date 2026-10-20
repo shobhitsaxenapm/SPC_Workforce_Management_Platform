@@ -44,5 +44,5 @@ The current React codebase contains several active routes that are **not specifi
 3. `/deployments`: Renders `DeploymentsList.tsx` tracking active placements.
 4. `/attendance`: Renders `AttendanceList.tsx` tracking client timesheets.
 5. `/billing`: Renders `BillingList.tsx` for client billing cycles.
-6. `/reports`: Renders `Reports.tsx` dashboard reports.
+6. `/reports`: Deprecated and redirected to `/` (Dashboard relocated under the Intelligence module).
 7. `/settings`: Renders `Settings.tsx` basic config.
