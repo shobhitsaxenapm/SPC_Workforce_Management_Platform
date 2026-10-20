@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Briefcase, 
@@ -7,22 +7,29 @@ import {
   ClipboardList, 
   CalendarDays, 
   FileText, 
-  Settings,
-  ShieldAlert,
-  Bell,
-  Search,
-  CheckSquare,
-  UserCheck,
-  MapPin,
-  Clock,
-  CreditCard,
-  LogOut,
-  LineChart,
-  ChevronDown,
-  Layers,
-  LayoutGrid,
-  Menu,
-  X
+  Settings, 
+  ShieldAlert, 
+  Bell, 
+  Search, 
+  CheckSquare, 
+  UserCheck, 
+  MapPin, 
+  Clock, 
+  CreditCard, 
+  LogOut, 
+  LineChart, 
+  ChevronDown, 
+  Layers, 
+  LayoutGrid, 
+  Menu, 
+  X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  ArrowLeftRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
@@ -211,6 +218,135 @@ export default function Layout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Stretchable & Collapsible & Movable sidebar states
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('spc_sidebar_width');
+      const parsed = saved ? parseInt(saved, 10) : 260;
+      return isNaN(parsed) ? 260 : Math.min(Math.max(parsed, 200), 500);
+    } catch {
+      return 260;
+    }
+  });
+
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('spc_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => {
+    try {
+      return (localStorage.getItem('spc_sidebar_position') as 'left' | 'right') || 'left';
+    } catch {
+      return 'left';
+    }
+  });
+
+  const [isDesktop, setIsDesktop] = useState(() => 
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
+
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const sidebarPositionRef = useRef(sidebarPosition);
+  sidebarPositionRef.current = sidebarPosition;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Keyboard shortcut: Cmd/Ctrl + B to toggle sidebar collapse
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsCollapsed(prev => {
+          const next = !prev;
+          try {
+            localStorage.setItem('spc_sidebar_collapsed', String(next));
+          } catch {}
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const toggleCollapse = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('spc_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const togglePosition = () => {
+    setSidebarPosition(prev => {
+      const next = prev === 'left' ? 'right' : 'left';
+      try {
+        localStorage.setItem('spc_sidebar_position', next);
+      } catch {}
+      return next;
+    });
+  };
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    isDraggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      let newWidth: number;
+      if (sidebarPositionRef.current === 'left') {
+        newWidth = event.clientX;
+      } else {
+        newWidth = window.innerWidth - event.clientX;
+      }
+
+      if (newWidth < 140) {
+        setIsCollapsed(true);
+        try {
+          localStorage.setItem('spc_sidebar_collapsed', 'true');
+        } catch {}
+      } else {
+        setIsCollapsed(false);
+        try {
+          localStorage.setItem('spc_sidebar_collapsed', 'false');
+        } catch {}
+        const clampedWidth = Math.min(Math.max(newWidth, 200), 500);
+        setSidebarWidth(clampedWidth);
+        try {
+          localStorage.setItem('spc_sidebar_width', clampedWidth.toString());
+        } catch {}
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -237,7 +373,34 @@ export default function Layout() {
     : '??';
 
   return (
-    <div className="min-h-screen bg-[#F6F8FB] flex">
+    <div className="min-h-screen bg-[#F6F8FB] flex relative">
+      {/* Transparent drag protection overlay */}
+      {isDragging && (
+        <div 
+          className="fixed inset-0 z-50 cursor-col-resize select-none"
+          style={{ cursor: 'col-resize' }}
+        />
+      )}
+
+      {/* Edge Tab button when collapsed on desktop for instant 1-click reveal */}
+      {isCollapsed && isDesktop && (
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            "fixed top-20 z-40 bg-white border border-slate-200 shadow-md hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 text-slate-500 py-2.5 px-1.5 transition-all flex items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+            sidebarPosition === 'left' ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"
+          )}
+          title="Expand sidebar (Ctrl+B)"
+          aria-label="Expand sidebar"
+        >
+          {sidebarPosition === 'left' ? (
+            <ChevronsRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          ) : (
+            <ChevronsLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          )}
+        </button>
+      )}
+
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -247,23 +410,91 @@ export default function Layout() {
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "w-64 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 left-0 z-30 shadow-[1px_0_4px_rgba(0,0,0,0.02)] transition-transform duration-300 ease-in-out md:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200/60 bg-white">
-          <div className="flex items-center gap-2 text-blue-700">
-            <Briefcase className="w-6 h-6" />
-            <span className="font-bold text-lg leading-tight">
+      <aside 
+        style={{
+          width: isDesktop ? `${sidebarWidth}px` : undefined,
+        }}
+        className={cn(
+          "bg-white flex flex-col fixed inset-y-0 z-30 shadow-[1px_0_4px_rgba(0,0,0,0.02)]",
+          !isDesktop && "w-64",
+          sidebarPosition === 'left' 
+            ? "left-0 border-r border-slate-200" 
+            : "right-0 border-l border-slate-200",
+          isDragging ? "transition-none select-none" : "transition-transform duration-300 ease-in-out",
+          // Mobile state
+          isMobileMenuOpen 
+            ? "translate-x-0" 
+            : (sidebarPosition === 'left' ? "-translate-x-full" : "translate-x-full"),
+          // Desktop collapsed state
+          "md:translate-x-0",
+          isCollapsed && (sidebarPosition === 'left' ? "md:-translate-x-full" : "md:translate-x-full")
+        )}
+      >
+        {/* Resize handle (Stretchable / Resizable bar) */}
+        {isDesktop && (
+          <div
+            onMouseDown={startResizing}
+            className={cn(
+              "absolute top-0 w-3.5 h-full cursor-col-resize flex items-center justify-center group z-40 select-none hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors",
+              sidebarPosition === 'left' ? "-right-2" : "-left-2"
+            )}
+            title="Drag to stretch/shrink sidebar width (Double-click to reset)"
+            onDoubleClick={() => {
+              setSidebarWidth(260);
+              try {
+                localStorage.setItem('spc_sidebar_width', '260');
+              } catch {}
+            }}
+          >
+            <div className={cn(
+              "w-1 h-8 rounded-full bg-slate-300 group-hover:bg-blue-500 group-hover:h-20 transition-all duration-150",
+              isDragging && "bg-blue-600 h-full w-1.5"
+            )} />
+          </div>
+        )}
+
+        <div className="h-16 flex items-center justify-between px-4 md:px-5 border-b border-slate-200/60 bg-white">
+          <div className="flex items-center gap-2.5 text-blue-700 min-w-0">
+            <Briefcase className="w-6 h-6 shrink-0" />
+            <span className="font-bold text-lg leading-tight truncate">
               SPC<br/><span className="text-sm font-medium text-slate-500">Workforce</span>
             </span>
           </div>
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Move position toggle button (Dock Left vs Dock Right) */}
+            <button
+              onClick={togglePosition}
+              className="hidden md:inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title={sidebarPosition === 'left' ? "Move sidebar to right" : "Move sidebar to left"}
+              aria-label="Move sidebar position"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+            </button>
+
+            {/* Collapse toggle button */}
+            <button
+              onClick={toggleCollapse}
+              className="hidden md:inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Collapse sidebar (Ctrl+B)"
+              aria-label="Collapse sidebar"
+            >
+              {sidebarPosition === 'left' ? (
+                <PanelLeftClose className="w-4.5 h-4.5" />
+              ) : (
+                <PanelRightClose className="w-4.5 h-4.5" />
+              )}
+            </button>
+
+            {/* Mobile close button */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-5 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
@@ -291,22 +522,82 @@ export default function Layout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen min-w-0">
+      <div 
+        className={cn(
+          "flex-1 flex flex-col min-h-screen min-w-0",
+          isDragging ? "transition-none" : "transition-[margin] duration-300 ease-in-out"
+        )}
+        style={{
+          marginLeft: isDesktop && sidebarPosition === 'left' && !isCollapsed ? `${sidebarWidth}px` : '0px',
+          marginRight: isDesktop && sidebarPosition === 'right' && !isCollapsed ? `${sidebarWidth}px` : '0px',
+        }}
+      >
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile menu trigger */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+              aria-label="Open mobile menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg md:text-xl font-semibold text-slate-800">
+
+            {/* Desktop toggle button if sidebar is on left */}
+            {sidebarPosition === 'left' && (
+              <button
+                onClick={toggleCollapse}
+                className={cn(
+                  "hidden md:inline-flex items-center gap-2 p-2 -ml-2 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  isCollapsed 
+                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs px-2.5 py-1.5" 
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                )}
+                title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {isCollapsed ? (
+                  <>
+                    <PanelLeftOpen className="w-4.5 h-4.5 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-700">Sidebar</span>
+                  </>
+                ) : (
+                  <PanelLeftClose className="w-5 h-5" />
+                )}
+              </button>
+            )}
+
+            <h1 className="text-lg md:text-xl font-semibold text-slate-800 truncate">
               {getPageTitle()}
             </h1>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
+            {/* Desktop toggle button if sidebar is on right */}
+            {sidebarPosition === 'right' && (
+              <button
+                onClick={toggleCollapse}
+                className={cn(
+                  "hidden md:inline-flex items-center gap-2 p-2 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                  isCollapsed 
+                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs px-2.5 py-1.5" 
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                )}
+                title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {isCollapsed ? (
+                  <>
+                    <span className="text-xs font-semibold text-blue-700">Sidebar</span>
+                    <PanelRightOpen className="w-4.5 h-4.5 text-blue-600" />
+                  </>
+                ) : (
+                  <PanelRightClose className="w-5 h-5" />
+                )}
+              </button>
+            )}
+
             <div className="relative hidden md:block">
               <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
