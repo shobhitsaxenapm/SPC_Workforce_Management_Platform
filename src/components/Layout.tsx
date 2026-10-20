@@ -73,6 +73,20 @@ const navigationConfig: NavModuleConfig[] = [
     ],
   },
   {
+    id: 'operations',
+    label: 'Operation - WFM',
+    icon: Layers,
+    isComingSoon: true,
+    items: [
+      { title: 'Onboarding', path: '/onboarding', icon: CheckSquare },
+      { title: 'Employees', path: '/employees', icon: UserCheck },
+      { title: 'Deployments', path: '/deployments', icon: MapPin },
+      { title: 'Attendance', path: '/attendance', icon: Clock },
+      { title: 'Billing Drafts', path: '/billing', icon: CreditCard },
+      { title: 'Offboarding', path: '/offboarding', icon: LogOut },
+    ],
+  },
+  {
     id: 'administration',
     label: 'Administration',
     icon: Settings,

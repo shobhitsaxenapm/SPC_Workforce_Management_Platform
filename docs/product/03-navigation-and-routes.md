@@ -46,3 +46,5 @@ The current React codebase contains several active routes that are **not specifi
 5. `/billing`: Renders `BillingList.tsx` for client billing cycles.
 6. `/reports`: Deprecated and redirected to `/` (Dashboard relocated under the Intelligence module).
 7. `/settings`: Renders `Settings.tsx` basic config.
+
+> **Navigation Note**: The Operations module is surfaced in the sidebar as **Operation - WFM** with a **Coming Soon** badge, located immediately above Administration.
