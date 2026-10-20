@@ -319,9 +319,9 @@ export default function JobsList() {
                             });
                             if (latestActivity === 0) return null;
                             const now = new Date('2026-07-13T12:00:00Z').getTime();
-                            const isDormant = (now - latestActivity) >= 15 * 24 * 60 * 60 * 1000;
+                            const isDormant = (now - latestActivity) >= 7 * 24 * 60 * 60 * 1000;
                             if (isDormant) {
-                              return <span className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1" title="No Activity for 15+ Days"><AlertCircle className="w-3 h-3" /> Dormant</span>;
+                              return <span className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1" title="No Activity for 7+ Days"><AlertCircle className="w-3 h-3" /> Dormant</span>;
                             }
                             return null;
                           })()}

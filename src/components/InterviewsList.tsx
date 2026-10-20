@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
   Search, Video, Users, Phone, X, Calendar, Clock, 
@@ -27,6 +28,8 @@ export default function InterviewsList() {
     cancelInterview,
     updateApplicationStage
   } = useApp();
+
+  const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ clientId: '', jobId: '', interviewerName: '', interviewType: '', roundName: '' });
@@ -306,10 +309,28 @@ export default function InterviewsList() {
 
   const handleConfirmSelection = () => {
     if (!selectedInterview) return;
+    const candidate = candidates.find(c => c.id === selectedInterview.candidateId);
+    const job = jobs.find(j => j.id === selectedInterview.jobId);
+
     updateApplicationStage(selectedInterview.applicationId, 'Selected');
-    triggerToast('Candidate selected for the job.');
     setActiveModal(null);
     setSelectedInterview(null);
+
+    if (candidate && job) {
+      navigate('/offers', {
+        state: {
+          candidateId: candidate.id,
+          candidateName: candidate.fullName,
+          jobId: job.id,
+          jobTitle: job.title,
+          clientId: job.clientId,
+          projectId: job.projectId,
+          applicationId: selectedInterview.applicationId
+        }
+      });
+    } else {
+      triggerToast('Candidate selected for the job.');
+    }
   };
 
   const handleConfirmRejection = (e: React.FormEvent) => {

@@ -70,7 +70,7 @@ export default function JobDetail() {
   const canRunMatching = (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId) && isJobActive;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected'] as const;
+  const canonicalStages = ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
@@ -104,7 +104,7 @@ export default function JobDetail() {
     switch (currentStage) {
       case 'Rejected':
       case 'Withdrawn': return [currentStage, 'Sourced']; // Allow reopening
-      default: return ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected'];
+      default: return ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'];
     }
   };
 
@@ -316,9 +316,9 @@ export default function JobDetail() {
                       });
                       if (latestActivity === 0) return null;
                       const now = new Date('2026-07-13T12:00:00Z').getTime();
-                      const isDormant = (now - latestActivity) >= 15 * 24 * 60 * 60 * 1000;
+                      const isDormant = (now - latestActivity) >= 7 * 24 * 60 * 60 * 1000;
                       if (isDormant) {
-                        return <span className="px-3 py-1 rounded-full text-sm uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 border border-amber-200 flex items-center gap-1" title="No Activity for 15+ Days"><AlertCircle className="w-3.5 h-3.5" /> Dormant</span>;
+                        return <span className="px-3 py-1 rounded-full text-sm uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 border border-amber-200 flex items-center gap-1" title="No Activity for 7+ Days"><AlertCircle className="w-3.5 h-3.5" /> Dormant</span>;
                       }
                       return null;
                     })()}

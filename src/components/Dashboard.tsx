@@ -39,27 +39,14 @@ export default function Dashboard() {
     clientReviewBatches 
   } = useApp();
 
-  const isManagerOrAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER';
-  const defaultScope = isManagerOrAdmin ? 'Team' : 'My Work';
-  
-  const [scope, setScope] = useState<'My Work' | 'Team'>(defaultScope);
   const [filterClientId, setFilterClientId] = useState('');
-  const [filterRecruiterId, setFilterRecruiterId] = useState(defaultScope === 'My Work' ? currentUser?.id || '' : '');
+  const [filterRecruiterId, setFilterRecruiterId] = useState('');
   const [filterJobId, setFilterJobId] = useState('');
   const [activityPeriod, setActivityPeriod] = useState<'Today' | 'Last 7 Days' | 'Last 30 Days' | 'Custom'>('Last 7 Days');
   const [upcomingPeriod, setUpcomingPeriod] = useState<'Next 7 Days' | 'Next 14 Days' | 'Next 30 Days' | 'Custom'>('Next 7 Days');
   const [attentionFilter, setAttentionFilter] = useState<'All' | 'Critical' | 'Overdue' | 'Pending' | 'Warning'>('All');
   const [jobHealthFilter, setJobHealthFilter] = useState<'All' | 'Has Bottlenecks' | 'On Track'>('All');
   const [isAttentionDrawerOpen, setIsAttentionDrawerOpen] = useState(false);
-
-  const handleScopeChange = (newScope: 'My Work' | 'Team') => {
-    setScope(newScope);
-    if (newScope === 'My Work') {
-      setFilterRecruiterId(currentUser?.id || '');
-    } else {
-      setFilterRecruiterId('');
-    }
-  };
 
   // Base Data Filtering
   const baseJobs = useMemo(() => {
@@ -220,7 +207,7 @@ export default function Dashboard() {
     // 6. No recent activity
     const lastApp = applications.filter(a => a.jobId === j.id).sort((a, b) => safeTime(b.lastActivity) - safeTime(a.lastActivity))[0];
     const dt = lastApp ? safeTime(lastApp.lastActivity) : NaN;
-    if (!isNaN(dt) && (now - dt) > 15 * 24 * 60 * 60 * 1000) {
+    if (!isNaN(dt) && (now - dt) > 7 * 24 * 60 * 60 * 1000) {
       attentionItems.push({ ...baseItem, id: `inact-${j.id}`, issue: `No activity for ${formatDays(now - dt)}`, durationLabel: 'Inactive', priority: 6, label: 'Warning', actionText: 'View Job', actionLink: `/job-desk/${j.id}` });
     }
   });
@@ -290,7 +277,7 @@ export default function Dashboard() {
     else if (applications.some(a => a.jobId === job.id && a.currentStage === 'Interviewing' && interviews.some(i => i.applicationId === a.id && safeTime(i.scheduledAt) < now && i.status === 'Scheduled'))) bottleneck = 'Interview Feedback Pending';
     else if (offers.some(o => o.jobId === job.id && o.status === 'Sent')) bottleneck = 'Offer Response Pending';
     else if (offers.some(o => o.jobId === job.id && o.status === 'Accepted' && applications.find(a => a.id === o.applicationId)?.currentStage !== 'Joined')) bottleneck = 'Joining Pending';
-    else if (inactiveDays > 15) bottleneck = `No Recent Activity (${inactiveDays} days)`;
+    else if (inactiveDays > 7) bottleneck = `No Recent Activity (${inactiveDays} days)`;
     else if (applications.filter(a => a.jobId === job.id).length === 0) bottleneck = 'No Candidates Sourced';
 
     const targetDt = safeTime(job.targetJoiningDate);
@@ -304,8 +291,8 @@ export default function Dashboard() {
     };
   });
 
-  // ── 7. Team Workload / My Workload ──
-  const relevantRecruiters = scope === 'Team' ? mockUsers.filter(u => u.role === 'RECRUITER' || (u.role === 'MANAGER' && jobs.some(j => j.assignedRecruiterId === u.id))) : [currentUser].filter(Boolean);
+  // ── 7. Team Workload ──
+  const relevantRecruiters = mockUsers.filter(u => u.role === 'RECRUITER' || (u.role === 'MANAGER' && jobs.some(j => j.assignedRecruiterId === u.id)));
   
   const workloadList = relevantRecruiters.map(u => {
     const rJobs = jobs.filter(j => j.assignedRecruiterId === u?.id && (!filterClientId || j.clientId === filterClientId) && (!filterJobId || j.id === filterJobId));
@@ -322,32 +309,30 @@ export default function Dashboard() {
     const inactiveJobs = rJobs.filter(j => {
       const lastApp = applications.filter(a => a.jobId === j.id).sort((a, b) => safeTime(b.lastActivity) - safeTime(a.lastActivity))[0];
       const dt = lastApp ? safeTime(lastApp.lastActivity) : NaN;
-      return j.status === 'Open' && !isNaN(dt) && (now - dt) > 15 * 24 * 60 * 60 * 1000;
+      return j.status === 'Open' && !isNaN(dt) && (now - dt) > 7 * 24 * 60 * 60 * 1000;
     }).length;
 
     return { id: u?.id || 'unassigned', name: u?.name || 'Unassigned', openJobs: rOpenJobs, positionsRem: rPositionsRem, actPipe: rActPipe, fbOverdue: rFbOverdue, intPending: rIntPending, inactiveJobs, hasJobs: rJobs.length > 0 };
-  }).filter(w => w.hasJobs || scope === 'Team');
+  }).filter(w => w.hasJobs);
 
-  // Add Unassigned if in Team mode
-  if (scope === 'Team') {
-    const uJobs = jobs.filter(j => !j.assignedRecruiterId && (!filterClientId || j.clientId === filterClientId) && (!filterJobId || j.id === filterJobId));
-    if (uJobs.length > 0) {
-      const rOpenJobs = uJobs.filter(j => j.status === 'Open').length;
-      const rPositionsRem = uJobs.reduce((acc, job) => {
-        const joined = applications.filter(a => a.jobId === job.id && (a.currentStage === 'Joined' || a.currentStage === 'Hired')).length;
-        return acc + Math.max(job.openings - joined, 0);
-      }, 0);
-      const rApps = applications.filter(a => uJobs.some(j => j.id === a.jobId));
-      const rActPipe = rApps.filter(a => !['Application Rejected', 'Withdrawn', 'Hired', 'Joined'].includes(a.currentStage)).length;
-      const rFbOverdue = rApps.filter(a => a.currentStage === 'Client Review' && overdueBatches.some(b => b.applicationIds.includes(a.id))).length;
-      const rIntPending = rApps.filter(a => a.currentStage === 'Interviewing' && interviews.some(i => i.applicationId === a.id && safeTime(i.scheduledAt) < now && i.status === 'Scheduled')).length;
-      const inactiveJobs = uJobs.filter(j => {
-        const lastApp = applications.filter(a => a.jobId === j.id).sort((a, b) => safeTime(b.lastActivity) - safeTime(a.lastActivity))[0];
-        const dt = lastApp ? safeTime(lastApp.lastActivity) : NaN;
-        return j.status === 'Open' && !isNaN(dt) && (now - dt) > 15 * 24 * 60 * 60 * 1000;
-      }).length;
-      workloadList.push({ id: 'unassigned', name: 'Unassigned', openJobs: rOpenJobs, positionsRem: rPositionsRem, actPipe: rActPipe, fbOverdue: rFbOverdue, intPending: rIntPending, inactiveJobs, hasJobs: true });
-    }
+  // Add Unassigned
+  const uJobs = jobs.filter(j => !j.assignedRecruiterId && (!filterClientId || j.clientId === filterClientId) && (!filterJobId || j.id === filterJobId));
+  if (uJobs.length > 0) {
+    const rOpenJobs = uJobs.filter(j => j.status === 'Open').length;
+    const rPositionsRem = uJobs.reduce((acc, job) => {
+      const joined = applications.filter(a => a.jobId === job.id && (a.currentStage === 'Joined' || a.currentStage === 'Hired')).length;
+      return acc + Math.max(job.openings - joined, 0);
+    }, 0);
+    const rApps = applications.filter(a => uJobs.some(j => j.id === a.jobId));
+    const rActPipe = rApps.filter(a => !['Application Rejected', 'Withdrawn', 'Hired', 'Joined'].includes(a.currentStage)).length;
+    const rFbOverdue = rApps.filter(a => a.currentStage === 'Client Review' && overdueBatches.some(b => b.applicationIds.includes(a.id))).length;
+    const rIntPending = rApps.filter(a => a.currentStage === 'Interviewing' && interviews.some(i => i.applicationId === a.id && safeTime(i.scheduledAt) < now && i.status === 'Scheduled')).length;
+    const inactiveJobs = uJobs.filter(j => {
+      const lastApp = applications.filter(a => a.jobId === j.id).sort((a, b) => safeTime(b.lastActivity) - safeTime(a.lastActivity))[0];
+      const dt = lastApp ? safeTime(lastApp.lastActivity) : NaN;
+      return j.status === 'Open' && !isNaN(dt) && (now - dt) > 7 * 24 * 60 * 60 * 1000;
+    }).length;
+    workloadList.push({ id: 'unassigned', name: 'Unassigned', openJobs: rOpenJobs, positionsRem: rPositionsRem, actPipe: rActPipe, fbOverdue: rFbOverdue, intPending: rIntPending, inactiveJobs, hasJobs: true });
   }
 
   const jobOptions = jobs.filter(j => !filterClientId || j.clientId === filterClientId);
@@ -360,27 +345,14 @@ export default function Dashboard() {
           <Filter className="w-4 h-4" /> Filters:
         </div>
         
-        {isManagerOrAdmin && (
-          <select 
-            value={scope} 
-            onChange={e => handleScopeChange(e.target.value as 'My Work' | 'Team')}
-            className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
-          >
-            <option value="My Work">My Work</option>
-            <option value="Team">Team</option>
-          </select>
-        )}
-
-        {scope === 'Team' && (
-          <select 
-            value={filterRecruiterId} 
-            onChange={e => setFilterRecruiterId(e.target.value)}
-            className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
-          >
-            <option value="">All Recruiters</option>
-            {mockUsers.filter(u => u.role === 'RECRUITER' || (u.role === 'MANAGER' && jobs.some(j => j.assignedRecruiterId === u.id))).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        )}
+        <select 
+          value={filterRecruiterId} 
+          onChange={e => setFilterRecruiterId(e.target.value)}
+          className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
+        >
+          <option value="">All Recruiters</option>
+          {mockUsers.filter(u => u.role === 'RECRUITER' || (u.role === 'MANAGER' && jobs.some(j => j.assignedRecruiterId === u.id))).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
 
         <select 
           value={filterClientId} 
@@ -712,12 +684,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Team Workload / My Workload ── */}
+      {/* ── Team Workload ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
             <UserCheck className="w-4 h-4 text-indigo-500" />
-            {scope === 'Team' ? 'Team Workload' : 'My Workload'}
+            Team Workload
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -730,7 +702,7 @@ export default function Dashboard() {
                 <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Candidates</th>
                 <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Feedback Overdue</th>
                 <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Interviews Pending Feedback</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Jobs (15+ Days)</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Jobs (7+ Days)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
