@@ -44,6 +44,7 @@ type NavModuleConfig = {
   icon: React.ElementType;
   items: NavItem[];
   requiredRole?: 'ADMIN' | 'MANAGER' | 'RECRUITER';
+  isComingSoon?: boolean;
 };
 
 const navigationConfig: NavModuleConfig[] = [
@@ -62,10 +63,18 @@ const navigationConfig: NavModuleConfig[] = [
     ],
   },
   {
+    id: 'intelligence',
+    label: 'Intelligence',
+    icon: LineChart,
+    items: [
+      { title: 'Reports & Insights', path: '/reports', icon: LineChart },
+    ],
+  },
+  {
     id: 'administration',
     label: 'Administration',
     icon: Settings,
-    requiredRole: 'ADMIN',
+    isComingSoon: true,
     items: [
       { title: 'Users & Roles', path: '/users', icon: ShieldAlert },
       { title: 'Recruitment Settings', path: '/settings', icon: Settings },
@@ -84,16 +93,19 @@ const NavModule: React.FC<{
   currentPath, 
   forceOpen 
 }) => {
-  const [isExpanded, setIsExpanded] = useState(forceOpen);
+  const [isExpanded, setIsExpanded] = useState(forceOpen && !module.isComingSoon);
 
   // Auto-expand if a child route becomes active, but don't auto-collapse if user opened it
   useEffect(() => {
-    if (forceOpen) {
+    if (forceOpen && !module.isComingSoon) {
       setIsExpanded(true);
     }
-  }, [forceOpen]);
+  }, [forceOpen, module.isComingSoon]);
 
-  const toggleExpand = () => setIsExpanded(!isExpanded);
+  const toggleExpand = () => {
+    if (module.isComingSoon) return;
+    setIsExpanded(!isExpanded);
+  };
   
   // Determine if any child is active
   const hasActiveChild = module.items.some(item => 
@@ -106,33 +118,43 @@ const NavModule: React.FC<{
         onClick={toggleExpand}
         aria-expanded={isExpanded}
         aria-controls={`nav-module-${module.id}`}
+        disabled={module.isComingSoon}
         className={cn(
           "w-full flex items-center justify-between px-4 py-2.5 mx-2 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-          isExpanded ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+          module.isComingSoon
+            ? "text-slate-400 cursor-not-allowed hover:bg-slate-50/50"
+            : isExpanded ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
           hasActiveChild && !isExpanded ? "bg-blue-50/50 text-blue-900" : ""
         )}
         style={{ width: 'calc(100% - 16px)' }}
       >
-        <div className="flex items-center gap-3">
-          <module.icon className={cn("w-5 h-5", isExpanded ? "text-blue-600" : "text-slate-500")} aria-hidden="true" />
-          <span className="text-sm font-medium">{module.label}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <module.icon className={cn("w-5 h-5 shrink-0", module.isComingSoon ? "text-slate-400" : isExpanded ? "text-blue-600" : "text-slate-500")} aria-hidden="true" />
+          <span className="text-sm font-medium truncate">{module.label}</span>
         </div>
-        <ChevronDown 
-          className={cn(
-            "w-4 h-4 text-slate-400 transition-transform duration-200", 
-            !isExpanded && "-rotate-90"
-          )} 
-          aria-hidden="true" 
-        />
+        {module.isComingSoon ? (
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80 px-2 py-0.5 rounded-full shrink-0">
+            Coming Soon
+          </span>
+        ) : (
+          <ChevronDown 
+            className={cn(
+              "w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0", 
+              !isExpanded && "-rotate-90"
+            )} 
+            aria-hidden="true" 
+          />
+        )}
       </button>
 
-      <div 
-        id={`nav-module-${module.id}`}
-        className={cn(
-          "overflow-hidden transition-all duration-200 ease-in-out",
-          isExpanded ? "max-h-[500px] opacity-100 mt-1" : "max-h-0 opacity-0"
-        )}
-      >
+      {!module.isComingSoon && (
+        <div 
+          id={`nav-module-${module.id}`}
+          className={cn(
+            "overflow-hidden transition-all duration-200 ease-in-out",
+            isExpanded ? "max-h-[500px] opacity-100 mt-1" : "max-h-0 opacity-0"
+          )}
+        >
         <div className="space-y-0.5 pb-2">
           {module.items.map((item) => {
             const isActive = item.path === currentPath || (item.path !== '/' && currentPath.startsWith(item.path + '/'));
@@ -162,8 +184,9 @@ const NavModule: React.FC<{
           })}
         </div>
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }
 
 export default function Layout() {
