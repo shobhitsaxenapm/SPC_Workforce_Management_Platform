@@ -14,13 +14,11 @@ interface SmartJobReviewProps {
 }
 
 export default function SmartJobReview({ extractedData, sourceText, metadata, onSaveAsDraft, onDiscard }: SmartJobReviewProps) {
-  const { projects, clients, currentUser, createJob } = useApp();
+  const { clients, currentUser, createJob } = useApp();
 
   const [formData, setFormData] = useState({
     title: extractedData.title || '',
-    projectId: extractedData.linkedClientProject || '',
     clientId: '',
-    projectName: '',
     location: extractedData.location || '',
     openings: extractedData.openings || 1,
     employmentType: extractedData.employmentType || 'Full-time',
@@ -39,24 +37,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
   const [showClientForm, setShowClientForm] = useState(false);
 
   useEffect(() => {
-    // Attempt to auto-map client requirement if provided by AI
-    if (formData.projectId) {
-      const match = projects.find(r => 
-        r.id === formData.projectId || 
-        r.code.toLowerCase() === formData.projectId.toLowerCase() || 
-        r.projectName.toLowerCase().includes(formData.projectId.toLowerCase())
-      );
-      if (match) {
-        setFormData(prev => ({ 
-          ...prev, 
-          projectId: match.id,
-          clientId: match.clientId,
-          projectName: match.projectName
-        }));
-      } else {
-        setFormData(prev => ({ ...prev, projectId: '' }));
-      }
-    } else if (extractedData.clientName && !formData.clientId) {
+    if (extractedData.clientName && !formData.clientId) {
       // Auto-map client if extracted
       const normName = extractedData.clientName.trim().toLowerCase();
       const match = clients.find(c => c.name.trim().toLowerCase() === normName);
@@ -65,20 +46,6 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       }
     }
   }, []);
-
-  const handleRequirementChange = (projectId: string) => {
-    const req = projects.find(r => r.id === projectId);
-    if (req) {
-      setFormData(prev => ({
-        ...prev,
-        projectId: projectId,
-        clientId: req.clientId,
-        projectName: req.projectName
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, projectId: '' }));
-    }
-  };
 
   const validate = (isDraft: boolean = false) => {
     const newErrors: Record<string, string> = {};
@@ -100,9 +67,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
     
     createJob({
       title: formData.title,
-      projectId: formData.projectId,
       clientId: formData.clientId,
-      projectName: formData.projectName,
       location: formData.location,
       openings: Number(formData.openings) || 1,
       employmentType: formData.employmentType,
@@ -119,7 +84,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       status: status,
       isPublished: false,
       sourceMetadata: metadata,
-    }, formData.projectId);
+    });
 
     onSaveAsDraft();
   };
@@ -148,7 +113,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
               Review Job Details
               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">AI Extracted</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Please review the extracted details and link a client requirement.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Please review the extracted details and assign a client.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={onDiscard} className="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
@@ -182,73 +147,49 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Linked Project (Optional)
+                    Client <span className="text-red-500">*</span>
                   </label>
-                  <select 
-                    value={formData.projectId}
-                    onChange={(e) => handleRequirementChange(e.target.value)}
-                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.projectId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
-                  >
-                    <option value="">-- Select Project --</option>
-                    {projects.map(p => {
-                      const client = clients.find(c => c.id === p.clientId);
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {client?.name} - {p.projectName} ({p.code})
-                        </option>
-                      );
-                    })}
-                  </select>
-                  {errors.projectId && <p className="text-red-500 text-xs mt-1">{errors.projectId}</p>}
-                </div>
-
-                {!formData.projectId && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Client <span className="text-red-500">*</span>
-                    </label>
-                    {showClientForm ? (
-                      <InlineClientForm 
-                        initialClientName={extractedData.clientName}
-                        onSuccess={(newClientId) => {
-                          setFormData({...formData, clientId: newClientId});
-                          setShowClientForm(false);
-                          setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
-                        }}
-                        onCancel={() => setShowClientForm(false)}
-                      />
-                    ) : (
-                      <select 
-                        value={formData.clientId}
-                        onChange={(e) => {
-                          if (e.target.value === 'NEW') {
-                            setShowClientForm(true);
-                          } else {
-                            setFormData({...formData, clientId: e.target.value});
-                            if (e.target.value) {
-                              setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
-                            }
+                  {showClientForm ? (
+                    <InlineClientForm 
+                      initialClientName={extractedData.clientName}
+                      onSuccess={(newClientId) => {
+                        setFormData({...formData, clientId: newClientId});
+                        setShowClientForm(false);
+                        setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
+                      }}
+                      onCancel={() => setShowClientForm(false)}
+                    />
+                  ) : (
+                    <select 
+                      value={formData.clientId}
+                      onChange={(e) => {
+                        if (e.target.value === 'NEW') {
+                          setShowClientForm(true);
+                        } else {
+                          setFormData({...formData, clientId: e.target.value});
+                          if (e.target.value) {
+                            setErrors(prev => { const e = {...prev}; delete e.clientId; return e; });
                           }
-                        }}
-                        className={cn("w-full rounded-lg border p-2.5 text-sm", errors.clientId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
-                      >
-                        <option value="">-- Select Client --</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                        <option value="NEW" className="font-bold text-blue-600 bg-blue-50">+ Create New Client</option>
-                      </select>
-                    )}
-                    {!showClientForm && errors.clientId && <p className="text-red-500 text-xs mt-1">{errors.clientId}</p>}
-                    
-                    {!showClientForm && extractedData.clientName && !formData.clientId && (
-                      <div className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
-                        <Info className="w-4 h-4 text-blue-500" />
-                        AI extracted <b>{extractedData.clientName}</b> but no exact match was found. You can create it above.
-                      </div>
-                    )}
-                  </div>
-                )}
+                        }
+                      }}
+                      className={cn("w-full rounded-lg border p-2.5 text-sm", errors.clientId ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                    >
+                      <option value="">-- Select Client --</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      <option value="NEW" className="font-bold text-blue-600 bg-blue-50">+ Create New Client</option>
+                    </select>
+                  )}
+                  {!showClientForm && errors.clientId && <p className="text-red-500 text-xs mt-1">{errors.clientId}</p>}
+                  
+                  {!showClientForm && extractedData.clientName && !formData.clientId && (
+                    <div className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
+                      <Info className="w-4 h-4 text-blue-500" />
+                      AI extracted <b>{extractedData.clientName}</b> but no exact match was found. You can create it above.
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">

@@ -195,7 +195,6 @@ export default function JobsList() {
     { key: 'status', label: 'Status', options: ['Draft', 'Open', 'On Hold', 'Closed'].map(s => ({ value: s, label: s })) },
     { key: 'isPublished', label: 'Publication', options: [{ value: 'true', label: 'Published' }, { value: 'false', label: 'Unpublished' }] },
     { key: 'clientId', label: 'Client', options: clientOptions },
-    { key: 'employmentType', label: 'Employment Type', options: ['Contract', 'Full-time', 'Part-time'].map(s => ({ value: s, label: s })) },
   ];
 
   const filteredJobs = jobs.filter(job => {
@@ -209,9 +208,8 @@ export default function JobsList() {
     const matchStatus = !jobFilters.status || job.status === jobFilters.status;
     const matchPublished = !jobFilters.isPublished || (jobFilters.isPublished === 'true' ? job.isPublished === true : job.isPublished !== true);
     const matchClient = !jobFilters.clientId || job.clientId === jobFilters.clientId;
-    const matchType = !jobFilters.employmentType || job.employmentType === jobFilters.employmentType;
     const matchDate = isDateInPreset(job.publishedAt || job.targetJoiningDate, datePreset, customStart, customEnd);
-    return matchSearch && matchStatus && matchPublished && matchClient && matchType && matchDate;
+    return matchSearch && matchStatus && matchPublished && matchClient && matchDate;
   });
 
   return (
