@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { mockUsers } from '../data/mockData';
-import { Plus, Search, MapPin, Briefcase, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, MapPin, Briefcase, X, CheckCircle2, Settings } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Job, JobVisibility, JobStatus } from '../types';
+import { Job, JobVisibility, JobStatus, HiringModel } from '../types';
+import { getHiringModelBadgeConfig } from '../lib/hiringModelUtils';
+import ConfigureHiringModelModal from './ConfigureHiringModelModal';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
@@ -18,8 +20,9 @@ import { ExtractedJobData, JobSourceMetadata } from '../types';
 export default function JobsList() {
   const { jobs, projects, clients, applications, createJob, updateJob, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [jobFilters, setJobFilters] = useState<Record<string, string>>({ status: '', clientId: '', employmentType: '' });
+  const [jobFilters, setJobFilters] = useState<Record<string, string>>({ status: '', clientId: '', isPublished: '', hiringModel: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [jobToConfigure, setJobToConfigure] = useState<Job | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -62,6 +65,7 @@ export default function JobsList() {
     projectName: '',
     location: '',
     openings: 1,
+    hiringModel: 'Client Hire' as HiringModel,
     employmentType: 'Contract',
     experienceRange: '0-2 Years',
     requiredSkills: '',
@@ -85,6 +89,7 @@ export default function JobsList() {
         assignedRecruiterId: '',
         location: '',
         openings: 1,
+        hiringModel: 'Client Hire',
         employmentType: 'Contract',
       }));
     } else {
@@ -97,6 +102,7 @@ export default function JobsList() {
           projectName: req.projectName,
           location: req.locations[0] || 'Delhi',
           openings: Math.max(getUnallocatedPositions(req.id, req.totalRequestedHeadcount, jobs), 1),
+          hiringModel: 'Client Hire',
           employmentType: 'Contract', // default as employmentType removed
         }));
       }
@@ -142,6 +148,7 @@ export default function JobsList() {
     // Call Mutator
     createJob({
       ...formData,
+      hiringModel: formData.hiringModel,
       requiredSkills: reqSkillsArray,
       preferredSkills: prefSkillsArray,
       projectName: formData.projectName || formData.title,
@@ -162,9 +169,9 @@ export default function JobsList() {
         title: '',
         clientId: '',
         projectName: '',
-        assignedRecruiterId: '',
         location: '',
         openings: 1,
+        hiringModel: 'Client Hire',
         employmentType: 'Contract',
         experienceRange: '0-2 Years',
         requiredSkills: '',
@@ -195,6 +202,15 @@ export default function JobsList() {
     { key: 'status', label: 'Status', options: ['Draft', 'Open', 'On Hold', 'Closed'].map(s => ({ value: s, label: s })) },
     { key: 'isPublished', label: 'Publication', options: [{ value: 'true', label: 'Published' }, { value: 'false', label: 'Unpublished' }] },
     { key: 'clientId', label: 'Client', options: clientOptions },
+    {
+      key: 'hiringModel',
+      label: 'Hiring Model',
+      options: [
+        { value: 'Client Hire', label: 'Client Hire' },
+        { value: 'SPC Hire', label: 'SPC Hire' },
+        { value: 'Not Configured', label: 'Not Configured' }
+      ]
+    },
   ];
 
   const filteredJobs = jobs.filter(job => {
@@ -208,8 +224,13 @@ export default function JobsList() {
     const matchStatus = !jobFilters.status || job.status === jobFilters.status;
     const matchPublished = !jobFilters.isPublished || (jobFilters.isPublished === 'true' ? job.isPublished === true : job.isPublished !== true);
     const matchClient = !jobFilters.clientId || job.clientId === jobFilters.clientId;
+    const matchHiringModel = !jobFilters.hiringModel || (
+      jobFilters.hiringModel === 'Not Configured'
+        ? (!job.hiringModel || job.hiringModel === 'Not Configured')
+        : job.hiringModel === jobFilters.hiringModel
+    );
     const matchDate = isDateInPreset(job.publishedAt || job.targetJoiningDate, datePreset, customStart, customEnd);
-    return matchSearch && matchStatus && matchPublished && matchClient && matchDate;
+    return matchSearch && matchStatus && matchPublished && matchClient && matchHiringModel && matchDate;
   });
 
   return (
@@ -252,7 +273,7 @@ export default function JobsList() {
             values={jobFilters}
             onChange={(k, v) => setJobFilters({ ...jobFilters, [k]: v })}
             onClear={() => {
-              setJobFilters({ status: '', isPublished: '', clientId: '', employmentType: '' });
+              setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
               setDatePreset('All Time');
               setCustomStart('');
               setCustomEnd('');
@@ -286,11 +307,11 @@ export default function JobsList() {
               <tr>
                 <th className="px-6 py-4">Job Title</th>
                 <th className="px-6 py-4">Client</th>
+                <th className="px-6 py-4">Hiring Model</th>
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Fulfillment</th>
                 <th className="px-6 py-4">Target Date</th>
                 <th className="px-6 py-4">Job Status</th>
-
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -333,6 +354,42 @@ export default function JobsList() {
                     </td>
                     <td className="px-6 py-4 text-slate-700">
                       {client?.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const config = getHiringModelBadgeConfig(job.hiringModel);
+                        const Icon = config.icon;
+                        if (!config.isConfigured) {
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                                <Icon className="w-3.5 h-3.5 text-amber-600" />
+                                Not Configured
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setJobToConfigure(job);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-md transition-colors shadow-xs"
+                              >
+                                Configure
+                              </button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border",
+                            config.badgeClass
+                          )}>
+                            <Icon className="w-3.5 h-3.5" />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
                       <div className="flex items-center gap-1.5">
@@ -387,7 +444,7 @@ export default function JobsList() {
               })}
               {filteredJobs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
                     No matching jobs found.
                   </td>
                 </tr>
@@ -603,6 +660,19 @@ export default function JobsList() {
 
                       </div>
                       <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Hiring Model *
+                        </label>
+                        <select 
+                          value={formData.hiringModel} 
+                          onChange={e => setFormData({...formData, hiringModel: e.target.value as HiringModel})} 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                        >
+                          <option value="Client Hire">Client Hire (Direct Client payroll &amp; placement billing)</option>
+                          <option value="SPC Hire">SPC Hire (SPC workforce, offers &amp; onboarding)</option>
+                        </select>
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
                         <select 
                           value={formData.employmentType} 
@@ -792,6 +862,14 @@ export default function JobsList() {
             </div>
           </div>
         </div>
+      )}
+
+      {jobToConfigure && (
+        <ConfigureHiringModelModal
+          isOpen={!!jobToConfigure}
+          onClose={() => setJobToConfigure(null)}
+          job={jobToConfigure}
+        />
       )}
     </div>
   );

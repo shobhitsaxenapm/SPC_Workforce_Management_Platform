@@ -62,6 +62,63 @@ export type DeploymentStatus = 'Scheduled' | 'Active' | 'Completed' | 'Terminate
 export type BillingModel = 'Monthly' | 'Daily' | 'Hourly';
 export type AttendanceStatus = 'Draft' | 'Submitted' | 'Client Approved' | 'Rejected' | 'Locked for Billing';
 export type BillingStatus = 'Draft' | 'Pending Approval' | 'Approved' | 'Invoice Ready' | 'Sent' | 'Paid' | 'Disputed';
+
+export type HiringModel = 'Client Hire' | 'SPC Hire';
+export const HIRING_MODELS = ['Client Hire', 'SPC Hire'] as const;
+
+export type PlacementBillingStatus = 
+  | 'Billing Eligible'
+  | 'Invoice Draft'
+  | 'Invoice Sent'
+  | 'Payment Pending'
+  | 'Paid'
+  | 'Disputed'
+  | 'Cancelled';
+
+export const PLACEMENT_BILLING_STATUSES = [
+  'Billing Eligible',
+  'Invoice Draft',
+  'Invoice Sent',
+  'Payment Pending',
+  'Paid',
+  'Disputed',
+  'Cancelled'
+] as const;
+
+export type PlacementStatus = 'Joining Pending' | 'Joined' | 'Did Not Join';
+
+export interface PlacementBillingHistoryItem {
+  id: string;
+  fromStatus?: PlacementBillingStatus;
+  toStatus: PlacementBillingStatus;
+  changedAt: string;
+  changedBy: string;
+  notes?: string;
+  invoiceNumber?: string;
+  feeAmount?: string | number;
+}
+
+export interface Placement {
+  id: string;
+  applicationId: string;
+  candidateId: string;
+  jobId: string;
+  clientId: string;
+  hiringModel: 'Client Hire';
+  status: PlacementStatus;
+  expectedJoiningDate: string;
+  actualJoiningDate?: string;
+  notes?: string;
+  didNotJoinReason?: string;
+  billingStatus?: PlacementBillingStatus;
+  billingHistory?: PlacementBillingHistoryItem[];
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  feeAmount?: string | number;
+  paidDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 export type OffboardingStatus = 'Initiated' | 'Client Clearance Pending' | 'Final Attendance Pending' | 'Final Settlement Pending' | 'Completed' | 'Cancelled';
 export type PrimaryIndustry = 
   | 'BFSI' | 'BPO_KPO_ITES' | 'CONSULTING_PROFESSIONAL_SERVICES' 
@@ -216,6 +273,7 @@ export interface Job {
   assignedRecruiterId: string;
   visibility: JobVisibility;
   status: JobStatus;
+  hiringModel?: HiringModel | 'Not Configured';
   isPublished?: boolean;
   publishedAt?: string;
   sourceMetadata?: JobSourceMetadata;

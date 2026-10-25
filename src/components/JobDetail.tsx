@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { ApplicationStage, CANONICAL_SOURCES } from '../types';
+import { ApplicationStage, CANONICAL_SOURCES, Placement, HiringModel } from '../types';
 import { useApp } from '../context/AppContext';
+import { getHiringModelBadgeConfig, getPlacementBillingStatusConfig } from '../lib/hiringModelUtils';
 import JobMatchesTab from './JobMatchesTab';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
@@ -14,10 +15,34 @@ import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
 import JobApplicantsTab from './JobApplicantsTab';
 import CandidateScreeningModal from './CandidateScreeningModal';
 import SourceBadge from './SourceBadge';
+import ConfigureHiringModelModal from './ConfigureHiringModelModal';
+import StartJoiningTrackingModal from './StartJoiningTrackingModal';
+import ConfirmJoinedModal from './ConfirmJoinedModal';
+import DidNotJoinModal from './DidNotJoinModal';
+import PlacementBillingDrawer from './PlacementBillingDrawer';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, projects, clients, applications, candidates, offers, interviews, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId, createClientReviewBatch, clientReviewBatches } = useApp();
+  const { 
+    jobs, 
+    projects, 
+    clients, 
+    applications, 
+    candidates, 
+    offers, 
+    interviews, 
+    updateApplicationStage, 
+    matchRuns, 
+    runJobMatching, 
+    currentUser, 
+    addMatchToPipeline, 
+    updateJob, 
+    setQuickViewProjectId, 
+    setQuickViewCandidateId, 
+    createClientReviewBatch, 
+    clientReviewBatches,
+    placements 
+  } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Applicants' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -26,6 +51,13 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null);
+  
+  // Hiring Model & Placement Billing states
+  const [isConfigureHiringModelOpen, setIsConfigureHiringModelOpen] = useState(false);
+  const [startTrackingAppId, setStartTrackingAppId] = useState<string | null>(null);
+  const [confirmJoinedAppId, setConfirmJoinedAppId] = useState<string | null>(null);
+  const [didNotJoinAppId, setDidNotJoinAppId] = useState<string | null>(null);
+  const [selectedPlacementForBilling, setSelectedPlacementForBilling] = useState<Placement | null>(null);
   
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [pipelineSourceFilter, setPipelineSourceFilter] = useState('All');
@@ -301,6 +333,45 @@ export default function JobDetail() {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex gap-2 items-center">
+                    {(() => {
+                      const modelConfig = getHiringModelBadgeConfig(job.hiringModel);
+                      const Icon = modelConfig.icon;
+                      if (!modelConfig.isConfigured) {
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                              <Icon className="w-3.5 h-3.5 text-amber-600" />
+                              Not Configured
+                            </span>
+                            <button
+                              onClick={() => setIsConfigureHiringModelOpen(true)}
+                              className="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors shadow-xs"
+                            >
+                              Configure Hiring Model
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border",
+                            modelConfig.badgeClass
+                          )}>
+                            <Icon className="w-3.5 h-3.5" />
+                            {modelConfig.label}
+                          </span>
+                          <button
+                            onClick={() => setIsConfigureHiringModelOpen(true)}
+                            className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors text-xs hover:bg-slate-100"
+                            title="Edit / Override Hiring Model"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     <span className={cn(
                       "px-3 py-1 rounded-full text-sm font-medium border",
                       job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200" :
@@ -441,6 +512,30 @@ export default function JobDetail() {
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Application Deadline</p>
                   <p className="text-sm font-medium text-slate-800">{formatDate(job.applicationDeadline)}</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-slate-500">Hiring Model</p>
+                    <button 
+                      onClick={() => setIsConfigureHiringModelOpen(true)}
+                      className="text-[11px] text-blue-600 hover:underline font-medium"
+                    >
+                      {job.hiringModel && job.hiringModel !== 'Not Configured' ? 'Change' : 'Configure'}
+                    </button>
+                  </div>
+                  {(() => {
+                    const modelConfig = getHiringModelBadgeConfig(job.hiringModel);
+                    const Icon = modelConfig.icon;
+                    return (
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border",
+                        modelConfig.badgeClass
+                      )}>
+                        <Icon className="w-3.5 h-3.5" />
+                        {modelConfig.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <hr className="border-slate-100" />
                 
@@ -793,25 +888,78 @@ export default function JobDetail() {
                           );
                         })()}
 
-                        {app.currentStage !== 'Client Review' && app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received' && (
-                          <div className="mb-3">
-                            <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
-                          </div>
-                        )}
-                        
-                        {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
-                           const activeOffer = getActiveOfferCase(app.id);
-                           if (!activeOffer) return null;
-                           return (
-                             <div className="mb-3 flex gap-2">
-                               <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-100 flex items-center gap-1">
-                                 <FileText className="w-3 h-3" />
-                                 {['Offer Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Declined', 'Expired'].includes(activeOffer.status) 
-                                   ? `Offer: ${activeOffer.status === 'Offer Draft' ? 'Draft' : activeOffer.status}` 
-                                   : activeOffer.status}
-                               </span>
-                             </div>
-                           );
+                        {/* Secondary Substate / Model Status Badges */}
+                        {(() => {
+                          if (app.currentStage === 'Client Review') return null;
+
+                          // For Client Hire under Selected stage
+                          if (job.hiringModel === 'Client Hire' && app.currentStage === 'Selected') {
+                            const plc = placements.find(p => p.applicationId === app.id);
+                            if (app.currentSubstate === 'Joining Pending') {
+                              return (
+                                <div className="mb-3 space-y-1">
+                                  <span className="text-xs font-semibold px-2 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-200 inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-purple-600" />
+                                    Joining Pending
+                                  </span>
+                                  {plc?.expectedJoiningDate && (
+                                    <div className="text-[10px] text-purple-900 font-medium ml-0.5">
+                                      Expected: {formatDate(plc.expectedJoiningDate)}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            if (app.currentSubstate === 'Did Not Join') {
+                              return (
+                                <div className="mb-3 space-y-1">
+                                  <span className="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-800 rounded border border-amber-200 inline-flex items-center gap-1">
+                                    <UserX className="w-3 h-3 text-amber-600" />
+                                    Did Not Join
+                                  </span>
+                                  {plc?.didNotJoinReason && (
+                                    <div className="text-[10px] text-amber-900 truncate max-w-[200px]" title={plc.didNotJoinReason}>
+                                      {plc.didNotJoinReason}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="mb-3">
+                                <span className="text-xs font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
+                                  Client Hire • Selected
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          // For SPC Hire under Selected / Offered
+                          if ((job.hiringModel === 'SPC Hire' || !job.hiringModel) && (app.currentStage === 'Selected' || app.currentStage === 'Offered')) {
+                            const activeOffer = getActiveOfferCase(app.id);
+                            if (activeOffer) {
+                              return (
+                                <div className="mb-3 flex gap-2">
+                                  <span className="text-xs font-semibold px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-100 flex items-center gap-1">
+                                    <FileText className="w-3 h-3" />
+                                    {['Offer Draft', 'Pending Approval', 'Approved', 'Sent', 'Negotiating', 'Declined', 'Expired'].includes(activeOffer.status) 
+                                      ? `Offer: ${activeOffer.status === 'Offer Draft' ? 'Draft' : activeOffer.status}` 
+                                      : activeOffer.status}
+                                  </span>
+                                </div>
+                              );
+                            }
+                          }
+
+                          if (app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received') {
+                            return (
+                              <div className="mb-3">
+                                <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
+                              </div>
+                            );
+                          }
+
+                          return null;
                         })()}
 
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
@@ -837,8 +985,90 @@ export default function JobDetail() {
                             </button>
                             <div className="flex items-center gap-2">
                               {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
+                                // If unconfigured legacy job:
+                                if (!job.hiringModel || job.hiringModel === 'Not Configured') {
+                                  return (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsConfigureHiringModelOpen(true);
+                                      }}
+                                      className="px-2 py-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-bold border border-amber-300"
+                                      title="Configure Hiring Model to proceed"
+                                    >
+                                      <AlertCircle className="w-3 h-3 text-amber-600" />
+                                      Configure Model
+                                    </button>
+                                  );
+                                }
+
+                                // Branch 1: Client Hire post-selection workflow
+                                if (job.hiringModel === 'Client Hire') {
+                                  const isJoiningPending = app.currentSubstate === 'Joining Pending';
+                                  const isDidNotJoin = app.currentSubstate === 'Did Not Join';
+
+                                  return (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {!isJoiningPending && !isDidNotJoin && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStartTrackingAppId(app.id);
+                                          }}
+                                          className="px-2 py-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-bold border border-purple-200"
+                                          title="Start tracking client payroll joining"
+                                        >
+                                          <Clock className="w-3 h-3 text-purple-600" />
+                                          Start Joining Tracking
+                                        </button>
+                                      )}
+
+                                      {isJoiningPending && (
+                                        <>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setConfirmJoinedAppId(app.id);
+                                            }}
+                                            className="px-2 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-bold border border-emerald-200"
+                                            title="Confirm Candidate Joined on Client Payroll"
+                                          >
+                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                            Confirm Joined
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDidNotJoinAppId(app.id);
+                                            }}
+                                            className="px-2 py-1.5 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-semibold border border-amber-200"
+                                            title="Record Candidate Did Not Join"
+                                          >
+                                            <UserX className="w-3 h-3 text-amber-600" />
+                                            Did Not Join
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {isDidNotJoin && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStartTrackingAppId(app.id);
+                                          }}
+                                          className="px-2 py-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors flex items-center gap-1 text-[10px] font-semibold border border-purple-200"
+                                          title="Re-track Joining"
+                                        >
+                                          <Clock className="w-3 h-3 text-purple-600" />
+                                          Re-track Joining
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                // Branch 2: SPC Hire (preserve current Offers-module handoff)
                                 const activeOffer = getActiveOfferCase(app.id);
-                                
                                 const isTerminal = activeOffer && ['Declined', 'Expired', 'Withdrawn'].includes(activeOffer.status);
                                 
                                 return (
@@ -956,31 +1186,62 @@ export default function JobDetail() {
           })}
           </div>
 
-          {jobApplications.filter(a => a.currentStage === 'Hired').length > 0 && (
+          {jobApplications.filter(a => a.currentStage === 'Hired' || a.currentStage === 'Joined' || a.currentSubstate === 'Joined/Placed').length > 0 && (
             <div className="mt-8 pt-8 border-t border-slate-200">
               <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 Completed Outcomes
               </h3>
               <div className="flex gap-4 overflow-x-auto pb-4">
-                {jobApplications.filter(a => a.currentStage === 'Hired').map(app => {
+                {jobApplications.filter(a => a.currentStage === 'Hired' || a.currentStage === 'Joined' || a.currentSubstate === 'Joined/Placed').map(app => {
                   const candidate = candidates.find(c => c.id === app.candidateId);
                   if (!candidate) return null;
+                  const plc = placements.find(p => p.applicationId === app.id);
+                  const isClientHire = job.hiringModel === 'Client Hire' || (plc && plc.hiringModel === 'Client Hire');
+                  const billingConfig = plc?.billingStatus ? getPlacementBillingStatusConfig(plc.billingStatus) : null;
+                  const BillingIcon = billingConfig?.icon;
+
                   return (
-                    <div key={app.id} className="w-[320px] flex-shrink-0 bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm relative">
-                      <div className="flex justify-between items-start mb-2">
-                          <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-green-900 hover:text-green-700 truncate outline-none text-left mr-2">
+                    <div key={app.id} className="w-[340px] flex-shrink-0 bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 shadow-sm relative flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-emerald-950 hover:text-emerald-700 truncate outline-none text-left mr-2">
                             {candidate.fullName}
                           </button>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">
-                            Hired
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+                            Joined/Placed
                           </span>
+                        </div>
+                        <p className="text-xs text-emerald-800 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
+                        <div className="flex items-center justify-between gap-1.5 mt-1">
+                          <p className="text-xs text-emerald-700/80 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
+                          <SourceBadge source={app.source} compact />
+                        </div>
                       </div>
-                      <p className="text-xs text-green-700 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
-                      <div className="flex items-center justify-between gap-1.5 mt-1">
-                        <p className="text-xs text-green-600/70 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
-                        <SourceBadge source={app.source} compact />
-                      </div>
+
+                      {/* Client Hire Placement & Billing section */}
+                      {isClientHire && plc && (
+                        <div className="mt-3 pt-3 border-t border-emerald-200/60 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            {billingConfig && BillingIcon && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border",
+                                billingConfig.badgeClass
+                              )}>
+                                <BillingIcon className="w-3 h-3" />
+                                {billingConfig.label}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setSelectedPlacementForBilling(plc)}
+                            className="px-2.5 py-1 text-xs font-semibold text-purple-700 bg-white hover:bg-purple-50 border border-purple-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                          >
+                            <DollarSign className="w-3.5 h-3.5 text-purple-600" />
+                            Placement &amp; Billing
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1154,6 +1415,79 @@ export default function JobDetail() {
           onClose={() => setShowScreeningModal(null)}
         />
       )}
+
+      {isConfigureHiringModelOpen && (
+        <ConfigureHiringModelModal
+          isOpen={isConfigureHiringModelOpen}
+          onClose={() => setIsConfigureHiringModelOpen(false)}
+          job={job}
+        />
+      )}
+
+      {startTrackingAppId && (() => {
+        const targetApp = applications.find(a => a.id === startTrackingAppId);
+        const cand = candidates.find(c => c.id === targetApp?.candidateId);
+        if (!targetApp || !cand) return null;
+        const plc = placements.find(p => p.applicationId === targetApp.id);
+        return (
+          <StartJoiningTrackingModal
+            isOpen={!!startTrackingAppId}
+            onClose={() => setStartTrackingAppId(null)}
+            candidate={cand}
+            job={job}
+            applicationId={targetApp.id}
+            initialExpectedDate={plc?.expectedJoiningDate}
+            initialNotes={plc?.notes}
+          />
+        );
+      })()}
+
+      {confirmJoinedAppId && (() => {
+        const targetApp = applications.find(a => a.id === confirmJoinedAppId);
+        const cand = candidates.find(c => c.id === targetApp?.candidateId);
+        if (!targetApp || !cand) return null;
+        const plc = placements.find(p => p.applicationId === targetApp.id);
+        return (
+          <ConfirmJoinedModal
+            isOpen={!!confirmJoinedAppId}
+            onClose={() => setConfirmJoinedAppId(null)}
+            candidate={cand}
+            job={job}
+            applicationId={targetApp.id}
+            placement={plc}
+          />
+        );
+      })()}
+
+      {didNotJoinAppId && (() => {
+        const targetApp = applications.find(a => a.id === didNotJoinAppId);
+        const cand = candidates.find(c => c.id === targetApp?.candidateId);
+        if (!targetApp || !cand) return null;
+        const plc = placements.find(p => p.applicationId === targetApp.id);
+        return (
+          <DidNotJoinModal
+            isOpen={!!didNotJoinAppId}
+            onClose={() => setDidNotJoinAppId(null)}
+            candidate={cand}
+            job={job}
+            applicationId={targetApp.id}
+            placement={plc}
+          />
+        );
+      })()}
+
+      {selectedPlacementForBilling && (() => {
+        const cand = candidates.find(c => c.id === selectedPlacementForBilling.candidateId);
+        return (
+          <PlacementBillingDrawer
+            isOpen={!!selectedPlacementForBilling}
+            onClose={() => setSelectedPlacementForBilling(null)}
+            placement={selectedPlacementForBilling}
+            candidate={cand}
+            job={job}
+          />
+        );
+      })()}
     </div>
   );
 }

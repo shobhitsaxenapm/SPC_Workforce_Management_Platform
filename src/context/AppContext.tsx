@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch, CandidateJobSource } from '../types';
-import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch, CandidateJobSource, HiringModel, Placement, PlacementBillingStatus, PlacementStatus, PlacementBillingHistoryItem } from '../types';
+import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings, mockPlacements } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
 import { normalizeJob, normalizeApplication, normalizeOffer } from '../lib/statusNormalization';
 import { normalizeSource } from '../lib/sourceUtils';
+import { isJobHiringModelLocked } from '../lib/hiringModelUtils';
 
 interface AppContextType {
   currentUser: User | null;
@@ -16,6 +17,7 @@ interface AppContextType {
   interviews: Interview[];
   offers: Offer[];
   onboardings: Onboarding[];
+  placements: Placement[];
   matchRuns: JobMatchRun[];
   informationRequests: InformationRequest[];
   clientReviewBatches: ClientReviewBatch[];
@@ -39,6 +41,11 @@ interface AppContextType {
   deleteCandidate: (candidateId: string) => void;
   createJob: (jobData: Omit<Job, 'id' | 'code' | 'filled' | 'engagementType'>, projectId?: string) => void;
   updateJob: (jobId: string, updates: Partial<Job>) => void;
+  updateJobHiringModel: (jobId: string, hiringModel: HiringModel, isAdminOverride?: boolean) => { success: boolean; error?: string };
+  startJoiningTracking: (applicationId: string, expectedJoiningDate: string, notes?: string) => { success: boolean; error?: string; placementId?: string };
+  confirmJoined: (applicationId: string, actualJoiningDate: string, notes?: string) => { success: boolean; error?: string };
+  recordDidNotJoin: (applicationId: string, reason: string) => { success: boolean; error?: string };
+  updatePlacementBillingStatus: (placementId: string, status: PlacementBillingStatus, notes?: string, extra?: { invoiceNumber?: string, feeAmount?: string | number }) => { success: boolean; error?: string };
   submitApplication: (
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
     jobId: string,
@@ -213,16 +220,48 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.setItem('spc_jobs', JSON.stringify(mockJobs));
     }
     const parsedJobs = safeParse<Job[]>('spc_jobs', mockJobs);
+    const storedOffers = safeParse<Offer[]>('spc_offers', mockOffers);
+    const storedOnboardings = safeParse<Onboarding[]>('spc_onboardings', mockOnboardings);
+
+    let changed = false;
     const healedJobs = parsedJobs.map(j => {
       let healed = { ...j, title: j.title || j.projectName || '' };
-      return normalizeJob(healed);
+      healed = normalizeJob(healed);
+
+      // Legacy data rule:
+      // A legacy Job with an existing linked SPC offer or onboarding record may be classified as SPC Hire because the existing data proves it.
+      // Do not infer Client Hire merely because no offer exists.
+      // Leave other unclassified legacy Jobs as Not Configured and provide Configure Hiring Model.
+      if (!healed.hiringModel || healed.hiringModel === ('Not Configured' as any)) {
+        const hasOffer = storedOffers.some(o => o.jobId === j.id);
+        const hasOnboarding = storedOnboardings.some(onb => (onb as any).jobId === j.id);
+        if (hasOffer || hasOnboarding) {
+          healed.hiringModel = 'SPC Hire';
+        } else {
+          healed.hiringModel = 'Not Configured';
+        }
+      }
+      return healed;
     });
+
     // If any were healed, save back to storage so they persist
-    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status)) {
+    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status || j.hiringModel !== parsedJobs[i].hiringModel)) {
       localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
     }
     return healedJobs;
   });
+
+  const [placements, setPlacements] = useState<Placement[]>(() => {
+    if (localStorage.getItem('spc_placements') === null) {
+      localStorage.setItem('spc_placements', JSON.stringify(mockPlacements));
+    }
+    return safeParse<Placement[]>('spc_placements', mockPlacements);
+  });
+
+  const persistPlacements = (newPlacements: Placement[]) => {
+    setPlacements(newPlacements);
+    localStorage.setItem('spc_placements', JSON.stringify(newPlacements));
+  };
 
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
     let base = safeParse<Candidate[]>('spc_candidates', mockCandidates);
@@ -684,6 +723,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clientId,
       projectName,
       filled: 0,
+      hiringModel: jobData.hiringModel || 'Client Hire',
       status: jobData.status || 'Draft',
     };
 
@@ -700,6 +740,275 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return j;
     });
     persistJobs(updatedJobs);
+  };
+
+  const updateJobHiringModel = (jobId: string, hiringModel: HiringModel, isAdminOverride?: boolean) => {
+    const targetJob = jobs.find(j => j.id === jobId);
+    if (!targetJob) return { success: false, error: 'Job not found' };
+
+    const isLocked = isJobHiringModelLocked(jobId, applications);
+    if (isLocked) {
+      const isAdmin = currentUser?.role === 'ADMIN' || (currentUser as any)?.role === 'company_admin';
+      if (!isAdmin) {
+        return { success: false, error: 'Hiring Model is locked because candidates have entered the pipeline. Only an Administrator can override this.' };
+      }
+      if (!isAdminOverride) {
+        return { success: false, error: 'Confirmation required for administrator override.' };
+      }
+    }
+
+    const prevModel = targetJob.hiringModel || 'Not Configured';
+    const updatedJobs = jobs.map(j => {
+      if (j.id === jobId) {
+        return {
+          ...j,
+          hiringModel,
+          revisions: isLocked ? [
+            ...(j.revisions || []),
+            {
+              id: 'rev_' + Math.random().toString(36).substr(2, 9),
+              projectId: j.projectId,
+              version: (j as any).version ? (j as any).version + 1 : 1,
+              changedFields: ['hiringModel'],
+              previousValues: { hiringModel: prevModel },
+              newValues: { hiringModel },
+              changedBy: currentUser?.name || 'Administrator',
+              changedAt: new Date().toISOString(),
+              reason: `Admin Override: Hiring Model changed from ${prevModel} to ${hiringModel}`
+            }
+          ] : j.revisions
+        };
+      }
+      return j;
+    });
+
+    persistJobs(updatedJobs);
+    return { success: true };
+  };
+
+  const startJoiningTracking = (applicationId: string, expectedJoiningDate: string, notes?: string) => {
+    const app = applications.find(a => a.id === applicationId);
+    if (!app) return { success: false, error: 'Application not found' };
+
+    const targetJob = jobs.find(j => j.id === app.jobId);
+    if (!targetJob) return { success: false, error: 'Job not found' };
+
+    const now = new Date().toISOString();
+    let placementId = '';
+    const existingPlacement = placements.find(p => p.applicationId === applicationId);
+
+    let updatedPlacements: Placement[];
+    if (existingPlacement) {
+      placementId = existingPlacement.id;
+      updatedPlacements = placements.map(p => {
+        if (p.id === existingPlacement.id) {
+          return {
+            ...p,
+            status: 'Joining Pending' as const,
+            expectedJoiningDate,
+            notes: notes !== undefined ? notes : p.notes,
+            updatedAt: now,
+          };
+        }
+        return p;
+      });
+    } else {
+      placementId = 'plc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      const newPlacement: Placement = {
+        id: placementId,
+        applicationId,
+        candidateId: app.candidateId,
+        jobId: app.jobId,
+        clientId: targetJob.clientId,
+        hiringModel: 'Client Hire',
+        status: 'Joining Pending',
+        expectedJoiningDate,
+        notes,
+        createdAt: now,
+        updatedAt: now,
+      };
+      updatedPlacements = [newPlacement, ...placements];
+    }
+
+    persistPlacements(updatedPlacements);
+
+    // Update application: currentStage 'Selected', currentSubstate 'Joining Pending'
+    const updatedApps = applications.map(a => {
+      if (a.id === applicationId) {
+        return {
+          ...a,
+          currentStage: 'Selected' as ApplicationStage,
+          currentSubstate: 'Joining Pending' as ApplicationSubstate,
+          lastActivity: now,
+        };
+      }
+      return a;
+    });
+    persistApplications(updatedApps);
+
+    return { success: true, placementId };
+  };
+
+  const confirmJoined = (applicationId: string, actualJoiningDate: string, notes?: string) => {
+    const app = applications.find(a => a.id === applicationId);
+    if (!app) return { success: false, error: 'Application not found' };
+
+    const targetJob = jobs.find(j => j.id === app.jobId);
+    const now = new Date().toISOString();
+
+    const existingPlacement = placements.find(p => p.applicationId === applicationId);
+    let updatedPlacements: Placement[];
+
+    const historyEntry: PlacementBillingHistoryItem = {
+      id: 'bh_' + Date.now(),
+      fromStatus: existingPlacement?.billingStatus,
+      toStatus: existingPlacement?.billingStatus || 'Billing Eligible',
+      changedAt: now,
+      changedBy: currentUser?.name || 'Recruiter',
+      notes: notes || 'Confirmed joined on Client payroll'
+    };
+
+    if (existingPlacement) {
+      updatedPlacements = placements.map(p => {
+        if (p.id === existingPlacement.id) {
+          const nextBillingStatus = p.billingStatus || 'Billing Eligible';
+          return {
+            ...p,
+            status: 'Joined' as const,
+            actualJoiningDate,
+            billingStatus: nextBillingStatus,
+            billingHistory: [...(p.billingHistory || []), historyEntry],
+            updatedAt: now,
+          };
+        }
+        return p;
+      });
+    } else {
+      const newPlacement: Placement = {
+        id: 'plc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        applicationId,
+        candidateId: app.candidateId,
+        jobId: app.jobId,
+        clientId: targetJob?.clientId || '',
+        hiringModel: 'Client Hire',
+        status: 'Joined',
+        expectedJoiningDate: actualJoiningDate,
+        actualJoiningDate,
+        billingStatus: 'Billing Eligible',
+        billingHistory: [historyEntry],
+        createdAt: now,
+        updatedAt: now,
+      };
+      updatedPlacements = [newPlacement, ...placements];
+    }
+
+    persistPlacements(updatedPlacements);
+
+    // Move candidate into Completed Outcomes as Joined/Placed
+    const wasHired = app.currentStage === 'Hired';
+    const updatedApps = applications.map(a => {
+      if (a.id === applicationId) {
+        return {
+          ...a,
+          currentStage: 'Hired' as ApplicationStage,
+          currentSubstate: 'Joined/Placed' as ApplicationSubstate,
+          lastActivity: now,
+        };
+      }
+      return a;
+    });
+    persistApplications(updatedApps);
+
+    // Update job filled count if not already counted as hired
+    if (!wasHired && targetJob) {
+      const updatedJobs = jobs.map(j => {
+        if (j.id === targetJob.id) {
+          return {
+            ...j,
+            filled: Math.min(j.openings, j.filled + 1)
+          };
+        }
+        return j;
+      });
+      persistJobs(updatedJobs);
+    }
+
+    return { success: true };
+  };
+
+  const recordDidNotJoin = (applicationId: string, reason: string) => {
+    const now = new Date().toISOString();
+    const existingPlacement = placements.find(p => p.applicationId === applicationId);
+    if (existingPlacement) {
+      const updatedPlacements = placements.map(p => {
+        if (p.id === existingPlacement.id) {
+          return {
+            ...p,
+            status: 'Did Not Join' as const,
+            didNotJoinReason: reason,
+            updatedAt: now,
+          };
+        }
+        return p;
+      });
+      persistPlacements(updatedPlacements);
+    }
+
+    // Leave candidate under Selected; do not reject them automatically!
+    const updatedApps = applications.map(a => {
+      if (a.id === applicationId) {
+        return {
+          ...a,
+          currentSubstate: 'Did Not Join' as ApplicationSubstate,
+          lastActivity: now,
+        };
+      }
+      return a;
+    });
+    persistApplications(updatedApps);
+
+    return { success: true };
+  };
+
+  const updatePlacementBillingStatus = (
+    placementId: string, 
+    status: PlacementBillingStatus, 
+    notes?: string, 
+    extra?: { invoiceNumber?: string, feeAmount?: string | number }
+  ) => {
+    const placement = placements.find(p => p.id === placementId);
+    if (!placement) return { success: false, error: 'Placement not found' };
+
+    const now = new Date().toISOString();
+    const historyEntry: PlacementBillingHistoryItem = {
+      id: 'bh_' + Date.now(),
+      fromStatus: placement.billingStatus,
+      toStatus: status,
+      changedAt: now,
+      changedBy: currentUser?.name || 'Recruiter',
+      notes,
+      invoiceNumber: extra?.invoiceNumber,
+      feeAmount: extra?.feeAmount,
+    };
+
+    const updatedPlacements = placements.map(p => {
+      if (p.id === placementId) {
+        return {
+          ...p,
+          billingStatus: status,
+          invoiceNumber: extra?.invoiceNumber || p.invoiceNumber,
+          feeAmount: extra?.feeAmount !== undefined ? extra.feeAmount : p.feeAmount,
+          paidDate: status === 'Paid' ? (p.paidDate || now) : p.paidDate,
+          billingHistory: [...(p.billingHistory || []), historyEntry],
+          updatedAt: now,
+        };
+      }
+      return p;
+    });
+
+    persistPlacements(updatedPlacements);
+    // Rule: Payment completion must not automatically close the Job.
+    return { success: true };
   };
 
   const submitApplication = (
@@ -1440,6 +1749,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         interviews,
         offers,
         onboardings,
+        placements,
         matchRuns,
         informationRequests,
         clientReviewBatches,
@@ -1463,6 +1773,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteCandidate,
         createJob,
         updateJob,
+        updateJobHiringModel,
+        startJoiningTracking,
+        confirmJoined,
+        recordDidNotJoin,
+        updatePlacementBillingStatus,
         submitApplication,
         updateApplicationStage,
         updateApplicationScreening,

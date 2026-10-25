@@ -32,7 +32,7 @@ import {
   FileIcon
 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { JobVisibility, ApplicationStage, ProjectStatus, EngagementType } from '../types';
+import { JobVisibility, ApplicationStage, ProjectStatus, EngagementType, HiringModel } from '../types';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import FilterPanel, { FilterField } from './FilterPanel';
@@ -93,6 +93,7 @@ export default function ProjectDetail() {
     title: proj?.projectName || '',
     location: proj?.locations[0] || 'Delhi',
     openings: proj ? Math.max(getUnallocatedPositions(proj.id, totalRequested, jobs), 1) : 1,
+    hiringModel: 'Client Hire' as HiringModel,
     experienceRange: '',
     requiredSkills: '',
     preferredSkills: '',
@@ -143,6 +144,7 @@ export default function ProjectDetail() {
       title: jobFormData.title,
       location: jobFormData.location,
       openings: jobFormData.openings,
+      hiringModel: jobFormData.hiringModel,
       experienceRange: jobFormData.experienceRange,
       requiredSkills: jobFormData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
       preferredSkills: jobFormData.preferredSkills.split(',').map(s => s.trim()).filter(Boolean),
@@ -736,6 +738,18 @@ export default function ProjectDetail() {
                             Max: {unallocatedPositions}
                           </div>
                         </div>
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Hiring Model *</label>
+                        <select 
+                          value={jobFormData.hiringModel}
+                          onChange={e => setJobFormData({...jobFormData, hiringModel: e.target.value as HiringModel})}
+                          className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                        >
+                          <option value="Client Hire">Client Hire (Direct Client payroll &amp; placement billing)</option>
+                          <option value="SPC Hire">SPC Hire (SPC workforce, offers &amp; onboarding)</option>
+                        </select>
                       </div>
 
                       <div className="col-span-2">

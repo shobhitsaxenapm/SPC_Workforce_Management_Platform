@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Client, Project, Job, Candidate, Application, Interview, Offer, TalentPoolEntry, User } from '../types';
+import { Client, Project, Job, Candidate, Application, Interview, Offer, TalentPoolEntry, User, Placement } from '../types';
 
 export const mockUsers: User[] = [
   { id: 'u1', name: 'Rahul Sharma', role: 'ADMIN', email: 'rahul.s@spc.com' },
@@ -143,6 +143,7 @@ export const mockJobs: Job[] = [
     openings: 15,
     filled: 2,
     employmentType: 'Contract',
+    hiringModel: 'SPC Hire', // Proved by existing linked SPC offer off1
     experienceRange: '0-2 Years',
     requiredSkills: ['Typing Speed > 40 WPM', 'Excel', 'Data Validation'],
     preferredSkills: ['Healthcare background'],
@@ -168,6 +169,7 @@ export const mockJobs: Job[] = [
     openings: 10,
     filled: 2,
     employmentType: 'Contract',
+    hiringModel: 'Not Configured', // Legacy unclassified: no linked offer or onboarding
     experienceRange: '0-2 Years',
     requiredSkills: ['Typing Speed > 40 WPM', 'Excel'],
     preferredSkills: [],
@@ -192,6 +194,7 @@ export const mockJobs: Job[] = [
     openings: 15,
     filled: 8,
     employmentType: 'Full-time',
+    hiringModel: 'SPC Hire', // Proved by existing linked SPC offer off2
     experienceRange: '1-3 Years',
     requiredSkills: ['Inventory Management', 'Physical Fitness', 'Basic English'],
     preferredSkills: ['Forklift operation'],
@@ -216,6 +219,7 @@ export const mockJobs: Job[] = [
     openings: 8,
     filled: 0,
     employmentType: 'Full-time',
+    hiringModel: 'Not Configured', // Legacy unclassified: no linked offer or onboarding
     experienceRange: '1-4 Years',
     requiredSkills: ['Customer Service', 'Empathy', 'Communication Skills (Hindi & English)'],
     preferredSkills: ['BPO Experience', 'Healthcare knowledge'],
@@ -887,3 +891,4 @@ export const mockDeployments: any[] = [];
 export const mockAttendances: any[] = [];
 export const mockBillings: any[] = [];
 export const mockOffboardings: any[] = [];
+export const mockPlacements: Placement[] = [];

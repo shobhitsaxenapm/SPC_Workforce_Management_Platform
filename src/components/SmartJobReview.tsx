@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { ExtractedJobData, JobStatus, JobVisibility, JobSourceMetadata } from '../types';
+import { ExtractedJobData, JobStatus, JobVisibility, JobSourceMetadata, HiringModel } from '../types';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
 import InlineClientForm from './InlineClientForm';
@@ -21,6 +21,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
     clientId: '',
     location: extractedData.location || '',
     openings: extractedData.openings || 1,
+    hiringModel: 'Client Hire' as HiringModel,
     employmentType: extractedData.employmentType || 'Full-time',
     experienceRange: extractedData.experienceRange || '1-3 Years',
     requiredSkills: extractedData.requiredSkills?.join(', ') || '',
@@ -70,6 +71,7 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       clientId: formData.clientId,
       location: formData.location,
       openings: Number(formData.openings) || 1,
+      hiringModel: formData.hiringModel,
       employmentType: formData.employmentType,
       experienceRange: formData.experienceRange,
       requiredSkills: formData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
@@ -284,6 +286,20 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
               <h4 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-2">Logistics</h4>
               
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hiring Model <span className="text-red-500">*</span>
+                  </label>
+                  <select 
+                    value={formData.hiringModel}
+                    onChange={(e) => setFormData({...formData, hiringModel: e.target.value as HiringModel})}
+                    className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                  >
+                    <option value="Client Hire">Client Hire (Direct Client payroll &amp; placement billing)</option>
+                    <option value="SPC Hire">SPC Hire (SPC workforce, offers &amp; onboarding)</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
                   <select 
