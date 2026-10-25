@@ -44,7 +44,7 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
           initialData={extractedData}
           isEditMode={false}
           onSaveSuccess={(candidateId) => {
-            const result = addMatchToPipeline(jobId, candidateId, 'Recruiter Added from Job Pipeline');
+            const result = addMatchToPipeline(jobId, candidateId, 'Candidate uploaded directly against Job', 'Manual Upload');
             if (result.success) {
               alert('Candidate added to the Sourced stage for this Job.');
             } else {

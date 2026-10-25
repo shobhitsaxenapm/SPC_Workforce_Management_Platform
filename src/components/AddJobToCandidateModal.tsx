@@ -45,7 +45,7 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
     
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const result = addMatchToPipeline(selectedJobId, candidateId, 'Recruiter Added from Candidate Profile');
+    const result = addMatchToPipeline(selectedJobId, candidateId, 'Recruiter Added from Candidate Profile', 'Recruiter Added');
     if (!result.success) {
       setToast({ message: result.error || 'Failed to add to pipeline.', type: 'error' });
       setIsProcessing(false);

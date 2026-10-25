@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch } from '../types';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch, CandidateJobSource } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
 import { normalizeJob, normalizeApplication, normalizeOffer } from '../lib/statusNormalization';
+import { normalizeSource } from '../lib/sourceUtils';
 
 interface AppContextType {
   currentUser: User | null;
@@ -40,7 +41,8 @@ interface AppContextType {
   updateJob: (jobId: string, updates: Partial<Job>) => void;
   submitApplication: (
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
-    jobId: string
+    jobId: string,
+    source?: CandidateJobSource | string
   ) => { success: boolean; error?: string };
   updateApplicationStage: (appId: string, stage: ApplicationStage, substate?: ApplicationSubstate, rejectionReason?: string) => void;
   updateApplicationScreening: (appId: string, data: any) => void;
@@ -73,7 +75,7 @@ interface AppContextType {
   startOnboardingFromOffer: (offerId: string) => { success: boolean; error?: string };
   runJobMatching: (jobId: string) => void;
   dismissMatch: (jobId: string, candidateId: string) => void;
-  addMatchToPipeline: (jobId: string, candidateId: string, associationOrigin?: string) => { success: boolean; error?: string; applicationId?: string };
+  addMatchToPipeline: (jobId: string, candidateId: string, associationOrigin?: string, source?: CandidateJobSource | string) => { success: boolean; error?: string; applicationId?: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -225,22 +227,23 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
     let base = safeParse<Candidate[]>('spc_candidates', mockCandidates);
     
-    // Merge latest mock data fields if they are missing in cache
+    // Merge latest mock data fields if they are missing in cache, and normalize sources
     base = base.map(cached => {
       const mock = mockCandidates.find(m => m.id === cached.id);
-      if (mock && !cached.professionalSummary) {
-        return { ...cached, ...mock };
-      }
-      return cached;
+      const merged = mock && !cached.professionalSummary ? { ...cached, ...mock } : cached;
+      return {
+        ...merged,
+        source: normalizeSource(merged.source)
+      };
     });
     const pipelineSeeds: Candidate[] = [
       { id: 'can_seed_1', code: 'CAN-9001', fullName: 'Rohan Mehta', email: 'rohan.mehta@email.com', phone: '+91 98333 44556', currentLocation: 'Delhi', totalExperience: '1 Year', currentCompany: 'Apex Digitizing', currentRole: 'Data Typist', skills: ['Typing Speed > 40 WPM', 'Excel'], education: 'B.A, Delhi University', currentSalary: '₹2.0 LPA', expectedSalary: '₹2.6 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-08T10:00:00Z' },
-      { id: 'can_seed_2', code: 'CAN-9002', fullName: 'Vikram Malhotra', email: 'vikram.m@email.com', phone: '+91 98444 55667', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'Info Services', currentRole: 'Office Assistant', skills: ['Data Entry', 'Excel'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.8 LPA', noticePeriod: '15 Days', source: 'Referral', duplicateStatus: 'None', createdAt: '2026-07-09T11:00:00Z' },
+      { id: 'can_seed_2', code: 'CAN-9002', fullName: 'Vikram Malhotra', email: 'vikram.m@email.com', phone: '+91 98444 55667', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'Info Services', currentRole: 'Office Assistant', skills: ['Data Entry', 'Excel'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.8 LPA', noticePeriod: '15 Days', source: 'Recruiter Added', duplicateStatus: 'None', createdAt: '2026-07-09T11:00:00Z' },
       { id: 'can_seed_3', code: 'CAN-9003', fullName: 'Siddharth Sen', email: 'siddharth.sen@email.com', phone: '+91 98555 66778', currentLocation: 'Delhi', totalExperience: 'Fresher', currentCompany: 'N/A', currentRole: 'Graduate', skills: ['Excel', 'Data Typing'], education: 'B.Com, Delhi University', currentSalary: '0', expectedSalary: '₹2.4 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-10T12:00:00Z' },
       { id: 'can_seed_4', code: 'CAN-9004', fullName: 'Neha Kapoor', email: 'neha.k@email.com', phone: '+91 98666 77889', currentLocation: 'Delhi', totalExperience: '1.5 Years', currentCompany: 'Alpha Med', currentRole: 'Data Entry Operator', skills: ['Typing Speed > 40 WPM', 'Excel', 'Data Validation'], education: '12th Pass', currentSalary: '₹2.1 LPA', expectedSalary: '₹2.5 LPA', noticePeriod: 'Immediate', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-11T13:00:00Z' },
-      { id: 'can_seed_5', code: 'CAN-9005', fullName: 'Aditya Joshi', email: 'aditya.j@email.com', phone: '+91 98777 88990', currentLocation: 'Gurugram', totalExperience: '3 Years', currentCompany: 'Swift Logistics', currentRole: 'Senior Clerk', skills: ['Data Validation', 'Excel'], education: 'Graduate', currentSalary: '₹2.8 LPA', expectedSalary: '₹3.4 LPA', noticePeriod: '30 Days', source: 'Job Portal', duplicateStatus: 'None', createdAt: '2026-07-11T14:00:00Z' },
+      { id: 'can_seed_5', code: 'CAN-9005', fullName: 'Aditya Joshi', email: 'aditya.j@email.com', phone: '+91 98777 88990', currentLocation: 'Gurugram', totalExperience: '3 Years', currentCompany: 'Swift Logistics', currentRole: 'Senior Clerk', skills: ['Data Validation', 'Excel'], education: 'Graduate', currentSalary: '₹2.8 LPA', expectedSalary: '₹3.4 LPA', noticePeriod: '30 Days', source: 'Naukri', duplicateStatus: 'None', createdAt: '2026-07-11T14:00:00Z' },
       { id: 'can_seed_6', code: 'CAN-9006', fullName: 'Karan Malhotra', email: 'karan.m@email.com', phone: '+91 98888 99001', currentLocation: 'Delhi', totalExperience: '2.5 Years', currentCompany: 'Zeta MedTech', currentRole: 'Data Executive', skills: ['Typing Speed > 40 WPM', 'Data Validation'], education: 'B.A, Delhi University', currentSalary: '₹2.4 LPA', expectedSalary: '₹3.0 LPA', noticePeriod: '15 Days', source: 'SPC Careers Website', duplicateStatus: 'None', createdAt: '2026-07-12T09:00:00Z' },
-      { id: 'can_seed_7', code: 'CAN-9007', fullName: 'Pooja Hegde', email: 'pooja.h@email.com', phone: '+91 98999 00112', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'DataSoft', currentRole: 'Data Operator', skills: ['Excel', 'Typing Speed > 40 WPM'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.7 LPA', noticePeriod: 'Immediate', source: 'Referral', duplicateStatus: 'None', createdAt: '2026-07-12T10:00:00Z' }
+      { id: 'can_seed_7', code: 'CAN-9007', fullName: 'Pooja Hegde', email: 'pooja.h@email.com', phone: '+91 98999 00112', currentLocation: 'Noida', totalExperience: '2 Years', currentCompany: 'DataSoft', currentRole: 'Data Operator', skills: ['Excel', 'Typing Speed > 40 WPM'], education: 'B.Sc, Noida University', currentSalary: '₹2.2 LPA', expectedSalary: '₹2.7 LPA', noticePeriod: 'Immediate', source: 'Recruiter Added', duplicateStatus: 'None', createdAt: '2026-07-12T10:00:00Z' }
     ];
     let changed = false;
     pipelineSeeds.forEach(seed => {
@@ -251,7 +254,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
     mockWarehouseCandidates.forEach(seed => {
       if (!base.some(c => c.id === seed.id)) {
-        base.push(seed);
+        base.push({
+          ...seed,
+          source: normalizeSource(seed.source)
+        });
         changed = true;
       }
     });
@@ -264,30 +270,43 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [applications, setApplications] = useState<Application[]>(() => {
     let base = safeParse<Application[]>('spc_applications', mockApplications);
     
-    // Repair invalid Offered records
+    // Repair invalid Offered records and normalize source values
     let repaired = false;
     const parsedOffers = safeParse<Offer[]>('spc_offers', mockOffers);
     base = base.map(app => {
+      let normalized = normalizeApplication(app);
+      const canonicalSource = normalizeSource(app.source);
+      if (normalized.source !== canonicalSource) {
+        repaired = true;
+      }
       if (app.currentStage === 'Offered') {
         const hasIssuedOffer = parsedOffers.some(o => o.applicationId === app.id && o.status === 'Sent');
         if (!hasIssuedOffer) {
           repaired = true;
-          return normalizeApplication({ ...app, currentStage: 'Interviewing', currentSubstate: undefined });
+          return {
+            ...normalized,
+            currentStage: 'Interviewing',
+            currentSubstate: undefined,
+            source: canonicalSource
+          };
         }
       }
-      return normalizeApplication(app);
+      return {
+        ...normalized,
+        source: canonicalSource
+      };
     });
     if (repaired) {
        localStorage.setItem('spc_applications', JSON.stringify(base));
     }
     const appSeeds: Application[] = [
       { id: 'app_seed_1', candidateId: 'can_seed_1', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-08T10:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 85, matchStrengths: ['Good typing speed', 'Excel knowledge'], matchGaps: [], lastActivity: '2026-07-08T10:15:00Z' },
-      { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-09T11:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },
+      { id: 'app_seed_2', candidateId: 'can_seed_2', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-09T11:30:00Z', source: 'Recruiter Added', assignedRecruiterId: 'u3', matchScore: 78, matchStrengths: ['2 years experience'], matchGaps: [], lastActivity: '2026-07-09T11:30:00Z' },
       { id: 'app_seed_3', candidateId: 'can_seed_3', jobId: 'j1', projectId: 'r1', currentStage: 'Sourced', appliedDate: '2026-07-10T12:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 72, matchStrengths: ['Immediate availability'], matchGaps: [], lastActivity: '2026-07-10T12:15:00Z' },
       { id: 'app_seed_4', candidateId: 'can_seed_4', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-11T13:45:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 90, matchStrengths: ['Direct experience matching requirements'], matchGaps: [], lastActivity: '2026-07-11T13:45:00Z' },
-      { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-11T14:30:00Z', source: 'Job Portal', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
+      { id: 'app_seed_5', candidateId: 'can_seed_5', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-11T14:30:00Z', source: 'Naukri', assignedRecruiterId: 'u3', matchScore: 82, matchStrengths: ['Strong Excel and verification experience'], matchGaps: [], lastActivity: '2026-07-11T14:30:00Z' },
       { id: 'app_seed_6', candidateId: 'can_seed_6', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-12T09:15:00Z', source: 'SPC Careers Website', assignedRecruiterId: 'u3', matchScore: 94, matchStrengths: ['Over 2 years experience', 'Fast typing speed'], matchGaps: [], lastActivity: '2026-07-12T09:15:00Z' },
-      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-12T10:30:00Z', source: 'Referral', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
+      { id: 'app_seed_7', candidateId: 'can_seed_7', jobId: 'j1', projectId: 'r1', currentStage: 'Interviewing', appliedDate: '2026-07-12T10:30:00Z', source: 'Recruiter Added', assignedRecruiterId: 'u3', matchScore: 89, matchStrengths: ['Immediate joiner', 'Strong background'], matchGaps: [], lastActivity: '2026-07-12T10:30:00Z' }
     ];
     let changed = false;
     appSeeds.forEach(seed => {
@@ -685,8 +704,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const submitApplication = (
     candidateData: Omit<Candidate, 'id' | 'code' | 'duplicateStatus' | 'source'>,
-    jobId: string
+    jobId: string,
+    source?: CandidateJobSource | string
   ) => {
+    const canonicalSource = normalizeSource(source || 'SPC Careers Website');
+
     // Normalization logic
     const normEmail = candidateData.email.trim().toLowerCase();
     const normPhone = candidateData.phone.replace(/[^0-9]/g, '');
@@ -709,6 +731,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     let finalCandidate: Candidate;
 
     if (existingCandidate) {
+      // Preserve original candidate acquisition source separately
       finalCandidate = {
         ...existingCandidate,
         // Update missing profile information
@@ -731,7 +754,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         id: candidateId,
         code: candidateCode,
         duplicateStatus: 'None',
-        source: 'SPC Careers Website',
+        source: canonicalSource,
       };
       persistCandidates([finalCandidate, ...candidates]);
     }
@@ -745,7 +768,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       projectId: targetJob ? targetJob.projectId : 'none',
       currentStage: 'New',
       appliedDate: new Date().toISOString(),
-      source: 'SPC Careers Website',
+      source: canonicalSource,
       assignedRecruiterId: targetJob ? targetJob.assignedRecruiterId : 'u3',
       matchScore: 85, // Default mock score
       lastActivity: new Date().toISOString(),
@@ -1356,7 +1379,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     persistMatchRuns(updatedRuns);
   };
 
-  const addMatchToPipeline = (jobId: string, candidateId: string, associationOrigin?: string) => {
+  const addMatchToPipeline = (
+    jobId: string, 
+    candidateId: string, 
+    associationOrigin?: string,
+    source?: CandidateJobSource | string
+  ) => {
     // Check if already applied
     const existingApp = applications.find(a => a.jobId === jobId && a.candidateId === candidateId);
     if (existingApp) {
@@ -1371,6 +1399,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const run = matchRuns.find(r => r.jobId === jobId);
     const match = run?.matches.find(m => m.candidateId === candidateId);
 
+    // Canonical source logic:
+    // If source parameter is provided, normalize it.
+    // Otherwise default to 'AI Match'.
+    const canonicalSource: CandidateJobSource = source 
+      ? normalizeSource(source)
+      : 'AI Match';
+
     const newApp: Application = {
       id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       candidateId,
@@ -1378,7 +1413,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       projectId: job.projectId,
       currentStage: 'Sourced',
       appliedDate: new Date().toISOString(),
-      source: candidate?.source || 'Internal Match',
+      source: canonicalSource,
       associationOrigin,
       assignedRecruiterId: currentUser?.id || job.assignedRecruiterId,
       matchScore: match?.score,

@@ -60,7 +60,7 @@ const mockApplications: Application[] = [
     projectId: 'p1',
     currentStage: 'New',
     appliedDate: new Date().toISOString(), // Today
-    source: 'web',
+    source: 'SPC Careers Website',
     assignedRecruiterId: 'r1',
     lastActivity: new Date().toISOString()
   },
@@ -71,7 +71,7 @@ const mockApplications: Application[] = [
     projectId: 'p1',
     currentStage: 'Screening',
     appliedDate: '2026-07-01T12:00:00Z', // Past date
-    source: 'web',
+    source: 'SPC Careers Website',
     assignedRecruiterId: 'r1',
     lastActivity: '2026-07-02T12:00:00Z'
   }
@@ -185,5 +185,35 @@ describe('JobApplicantsTab Filtering', () => {
     
     confirmSpy.mockRestore();
     mockUpdateStage.mockClear();
+  });
+
+  it('renders Source column and filters by Source dropdown', async () => {
+    const appsWithSources: Application[] = [
+      {
+        ...mockApplications[0],
+        source: 'SPC Careers Website'
+      },
+      {
+        ...mockApplications[1],
+        source: 'LinkedIn'
+      }
+    ];
+
+    render(<JobApplicantsTab jobId="j1" applications={appsWithSources} candidates={mockCandidates} />);
+    
+    // Source column header should be rendered
+    expect(screen.getByRole('columnheader', { name: /Source/i })).toBeInTheDocument();
+    expect(screen.getByText('SPC Careers Website')).toBeInTheDocument();
+    expect(screen.getByText('LinkedIn')).toBeInTheDocument();
+
+    // Open Source dropdown filter
+    fireEvent.click(screen.getByRole('button', { name: /^Source/i }));
+    
+    // Select LinkedIn
+    fireEvent.click(screen.getByLabelText('LinkedIn'));
+
+    expect(screen.getByText('Bob Johnson')).toBeInTheDocument();
+    expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument();
+    expect(screen.getByText(/Showing 1 of 2 applicants/i)).toBeInTheDocument();
   });
 });

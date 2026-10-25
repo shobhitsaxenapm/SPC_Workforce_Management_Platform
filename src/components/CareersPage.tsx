@@ -1,11 +1,19 @@
 import React, { useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapPin, Briefcase, Clock, FileText, UploadCloud, CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { Job } from '../types';
+import { Job, CandidateJobSource } from '../types';
 import { useApp } from '../context/AppContext';
+import { normalizeSource } from '../lib/sourceUtils';
 
 export default function CareersPage() {
   const { jobs, submitApplication } = useApp();
+  const [searchParams] = useSearchParams();
+  const trackedSourceParam = searchParams.get('source') || searchParams.get('utm_source');
+  const applicationSource: CandidateJobSource = trackedSourceParam 
+    ? normalizeSource(trackedSourceParam) 
+    : 'SPC Careers Website';
+
   const publishedJobs = jobs.filter(j => j.status === 'Published' && j.visibility === 'Public');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isApplying, setIsApplying] = useState(false);
@@ -109,7 +117,7 @@ export default function CareersPage() {
 
     setIsUploading(true);
     setTimeout(() => {
-      const res = submitApplication(candidateData, selectedJob.id);
+      const res = submitApplication(candidateData, selectedJob.id, applicationSource);
       setIsUploading(false);
       if (res.success) {
         setIsSuccess(true);

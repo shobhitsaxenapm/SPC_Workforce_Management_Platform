@@ -23,6 +23,25 @@ export type ApplicationStage =
   | 'Rejected'
   | 'Withdrawn';
 
+export type CandidateJobSource =
+  | 'SPC Careers Website'
+  | 'LinkedIn'
+  | 'Naukri'
+  | 'Manual Upload'
+  | 'Bulk Upload'
+  | 'AI Match'
+  | 'Recruiter Added';
+
+export const CANONICAL_SOURCES: readonly CandidateJobSource[] = [
+  'SPC Careers Website',
+  'LinkedIn',
+  'Naukri',
+  'Manual Upload',
+  'Bulk Upload',
+  'AI Match',
+  'Recruiter Added',
+] as const;
+
 export type ApplicationSubstate = 
   | 'Added to Pipeline' | 'Ready for Screening'
   | 'Application Received'
@@ -304,7 +323,7 @@ export interface Application {
   currentStage: ApplicationStage;
   currentSubstate?: ApplicationSubstate;
   appliedDate: string;
-  source: string;
+  source: CandidateJobSource;
   associationOrigin?: string;
   assignedRecruiterId: string;
   matchScore?: number;

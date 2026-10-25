@@ -171,7 +171,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
 
       let finalApplicationId = currentApplication?.id || '';
       if (isNewlyLinked) {
-        const linkResult = addMatchToPipeline(selectedJobId, selectedCandidateId, 'Added by recruiter during interview scheduling');
+        const linkResult = addMatchToPipeline(selectedJobId, selectedCandidateId, 'Added by recruiter during interview scheduling', 'Recruiter Added');
         if (!linkResult.success) {
           setError(linkResult.error || 'Failed to link candidate to the selected job.');
           setIsScheduling(false);

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
 import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { ApplicationStage } from '../types';
+import { ApplicationStage, CANONICAL_SOURCES } from '../types';
 import { useApp } from '../context/AppContext';
 import JobMatchesTab from './JobMatchesTab';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
@@ -13,10 +13,11 @@ import AddCandidateToJobModal from './AddCandidateToJobModal';
 import ConfirmOfferAcceptanceModal from './ConfirmOfferAcceptanceModal';
 import JobApplicantsTab from './JobApplicantsTab';
 import CandidateScreeningModal from './CandidateScreeningModal';
+import SourceBadge from './SourceBadge';
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { jobs, projects, clients, applications, candidates, offers, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId, createClientReviewBatch, clientReviewBatches } = useApp();
+  const { jobs, projects, clients, applications, candidates, offers, interviews, updateApplicationStage, matchRuns, runJobMatching, currentUser, addMatchToPipeline, updateJob, setQuickViewProjectId, setQuickViewCandidateId, createClientReviewBatch, clientReviewBatches } = useApp();
   const job = jobs.find(j => j.id === id);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Applicants' | 'Matches' | 'Pipeline' | 'Activity'>('Overview');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -25,6 +26,10 @@ export default function JobDetail() {
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [scheduleCandidateId, setScheduleCandidateId] = useState<string | null>(null);
   const [showScreeningModal, setShowScreeningModal] = useState<string | null>(null);
+  
+  const [pipelineSearch, setPipelineSearch] = useState('');
+  const [pipelineSourceFilter, setPipelineSourceFilter] = useState('All');
+  const [pipelineActionFilter, setPipelineActionFilter] = useState('All');
   
   const [isPreparingClientReview, setIsPreparingClientReview] = useState(false);
   const [selectedForClientReview, setSelectedForClientReview] = useState<string[]>([]);
@@ -45,6 +50,7 @@ export default function JobDetail() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closeReason, setCloseReason] = useState<any>('Positions Filled/Placed');
   const [closeNote, setCloseNote] = useState('');
@@ -58,7 +64,10 @@ export default function JobDetail() {
   const client = clients.find(c => c.id === job.clientId);
   const recruiter = mockUsers.find(u => u.id === job.assignedRecruiterId);
   const jobApplications = applications.filter(a => a.jobId === job.id);
-  const applicants = jobApplications.filter(a => a.source === 'SPC Careers Website');
+  const applicants = jobApplications.filter(a => 
+    ['SPC Careers Website', 'LinkedIn', 'Naukri', 'Bulk Upload', 'Manual Upload'].includes(a.source) || 
+    ['New', 'Under Review', 'Application Rejected'].includes(a.currentStage)
+  );
   const pipelineApps = jobApplications.filter(a => !['New', 'Under Review', 'Application Rejected'].includes(a.currentStage));
   
   const progress = (job.filled / job.openings) * 100;
@@ -513,10 +522,130 @@ export default function JobDetail() {
             </div>
           )}
 
+          {/* Pipeline Toolbar */}
+          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search candidates, role, skills..."
+                  value={pipelineSearch}
+                  onChange={(e) => setPipelineSearch(e.target.value)}
+                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                />
+                {pipelineSearch && (
+                  <button
+                    onClick={() => setPipelineSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs px-1"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Source Filter */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Source:</label>
+                <select
+                  value={pipelineSourceFilter}
+                  onChange={(e) => setPipelineSourceFilter(e.target.value)}
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="All">All Sources</option>
+                  {CANONICAL_SOURCES.map(source => (
+                    <option key={source} value={source}>{source}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Action Required Filter */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Action:</label>
+                <select
+                  value={pipelineActionFilter}
+                  onChange={(e) => setPipelineActionFilter(e.target.value)}
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Action Required">Action Required</option>
+                  <option value="Feedback Pending">Feedback Pending</option>
+                  <option value="Screening Pending">Screening Pending</option>
+                  <option value="Overdue">Overdue (&gt;7 days)</option>
+                </select>
+              </div>
+
+              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All') && (
+                <button
+                  onClick={() => {
+                    setPipelineSearch('');
+                    setPipelineSourceFilter('All');
+                    setPipelineActionFilter('All');
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
+              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All') ? (
+                <span>
+                  Filtering active <span className="text-slate-400 font-normal">(stage counts unaltered)</span>
+                </span>
+              ) : (
+                <span>{pipelineApps.length} in pipeline</span>
+              )}
+            </div>
+          </div>
+
           <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-6 overflow-x-auto shadow-inner flex gap-6 min-h-[500px] w-full">
           {canonicalStages.map(stage => {
             const appsInStage = groupedApps[stage] || [];
             if ((stage as string) === 'Other' && appsInStage.length === 0) return null;
+
+            const visibleAppsInStage = appsInStage.filter(app => {
+              const candidate = candidates.find(c => c.id === app.candidateId);
+              if (!candidate) return false;
+
+              if (pipelineSearch.trim()) {
+                const q = pipelineSearch.trim().toLowerCase();
+                const matchName = candidate.fullName.toLowerCase().includes(q);
+                const matchRole = (candidate.currentRole || '').toLowerCase().includes(q);
+                const matchEmail = (candidate.email || '').toLowerCase().includes(q);
+                const matchSkills = (candidate.skills || []).some(s => s.toLowerCase().includes(q));
+                if (!matchName && !matchRole && !matchEmail && !matchSkills) return false;
+              }
+
+              if (pipelineSourceFilter !== 'All' && app.source !== pipelineSourceFilter) {
+                return false;
+              }
+
+              if (pipelineActionFilter !== 'All') {
+                const isFeedbackPending = app.clientReviewStatus === 'Submitted' ||
+                  app.clientReviewStatus === 'Feedback Pending' ||
+                  interviews.some(i => i.applicationId === app.id && (i.status === 'Scheduled' || i.status === 'Completed') && i.feedbackStatus !== 'Submitted');
+                
+                const isScreeningPending = app.currentStage === 'Screening' && (!app.screeningData || app.screeningData.status === 'Pending' || app.screeningData.status === 'Requested Info');
+                
+                const lastAct = new Date(app.lastActivity || app.appliedDate).getTime();
+                const isOverdue = (new Date('2026-07-13T12:00:00Z').getTime() - lastAct) >= 7 * 24 * 60 * 60 * 1000;
+                
+                const isActionRequired = isFeedbackPending || isScreeningPending || isOverdue ||
+                  app.clientReviewStatus === 'More Info Requested' ||
+                  (app.currentStage === 'Selected' && !app.offerCaseId);
+
+                if (pipelineActionFilter === 'Action Required' && !isActionRequired) return false;
+                if (pipelineActionFilter === 'Feedback Pending' && !isFeedbackPending) return false;
+                if (pipelineActionFilter === 'Screening Pending' && !isScreeningPending) return false;
+                if (pipelineActionFilter === 'Overdue' && !isOverdue) return false;
+              }
+
+              return true;
+            });
+
             return (
               <div key={stage} className="w-[320px] flex-shrink-0 flex flex-col">
                 <div className="flex items-center justify-between mb-4 px-2">
@@ -579,7 +708,7 @@ export default function JobDetail() {
                 )}
                 
                 <div className="flex-1 space-y-3">
-                  {appsInStage.map(app => {
+                  {visibleAppsInStage.map(app => {
                     const candidate = candidates.find(c => c.id === app.candidateId);
                     if (!candidate) return null;
                     const isSelected = selectedForClientReview.includes(app.id);
@@ -617,13 +746,19 @@ export default function JobDetail() {
                                     app.matchScore >= 90 ? "bg-green-100 text-green-700" :
                                     app.matchScore >= 75 ? "bg-blue-100 text-blue-700" :
                                     "bg-amber-100 text-amber-700"
-                                )}>
+                                    )}>
                                     {app.matchScore}%
                                 </span>
                             )}
                         </div>
                         <p className="text-xs text-slate-500 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
-                        <p className="text-xs text-slate-400 mb-2 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation} • {app.source}</p>
+                        <div className="flex items-center justify-between gap-1.5 mb-2">
+                          <span className="text-xs text-slate-400 flex items-center gap-1 truncate">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{candidate.currentLocation || 'Location not specified'}</span>
+                          </span>
+                          <SourceBadge source={app.source} compact />
+                        </div>
                         
                         {app.currentStage === 'Client Review' && (() => {
                           const batch = clientReviewBatches.find(b => b.applicationIds.includes(app.id));
@@ -808,6 +943,13 @@ export default function JobDetail() {
                       <span className="font-medium">No Candidates</span>
                     </div>
                   )}
+
+                  {appsInStage.length > 0 && visibleAppsInStage.length === 0 && (
+                    <div className="h-28 rounded-xl border-2 border-dashed border-slate-200/70 bg-slate-50/50 flex flex-col items-center justify-center text-xs text-slate-400 gap-1 px-4 text-center">
+                      <span className="font-medium">No Matching Candidates</span>
+                      <span className="text-[11px] text-slate-400">Try adjusting your filters</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -835,7 +977,10 @@ export default function JobDetail() {
                           </span>
                       </div>
                       <p className="text-xs text-green-700 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
-                      <p className="text-xs text-green-600/70 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
+                      <div className="flex items-center justify-between gap-1.5 mt-1">
+                        <p className="text-xs text-green-600/70 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
+                        <SourceBadge source={app.source} compact />
+                      </div>
                     </div>
                   );
                 })}

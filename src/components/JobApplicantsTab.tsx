@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Application, Candidate } from '../types';
+import { Application, Candidate, CANONICAL_SOURCES } from '../types';
 import { useApp } from '../context/AppContext';
 import { FileText, Eye, CheckCircle2, XCircle, ArrowRight, SearchX, RefreshCw } from 'lucide-react';
 import ResumeModal from './ResumeModal';
 import { cn, formatDate } from '../lib/utils';
 import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
 import { isDateInPreset } from '../lib/dateUtils';
+import SourceBadge from './SourceBadge';
 
 interface JobApplicantsTabProps {
   jobId: string;
@@ -24,7 +25,16 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
     setFilters(createEmptyFilters());
   }, [jobId]);
 
-  // Compute available locations and statuses based on current applicants
+  // Compute available locations, statuses and sources based on current applicants
+  const availableSources = useMemo(() => {
+    const s = new Set<string>();
+    CANONICAL_SOURCES.forEach(src => s.add(src));
+    applications.forEach(app => {
+      if (app.source) s.add(app.source);
+    });
+    return Array.from(s);
+  }, [applications]);
+
   const availableLocations = useMemo(() => {
     const locs = new Set<string>();
     applications.forEach(app => {
@@ -56,6 +66,13 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
         const email = (candidate.email || '').toLowerCase();
         const phone = (candidate.phone || '').toLowerCase();
         if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) {
+          return false;
+        }
+      }
+
+      // Source
+      if (filters.sources && filters.sources.length > 0) {
+        if (!filters.sources.includes(app.source)) {
           return false;
         }
       }
@@ -121,7 +138,8 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
         filters={filters} 
         onChange={setFilters} 
         availableLocations={availableLocations} 
-        availableStatuses={availableStatuses} 
+        availableStatuses={availableStatuses}
+        availableSources={availableSources}
       />
       <div className="flex justify-between items-center mb-3">
         <span className="text-sm font-medium text-slate-500">
@@ -142,6 +160,7 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-xs">
             <tr>
               <th className="px-4 py-4 pl-6">Candidate Details</th>
+              <th className="px-4 py-4">Source</th>
               <th className="px-4 py-4">Applied On</th>
               <th className="px-4 py-4">Application Status</th>
               <th className="px-4 py-4 text-right pr-6">Actions</th>
@@ -150,12 +169,12 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
           <tbody className="divide-y divide-slate-100">
             {filteredApplications.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center">
+                <td colSpan={5} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-500">
                     <SearchX className="w-10 h-10 text-slate-300 mb-3" />
                     <p className="text-sm font-medium text-slate-900 mb-1">No applicants found</p>
                     <p className="text-xs text-slate-500 mb-4">Try adjusting your filters or search query.</p>
-                    {(filters.searchQuery || filters.locations.length > 0 || filters.statuses.length > 0 || filters.appliedOn) && (
+                    {(filters.searchQuery || filters.locations.length > 0 || filters.statuses.length > 0 || (filters.sources && filters.sources.length > 0) || filters.appliedOn) && (
                       <button 
                         onClick={() => setFilters(createEmptyFilters())}
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -187,8 +206,10 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                       </div>
                     </td>
                     <td className="px-4 py-4 align-top">
-                      {formatDate(app.appliedDate)}
-                      <div className="text-xs text-slate-400 mt-1">{app.source}</div>
+                      <SourceBadge source={app.source} />
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <span className="font-medium text-slate-700">{formatDate(app.appliedDate)}</span>
                     </td>
                     <td className="px-4 py-4 align-top">
                       <span

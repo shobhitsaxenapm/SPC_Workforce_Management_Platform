@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, X, Filter } from 'lucide-react';
 import { DatePreset } from '../lib/dateUtils';
 import { cn } from '../lib/utils';
+import { CANONICAL_SOURCES } from '../types';
 
 export interface ApplicantFilters {
   searchQuery: string;
   locations: string[];
   statuses: string[];
+  sources: string[];
   appliedOn: DatePreset | null;
   customStartDate: string;
   customEndDate: string;
@@ -16,6 +18,7 @@ export const createEmptyFilters = (): ApplicantFilters => ({
   searchQuery: '',
   locations: [],
   statuses: [],
+  sources: [],
   appliedOn: null,
   customStartDate: '',
   customEndDate: ''
@@ -26,6 +29,7 @@ interface ApplicantFilterToolbarProps {
   onChange: (filters: ApplicantFilters) => void;
   availableLocations: string[];
   availableStatuses: string[];
+  availableSources?: string[];
 }
 
 function MultiSelect({ label, options, selected, onChange }: { label: string, options: string[], selected: string[], onChange: (val: string[]) => void }) {
@@ -85,9 +89,16 @@ function MultiSelect({ label, options, selected, onChange }: { label: string, op
   );
 }
 
-export default function ApplicantFilterToolbar({ filters, onChange, availableLocations, availableStatuses }: ApplicantFilterToolbarProps) {
+export default function ApplicantFilterToolbar({ 
+  filters, 
+  onChange, 
+  availableLocations, 
+  availableStatuses,
+  availableSources 
+}: ApplicantFilterToolbarProps) {
   const activeChips = [
     ...(filters.searchQuery ? [{ type: 'search', label: `"${filters.searchQuery}"` }] : []),
+    ...(filters.sources || []).map(src => ({ type: 'source', label: `Source: ${src}`, val: src })),
     ...filters.locations.map(loc => ({ type: 'location', label: loc, val: loc })),
     ...filters.statuses.map(st => ({ type: 'status', label: st, val: st })),
     ...(filters.appliedOn && filters.appliedOn !== 'All Time' ? [{ 
@@ -106,10 +117,15 @@ export default function ApplicantFilterToolbar({ filters, onChange, availableLoc
 
   const removeChip = (chip: any) => {
     if (chip.type === 'search') onChange({ ...filters, searchQuery: '' });
+    else if (chip.type === 'source') onChange({ ...filters, sources: (filters.sources || []).filter(s => s !== chip.val) });
     else if (chip.type === 'location') onChange({ ...filters, locations: filters.locations.filter(l => l !== chip.val) });
     else if (chip.type === 'status') onChange({ ...filters, statuses: filters.statuses.filter(s => s !== chip.val) });
     else if (chip.type === 'date') onChange({ ...filters, appliedOn: null, customStartDate: '', customEndDate: '' });
   };
+
+  const sourceOptions = availableSources && availableSources.length > 0 
+    ? availableSources 
+    : (CANONICAL_SOURCES as readonly string[]);
 
   return (
     <div className="space-y-3 mb-4">
@@ -124,6 +140,13 @@ export default function ApplicantFilterToolbar({ filters, onChange, availableLoc
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
           />
         </div>
+
+        <MultiSelect 
+          label="Source" 
+          options={Array.from(sourceOptions)} 
+          selected={filters.sources || []} 
+          onChange={(srcs) => onChange({ ...filters, sources: srcs })} 
+        />
         
         <MultiSelect 
           label="Location" 

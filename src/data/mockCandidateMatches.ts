@@ -16,7 +16,7 @@ export const mockWarehouseCandidates: Candidate[] = [
     currentSalary: '₹15,000/month',
     expectedSalary: '₹18,000/month',
     noticePeriod: '0 days',
-    source: 'Direct Application',
+    source: 'SPC Careers Website',
     duplicateStatus: 'None',
     createdAt: '2026-08-10T10:00:00Z', // Resume updated: 10 Aug 2026
   },
@@ -35,7 +35,7 @@ export const mockWarehouseCandidates: Candidate[] = [
     currentSalary: '₹14,000/month',
     expectedSalary: '₹16,000/month',
     noticePeriod: '7 days',
-    source: 'Direct Application',
+    source: 'SPC Careers Website',
     duplicateStatus: 'None',
     createdAt: '2026-08-08T10:00:00Z', // Resume updated: 8 Aug 2026
   },
@@ -54,7 +54,7 @@ export const mockWarehouseCandidates: Candidate[] = [
     currentSalary: '₹14,500/month',
     expectedSalary: '₹17,000/month',
     noticePeriod: '0 days',
-    source: 'Direct Application',
+    source: 'SPC Careers Website',
     duplicateStatus: 'None',
     createdAt: '2026-08-12T10:00:00Z', // Resume updated: 12 Aug 2026
   },
@@ -73,7 +73,7 @@ export const mockWarehouseCandidates: Candidate[] = [
     currentSalary: '₹13,500/month',
     expectedSalary: '₹15,000/month',
     noticePeriod: '15 days',
-    source: 'Direct Application',
+    source: 'SPC Careers Website',
     duplicateStatus: 'None',
     createdAt: '2026-07-30T10:00:00Z', // Resume updated: 30 Jul 2026
   },
@@ -92,7 +92,7 @@ export const mockWarehouseCandidates: Candidate[] = [
     currentSalary: '₹14,000/month',
     expectedSalary: '₹16,000/month',
     noticePeriod: '7 days',
-    source: 'Direct Application',
+    source: 'SPC Careers Website',
     duplicateStatus: 'None',
     createdAt: '2026-08-04T10:00:00Z', // Resume updated: 4 Aug 2026
   }

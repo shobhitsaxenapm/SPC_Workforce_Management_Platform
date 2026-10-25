@@ -2,6 +2,7 @@ import React from 'react';
 import { Candidate, JobMatch } from '../types';
 import { X, MapPin, Briefcase, GraduationCap, Calendar, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
+import SourceBadge from './SourceBadge';
 
 interface CandidateMatchProfileDrawerProps {
   isOpen: boolean;
@@ -34,6 +35,9 @@ export default function CandidateMatchProfileDrawer({ isOpen, onClose, candidate
             <p className="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
               <MapPin className="w-3 h-3" /> {candidate.currentLocation}
             </p>
+            <div className="mt-2">
+              <SourceBadge source="AI Match" />
+            </div>
           </div>
 
           {/* Match Score */}

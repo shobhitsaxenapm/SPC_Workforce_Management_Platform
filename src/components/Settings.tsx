@@ -1,4 +1,6 @@
 import { Shield, Users as UsersIcon, Database, CheckCircle2 } from 'lucide-react';
+import { CANONICAL_SOURCES } from '../types';
+import SourceBadge from './SourceBadge';
 
 export default function Settings() {
   return (
@@ -10,11 +12,15 @@ export default function Settings() {
         {/* Left Col */}
         <div className="space-y-8">
           <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Candidate Sources</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Standard Candidate Sources</h3>
+              <span className="text-xs text-slate-500 font-medium">{CANONICAL_SOURCES.length} Canonical Sources</span>
+            </div>
             <div className="space-y-2">
-              {['SPC Careers Website', 'Manual Entry', 'Bulk Resume Upload', 'Referral', 'Email', 'WhatsApp', 'Existing Talent Pool'].map(s => (
-                <div key={s} className="px-4 py-3 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-700">
-                  {s}
+              {CANONICAL_SOURCES.map(s => (
+                <div key={s} className="px-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-lg flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">{s}</span>
+                  <SourceBadge source={s} compact />
                 </div>
               ))}
             </div>

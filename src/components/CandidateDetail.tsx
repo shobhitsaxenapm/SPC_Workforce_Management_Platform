@@ -18,6 +18,7 @@ import AddJobToCandidateModal from './AddJobToCandidateModal';
 import CandidateProcessModal from './CandidateProcessModal';
 import RecordInterviewFeedbackModal from './RecordInterviewFeedbackModal';
 import ResumeModal from './ResumeModal';
+import SourceBadge from './SourceBadge';
 
 type TabType = 'Overview' | 'Matching Jobs' | 'Hiring Progress' | 'Activity';
 
@@ -582,7 +583,14 @@ export default function CandidateDetail() {
               </button>
             </div>
             <div className="text-xs text-slate-500 space-y-1">
-              <p><span className="font-medium text-slate-700">Application Source: {originLabel}</span> • Added {formatDate(app.appliedDate)} • Recruiter: {recruiter?.name || 'Unassigned'}</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-medium text-slate-700">Application Source:</span>
+                <SourceBadge source={app.source} compact />
+                <span className="text-slate-400">•</span>
+                <span>Added {formatDate(app.appliedDate)}</span>
+                <span className="text-slate-400">•</span>
+                <span>Recruiter: {recruiter?.name || 'Unassigned'}</span>
+              </div>
               <p>Last Activity: {formatDate(lastActivity)}</p>
               {appInterview && currentStage === 'Interviewing' && (
                 <p>
@@ -862,8 +870,10 @@ export default function CandidateDetail() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Candidate Source</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.source || 'Not provided'}</p>
+                  <p className="text-xs text-slate-500 mb-1">Original Source</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <SourceBadge source={candidate.source} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1234,8 +1244,11 @@ export default function CandidateDetail() {
                     <div className="font-medium text-sm text-slate-800">Added from Candidate Match</div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Candidate Source</label>
-                    <div className="font-medium text-sm text-slate-800">{candidate.source} <span className="text-slate-400 font-normal">(Preserved)</span></div>
+                    <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Original Source</label>
+                    <div className="font-medium text-sm text-slate-800 flex items-center gap-2">
+                      <SourceBadge source={candidate.source} compact />
+                      <span className="text-slate-400 font-normal">(Preserved)</span>
+                    </div>
                   </div>
                 </div>
              </div>
@@ -1299,7 +1312,7 @@ export default function CandidateDetail() {
                 </div>
 
                 <p className="text-xs text-slate-500">
-                  This will create an onboarding record and update the candidate's hiring stage. The candidate's source ({candidate.source}) will be preserved.
+                  This will create an onboarding record and update the candidate's hiring stage. The candidate's original source ({candidate.source}) will be preserved.
                 </p>
              </div>
              <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
