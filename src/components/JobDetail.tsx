@@ -1073,15 +1073,6 @@ export default function JobDetail() {
                             >
                               <Calendar className="w-3.5 h-3.5" />
                             </button>
-                            <button 
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setHistoryDrawerAppId(app.id); }}
-                              className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-colors border border-slate-200"
-                              title="View interview history"
-                              aria-label="View interview history"
-                            >
-                              <History className="w-3.5 h-3.5" />
-                            </button>
                             <div className="flex items-center gap-2">
                               {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
                                 // If unconfigured legacy job:

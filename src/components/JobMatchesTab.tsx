@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Job, JobMatch, CANONICAL_SOURCES } from '../types';
+import { Job, JobMatch } from '../types';
 import { Search, UserPlus, X, Filter, ChevronDown, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -15,10 +15,8 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
   const { matchRuns, candidates, addMatchToPipeline, dismissMatch, currentUser, runJobMatching } = useApp();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sourceFilter, setSourceFilter] = useState<string>('All');
   const [scoreFilter, setScoreFilter] = useState<string>('All');
   const [locationFilter, setLocationFilter] = useState<string>('All');
-  const [availabilityFilter, setAvailabilityFilter] = useState<string>('All');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   
   const run = matchRuns.find(r => r.jobId === job.id);
@@ -37,14 +35,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
     return Array.from(locs).sort();
   }, [activeMatches, candidates]);
 
-  const availableAvailabilities = useMemo(() => {
-    const avs = new Set<string>();
-    activeMatches.forEach(m => {
-      const c = candidates.find(cand => cand.id === m.candidateId);
-      if (c?.noticePeriod) avs.add(c.noticePeriod);
-    });
-    return Array.from(avs).sort();
-  }, [activeMatches, candidates]);
   
   const filteredMatches = activeMatches.filter(m => {
     const candidate = candidates.find(c => c.id === m.candidateId);
@@ -59,10 +49,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
       if (!matchesSearch) return false;
     }
 
-    // Source filter (Candidate–Job relationship for matches is AI Match)
-    if (sourceFilter !== 'All' && sourceFilter !== 'AI Match') {
-      return false;
-    }
 
     // Score filter
     if (scoreFilter === '85+') {
@@ -78,10 +64,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
       return false;
     }
 
-    // Availability filter
-    if (availabilityFilter !== 'All' && candidate.noticePeriod !== availabilityFilter) {
-      return false;
-    }
     
     return true;
   });
@@ -104,14 +86,12 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
     }, 1000);
   };
 
-  const hasActiveFilters = searchTerm !== '' || sourceFilter !== 'All' || scoreFilter !== 'All' || locationFilter !== 'All' || availabilityFilter !== 'All';
+  const hasActiveFilters = searchTerm !== '' || scoreFilter !== 'All' || locationFilter !== 'All';
 
   const handleResetFilters = () => {
     setSearchTerm('');
-    setSourceFilter('All');
     setScoreFilter('All');
     setLocationFilter('All');
-    setAvailabilityFilter('All');
   };
 
   if (!run) {
@@ -154,19 +134,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Source Filter */}
-            <select
-              value={sourceFilter}
-              onChange={e => setSourceFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
-            >
-              <option value="All">All Sources</option>
-              <option value="AI Match">Source: AI Match</option>
-              {CANONICAL_SOURCES.filter(s => s !== 'AI Match').map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-
             {/* Score Filter */}
             <select
               value={scoreFilter}
@@ -188,18 +155,6 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
               <option value="All">All Locations</option>
               {availableLocations.map(loc => (
                 <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-
-            {/* Availability Filter */}
-            <select
-              value={availabilityFilter}
-              onChange={e => setAvailabilityFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
-            >
-              <option value="All">All Availability</option>
-              {availableAvailabilities.map(av => (
-                <option key={av} value={av}>{av}</option>
               ))}
             </select>
 
