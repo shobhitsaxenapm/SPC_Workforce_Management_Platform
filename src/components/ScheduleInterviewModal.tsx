@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Calendar, Clock, Video, Phone, Users, Check, AlertCircle, Link as LinkIcon, AlertTriangle } from 'lucide-react';
+import { X, Calendar, Clock, Video, Phone, Users, Check, AlertCircle, Link as LinkIcon, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { cn, formatDateTime } from '../lib/utils';
 import { Interview } from '../types';
+import { getNextRoundNumber } from '../lib/interviewUtils';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialCandidateId?: string;
   initialJobId?: string;
+  initialRoundNumber?: number;
 }
 
-export default function ScheduleInterviewModal({ isOpen, onClose, initialCandidateId, initialJobId }: ScheduleInterviewModalProps) {
+export default function ScheduleInterviewModal({ 
+  isOpen, 
+  onClose, 
+  initialCandidateId, 
+  initialJobId,
+  initialRoundNumber 
+}: ScheduleInterviewModalProps) {
   const { candidates, jobs, clients, applications, interviews, scheduleInterview, addMatchToPipeline, setQuickViewJobId } = useApp();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
@@ -38,6 +46,8 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
     internalNotes: ''
   });
 
+  const [additionalInterviewers, setAdditionalInterviewers] = useState<Array<{ name: string; email: string; role: string }>>([]);
+
   const [modeConfig, setModeConfig] = useState({
     mode: 'Video' as 'Phone' | 'Video' | 'In-person' | 'Manual Link',
     provider: 'None' as 'Google Meet' | 'Microsoft Teams' | 'Zoom' | 'None',
@@ -57,17 +67,17 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
   const selectedClient = clients.find(c => c.id === selectedJob?.clientId);
   const currentApplication = candidateApplications.find(a => a.jobId === selectedJobId);
 
-  // Auto-calculate next round when application changes
+  // Auto-calculate next round when application changes or when initialRoundNumber is passed
   useEffect(() => {
-    if (currentApplication && isOpen) {
-      const existingInterviews = interviews.filter(i => i.applicationId === currentApplication.id);
-      const highestRound = existingInterviews.reduce((max, i) => Math.max(max, i.roundNumber || 0), 0);
-      const nextRound = highestRound + 1;
+    if (initialRoundNumber) {
+      setDetails(d => ({ ...d, roundName: `Round ${initialRoundNumber}`, roundNumber: initialRoundNumber }));
+    } else if (currentApplication && isOpen) {
+      const nextRound = getNextRoundNumber(currentApplication.id, interviews);
       setDetails(d => ({ ...d, roundName: `Round ${nextRound}`, roundNumber: nextRound }));
     } else {
       setDetails(d => ({ ...d, roundName: 'Round 1', roundNumber: 1 }));
     }
-  }, [currentApplication?.id, isOpen, interviews]);
+  }, [currentApplication?.id, isOpen, interviews, initialRoundNumber]);
 
   useEffect(() => {
     if (isOpen) {
@@ -78,6 +88,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
       setStagedNewJobLink('');
       setShowJobLinkPanel(false);
       setJobSearchQuery('');
+      setAdditionalInterviewers([]);
       setDetails(d => ({
         ...d,
         interviewType: 'HR Screening',
@@ -180,6 +191,21 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         finalApplicationId = linkResult.applicationId || '';
       }
 
+      const allInterviewers = [
+        {
+          name: details.interviewerName.trim(),
+          email: details.interviewerEmail.trim(),
+          role: 'Lead Interviewer'
+        },
+        ...additionalInterviewers
+          .filter(ai => ai.name.trim())
+          .map(ai => ({
+            name: ai.name.trim(),
+            email: ai.email.trim(),
+            role: ai.role.trim() || 'Panelist'
+          }))
+      ];
+
       const result = scheduleInterview({
         applicationId: finalApplicationId,
         candidateId: selectedCandidateId,
@@ -192,6 +218,7 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
         durationMinutes: details.durationMinutes,
         interviewerName: details.interviewerName,
         interviewerEmail: details.interviewerEmail,
+        interviewers: allInterviewers,
         mode: modeConfig.mode,
         timezone: details.timezone,
         provider: modeConfig.provider,
@@ -378,18 +405,18 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
           {/* STEP 2: Details */}
           {step === 2 && (
             <div className="space-y-5 animate-fade-in">
-              <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Round Name</label>
-                    <input 
-                      type="text"
-                      value={details.roundName}
-                      disabled
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-600 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Interview Type</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Round Number & Name</label>
+                  <input 
+                    type="text"
+                    value={details.roundName}
+                    disabled
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Interview Type</label>
                   <select
                     value={details.interviewType}
                     onChange={(e) => setDetails({...details, interviewType: e.target.value})}
@@ -397,31 +424,110 @@ export default function ScheduleInterviewModal({ isOpen, onClose, initialCandida
                   >
                     <option value="HR Screening">HR Screening</option>
                     <option value="Skill Assessment">Skill Assessment</option>
+                    <option value="Technical Evaluation">Technical Evaluation</option>
                     <option value="Hiring Manager Interview">Hiring Manager Interview</option>
                     <option value="Client Interview">Client Interview</option>
                     <option value="Final Interview">Final Interview</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Interviewer Name *</label>
-                  <input
-                    type="text"
-                    value={details.interviewerName}
-                    onChange={(e) => setDetails({...details, interviewerName: e.target.value})}
-                    placeholder="E.g., John Doe"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
+              </div>
+
+              {/* Lead Interviewer */}
+              <div className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-xl space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                  Lead / Primary Interviewer
+                </span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Interviewer Name *</label>
+                    <input
+                      type="text"
+                      value={details.interviewerName}
+                      onChange={(e) => setDetails({...details, interviewerName: e.target.value})}
+                      placeholder="E.g., John Doe"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Interviewer Email *</label>
+                    <input
+                      type="email"
+                      value={details.interviewerEmail}
+                      onChange={(e) => setDetails({...details, interviewerEmail: e.target.value})}
+                      placeholder="john@example.com"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Interviewer Email *</label>
-                  <input
-                    type="email"
-                    value={details.interviewerEmail}
-                    onChange={(e) => setDetails({...details, interviewerEmail: e.target.value})}
-                    placeholder="john@example.com"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
+              </div>
+
+              {/* Additional Panelists */}
+              <div className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Additional Panelists / Interviewers ({additionalInterviewers.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAdditionalInterviewers([...additionalInterviewers, { name: '', email: '', role: 'Panelist' }])}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 bg-white px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-50 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Interviewer
+                  </button>
                 </div>
+
+                {additionalInterviewers.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No additional interviewers. Each invited interviewer receives their own secure feedback link.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {additionalInterviewers.map((ai, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200">
+                        <input
+                          type="text"
+                          placeholder="Name *"
+                          value={ai.name}
+                          onChange={(e) => {
+                            const updated = [...additionalInterviewers];
+                            updated[idx].name = e.target.value;
+                            setAdditionalInterviewers(updated);
+                          }}
+                          className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Email"
+                          value={ai.email}
+                          onChange={(e) => {
+                            const updated = [...additionalInterviewers];
+                            updated[idx].email = e.target.value;
+                            setAdditionalInterviewers(updated);
+                          }}
+                          className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Role (e.g. Peer)"
+                          value={ai.role}
+                          onChange={(e) => {
+                            const updated = [...additionalInterviewers];
+                            updated[idx].role = e.target.value;
+                            setAdditionalInterviewers(updated);
+                          }}
+                          className="w-28 px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAdditionalInterviewers(additionalInterviewers.filter((_, i) => i !== idx))}
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors"
+                          title="Remove interviewer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">

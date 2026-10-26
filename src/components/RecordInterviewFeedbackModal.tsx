@@ -38,27 +38,19 @@ export default function RecordInterviewFeedbackModal({ isOpen, onClose, intervie
     // Fake delay
     await new Promise(r => setTimeout(r, 600));
 
-    // Update the interview record itself
+    // Update the interview record itself with submitted feedback
+    // Feedback submission MUST NEVER automatically move candidate pipeline stage!
     submitInterviewFeedback(interview.id, {
       status: 'Completed',
-      feedbackStatus: 'Submitted'
+      feedbackStatus: 'Submitted',
+      overallRating: feedback.rating,
+      recommendation: outcome === 'Recommend Hire' ? 'Hire' : outcome === 'Keep on Hold' ? 'Hold' : outcome === 'Reject Candidate' ? 'Reject' : 'Hire',
+      overallResult: outcome === 'Recommend Hire' ? 'Hire' : outcome === 'Keep on Hold' ? 'Hold' : outcome === 'Reject Candidate' ? 'Reject' : 'Hire',
+      strengths: feedback.strengths,
+      concerns: feedback.concerns,
+      feedbackNotes: feedback.detailedFeedback,
+      recruiterOutcomeNotes: outcome === 'Reject Candidate' ? rejectionReason : outcome === 'Keep on Hold' ? holdReason : undefined
     });
-
-    // Handle Application State transition
-    switch (outcome) {
-      case 'Proceed to Next Round':
-        updateApplicationStage(interview.applicationId, 'Interviewing', 'Next Round To Schedule');
-        break;
-      case 'Recommend Hire':
-        updateApplicationStage(interview.applicationId, 'Interviewing', 'Interview Completed');
-        break;
-      case 'Keep on Hold':
-        updateApplicationStage(interview.applicationId, 'Interviewing', 'On Hold', holdReason);
-        break;
-      case 'Reject Candidate':
-        updateApplicationStage(interview.applicationId, 'Rejected', undefined, rejectionReason);
-        break;
-    }
 
     setIsSubmitting(false);
     onClose();

@@ -436,6 +436,35 @@ export interface JobMatchRun {
   matches: JobMatch[];
 }
 
+export type DerivedFeedbackStatus = 'Not Due' | 'Pending' | 'Partially Received' | 'Received';
+
+export type RecruiterInterviewOutcome = 
+  | 'Next Round' 
+  | 'Selected' 
+  | 'Rejected' 
+  | 'On Hold' 
+  | 'Additional Discussion Required';
+
+export interface InterviewerInvitation {
+  id: string;
+  interviewerId?: string;
+  name: string;
+  email?: string;
+  role?: string;
+  secureFeedbackToken: string;
+  feedbackStatus: 'Not Due' | 'Pending' | 'Submitted';
+  submittedAt?: string;
+  overallRating?: number;
+  overallResult?: 'Strong Hire' | 'Hire' | 'Hold' | 'Reject';
+  recommendation?: 'Hire' | 'Hold' | 'Reject';
+  strengths?: string;
+  concerns?: string;
+  feedbackNotes?: string;
+  invitedAt?: string;
+  reminderSentAt?: string;
+  reminderCount?: number;
+}
+
 export interface Interview {
   id: string;
   applicationId: string;
@@ -448,11 +477,13 @@ export interface Interview {
   interviewerId?: string;
   scheduledAt: string;
   durationMinutes: number;
+  scheduledEndAt?: string;
   interviewerName: string;
   interviewerEmail?: string;
+  interviewers?: InterviewerInvitation[];
   mode: 'Phone' | 'Video' | 'In-person' | 'Manual Link';
   status: InterviewStatus;
-  feedbackStatus: 'Not Started' | 'Pending' | 'Submitted';
+  feedbackStatus: 'Not Started' | 'Pending' | 'Submitted' | DerivedFeedbackStatus;
   timezone?: string;
   provider?: 'Google Meet' | 'Microsoft Teams' | 'Zoom' | 'None';
   meetingLink?: string;
@@ -470,6 +501,10 @@ export interface Interview {
   noShowNote?: string;
   candidateInstructions?: string;
   internalNotes?: string;
+  recruiterOutcome?: RecruiterInterviewOutcome;
+  recruiterOutcomeNotes?: string;
+  recruiterOutcomeConfirmedAt?: string;
+  recruiterOutcomeConfirmedBy?: string;
 }
 
 export interface OfferActivity {

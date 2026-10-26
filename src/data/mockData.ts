@@ -780,13 +780,75 @@ export const mockInterviews: Interview[] = [
     candidateId: 'can3',
     jobId: 'j2',
     clientId: 'c1',
+    roundName: 'Round 1',
+    roundNumber: 1,
     interviewType: 'HR Screening',
     scheduledAt: '2026-07-09T10:30:00Z',
-    durationMinutes: 30,
+    durationMinutes: 45,
+    scheduledEndAt: '2026-07-09T11:15:00Z',
     interviewerName: 'Amit Kumar',
+    interviewerEmail: 'amit.kumar@spc.example.com',
+    interviewers: [
+      {
+        id: 'inv-int1-1',
+        name: 'Amit Kumar',
+        email: 'amit.kumar@spc.example.com',
+        role: 'Lead HR',
+        secureFeedbackToken: 'token_int1_amit',
+        feedbackStatus: 'Submitted',
+        submittedAt: '2026-07-09T12:00:00Z',
+        overallRating: 4,
+        overallResult: 'Hire',
+        recommendation: 'Hire',
+        strengths: 'Clear communicator, active listener, high energy.',
+        concerns: 'Slightly higher salary expectation.',
+        feedbackNotes: 'Candidate performed well in standard screening questions and demonstrated alignment with client culture.'
+      },
+      {
+        id: 'inv-int1-2',
+        name: 'Pooja Varma',
+        email: 'pooja.v@spc.example.com',
+        role: 'Peer Evaluator',
+        secureFeedbackToken: 'token_int1_pooja',
+        feedbackStatus: 'Pending',
+        invitedAt: '2026-07-09T10:30:00Z'
+      }
+    ],
     mode: 'Video',
     status: 'Completed',
-    feedbackStatus: 'Pending'
+    feedbackStatus: 'Partially Received',
+    recruiterOutcome: 'Next Round',
+    recruiterOutcomeConfirmedAt: '2026-07-10T10:00:00Z',
+    recruiterOutcomeNotes: 'Approved to proceed to technical round based on HR evaluation.'
+  },
+  {
+    id: 'int1_r2',
+    applicationId: 'app3',
+    candidateId: 'can3',
+    jobId: 'j2',
+    clientId: 'c1',
+    roundName: 'Round 2',
+    roundNumber: 2,
+    interviewType: 'Technical Evaluation',
+    scheduledAt: '2026-11-05T14:00:00Z',
+    durationMinutes: 60,
+    scheduledEndAt: '2026-11-05T15:00:00Z',
+    interviewerName: 'Vikram Joshi',
+    interviewerEmail: 'vikram.j@spc.example.com',
+    interviewers: [
+      {
+        id: 'inv-int1_r2-1',
+        name: 'Vikram Joshi',
+        email: 'vikram.j@spc.example.com',
+        role: 'Technical Lead',
+        secureFeedbackToken: 'token_int1_r2_vikram',
+        feedbackStatus: 'Not Due',
+        invitedAt: '2026-10-20T09:00:00Z'
+      }
+    ],
+    mode: 'Video',
+    status: 'Scheduled',
+    feedbackStatus: 'Not Due'
   },
   {
     id: 'int2',
@@ -794,12 +856,27 @@ export const mockInterviews: Interview[] = [
     candidateId: 'can6',
     jobId: 'j4',
     clientId: 'c4',
+    roundName: 'Round 1',
+    roundNumber: 1,
     interviewType: 'Client Interview',
     scheduledAt: '2026-07-11T14:00:00Z',
     durationMinutes: 45,
+    scheduledEndAt: '2026-07-11T14:45:00Z',
     interviewerName: 'Rajeev Reddy',
+    interviewerEmail: 'rajeev.reddy@client.example.com',
+    interviewers: [
+      {
+        id: 'inv-int2-1',
+        name: 'Rajeev Reddy',
+        email: 'rajeev.reddy@client.example.com',
+        role: 'Client Hiring Manager',
+        secureFeedbackToken: 'token_int2_rajeev',
+        feedbackStatus: 'Pending',
+        invitedAt: '2026-07-11T14:00:00Z'
+      }
+    ],
     mode: 'Video',
-    status: 'Scheduled',
+    status: 'Completed',
     feedbackStatus: 'Pending'
   },
   {
@@ -808,19 +885,73 @@ export const mockInterviews: Interview[] = [
     candidateId: 'can1',
     jobId: 'j1',
     clientId: 'c1',
+    roundName: 'Round 1',
+    roundNumber: 1,
     interviewType: 'Skill Assessment',
     scheduledAt: '2026-07-02T11:00:00Z',
     durationMinutes: 60,
+    scheduledEndAt: '2026-07-02T12:00:00Z',
     interviewerName: 'Dr. Alok Gupta',
+    interviewerEmail: 'alok.gupta@spc.example.com',
+    interviewers: [
+      {
+        id: 'inv-int3-1',
+        name: 'Dr. Alok Gupta',
+        email: 'alok.gupta@spc.example.com',
+        role: 'Lead Evaluator',
+        secureFeedbackToken: 'token_int3_alok',
+        feedbackStatus: 'Submitted',
+        submittedAt: '2026-07-02T12:30:00Z',
+        overallRating: 4,
+        feedbackNotes: 'Strong communication skills and high typing speed.',
+        recommendation: 'Hire',
+        overallResult: 'Hire',
+        strengths: 'Fast typing, clear communication, polite.',
+        concerns: 'None.'
+      }
+    ],
     mode: 'In-person',
     status: 'Completed',
-    feedbackStatus: 'Submitted',
+    feedbackStatus: 'Received',
     overallRating: 4,
     feedbackNotes: 'Strong communication skills and high typing speed.',
     recommendation: 'Hire',
     overallResult: 'Hire',
     strengths: 'Fast typing, clear communication, polite.',
-    concerns: 'None.'
+    concerns: 'None.',
+    recruiterOutcome: 'Selected',
+    recruiterOutcomeConfirmedAt: '2026-07-03T09:00:00Z'
+  },
+  {
+    id: 'int4_noshow_can',
+    applicationId: 'app5',
+    candidateId: 'can12',
+    jobId: 'j4',
+    clientId: 'c4',
+    roundName: 'Round 1',
+    roundNumber: 1,
+    interviewType: 'Preliminary Screening',
+    scheduledAt: '2026-07-05T09:00:00Z',
+    durationMinutes: 30,
+    scheduledEndAt: '2026-07-05T09:30:00Z',
+    interviewerName: 'Kavita Sen',
+    interviewerEmail: 'kavita.s@spc.example.com',
+    interviewers: [
+      {
+        id: 'inv-int4-1',
+        name: 'Kavita Sen',
+        email: 'kavita.s@spc.example.com',
+        role: 'Recruiter',
+        secureFeedbackToken: 'token_int4_kavita',
+        feedbackStatus: 'Pending',
+        invitedAt: '2026-07-05T09:00:00Z'
+      }
+    ],
+    mode: 'Phone',
+    status: 'No Show',
+    noShowWho: 'Candidate',
+    noShowNote: 'Candidate phone was unreachable during scheduled slot.',
+    feedbackStatus: 'Not Started'
   }
 ];
 

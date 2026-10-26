@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage, CANONICAL_SOURCES, Placement, HiringModel } from '../types';
 import { useApp } from '../context/AppContext';
 import { getHiringModelBadgeConfig, getPlacementBillingStatusConfig } from '../lib/hiringModelUtils';
+import { getLatestInterviewForApplication, getInterviewFeedbackSummary, formatRoundSummaryForCard } from '../lib/interviewUtils';
 import JobMatchesTab from './JobMatchesTab';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import JobFormModal from './JobFormModal';
@@ -20,6 +21,7 @@ import StartJoiningTrackingModal from './StartJoiningTrackingModal';
 import ConfirmJoinedModal from './ConfirmJoinedModal';
 import DidNotJoinModal from './DidNotJoinModal';
 import PlacementBillingDrawer from './PlacementBillingDrawer';
+import InterviewHistoryDrawer from './InterviewHistoryDrawer';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -62,6 +64,9 @@ export default function JobDetail() {
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [pipelineSourceFilter, setPipelineSourceFilter] = useState('All');
   const [pipelineActionFilter, setPipelineActionFilter] = useState('All');
+  const [pipelineRoundFilter, setPipelineRoundFilter] = useState('All');
+  const [pipelineFeedbackFilter, setPipelineFeedbackFilter] = useState('All');
+  const [historyDrawerAppId, setHistoryDrawerAppId] = useState<string | null>(null);
   
   const [isPreparingClientReview, setIsPreparingClientReview] = useState(false);
   const [selectedForClientReview, setSelectedForClientReview] = useState<string[]>([]);
@@ -671,12 +676,45 @@ export default function JobDetail() {
                 </select>
               </div>
 
-              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All') && (
+              {/* Round Filter */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Round:</label>
+                <select
+                  value={pipelineRoundFilter}
+                  onChange={(e) => setPipelineRoundFilter(e.target.value)}
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="All">All Rounds</option>
+                  <option value="Round 1">Round 1</option>
+                  <option value="Round 2">Round 2</option>
+                  <option value="Round 3+">Round 3+</option>
+                </select>
+              </div>
+
+              {/* Feedback Status Filter */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Feedback:</label>
+                <select
+                  value={pipelineFeedbackFilter}
+                  onChange={(e) => setPipelineFeedbackFilter(e.target.value)}
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="All">All Feedback</option>
+                  <option value="Not Due">Not Due</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Partially Received">Partially Received</option>
+                  <option value="Received">Received</option>
+                </select>
+              </div>
+
+              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All' || pipelineRoundFilter !== 'All' || pipelineFeedbackFilter !== 'All') && (
                 <button
                   onClick={() => {
                     setPipelineSearch('');
                     setPipelineSourceFilter('All');
                     setPipelineActionFilter('All');
+                    setPipelineRoundFilter('All');
+                    setPipelineFeedbackFilter('All');
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                 >
@@ -686,7 +724,7 @@ export default function JobDetail() {
             </div>
 
             <div className="text-xs text-slate-500 font-medium">
-              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All') ? (
+              {(pipelineSearch.trim() !== '' || pipelineSourceFilter !== 'All' || pipelineActionFilter !== 'All' || pipelineRoundFilter !== 'All' || pipelineFeedbackFilter !== 'All') ? (
                 <span>
                   Filtering active <span className="text-slate-400 font-normal">(stage counts unaltered)</span>
                 </span>
@@ -736,6 +774,22 @@ export default function JobDetail() {
                 if (pipelineActionFilter === 'Feedback Pending' && !isFeedbackPending) return false;
                 if (pipelineActionFilter === 'Screening Pending' && !isScreeningPending) return false;
                 if (pipelineActionFilter === 'Overdue' && !isOverdue) return false;
+              }
+
+              if (pipelineRoundFilter !== 'All') {
+                const latestIv = getLatestInterviewForApplication(app.id, interviews);
+                if (!latestIv) return false;
+                const rNum = latestIv.roundNumber || 1;
+                if (pipelineRoundFilter === 'Round 1' && rNum !== 1) return false;
+                if (pipelineRoundFilter === 'Round 2' && rNum !== 2) return false;
+                if (pipelineRoundFilter === 'Round 3+' && rNum < 3) return false;
+              }
+
+              if (pipelineFeedbackFilter !== 'All') {
+                const latestIv = getLatestInterviewForApplication(app.id, interviews);
+                if (!latestIv) return false;
+                const fb = getInterviewFeedbackSummary(latestIv);
+                if (fb.status !== pipelineFeedbackFilter) return false;
               }
 
               return true;
@@ -962,6 +1016,42 @@ export default function JobDetail() {
                           return null;
                         })()}
 
+                        {/* Latest Round Summary & History Trigger */}
+                        {(() => {
+                          const latestIv = getLatestInterviewForApplication(app.id, interviews);
+                          const roundSummaryText = latestIv ? formatRoundSummaryForCard(latestIv) : null;
+                          if (!roundSummaryText) return null;
+
+                          return (
+                            <div className="mb-3 flex items-center justify-between gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                              <span className={cn(
+                                "text-[11px] font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 truncate",
+                                latestIv?.status === 'Completed' ? "bg-emerald-100 text-emerald-800" :
+                                latestIv?.status === 'No Show' ? "bg-amber-100 text-amber-900" :
+                                latestIv?.status === 'Rescheduled' ? "bg-purple-100 text-purple-800" :
+                                "bg-blue-100 text-blue-800"
+                              )}>
+                                <Clock className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{roundSummaryText}</span>
+                              </span>
+
+                              <button
+                                type="button"
+                                aria-label="View interview history"
+                                title="View interview history"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHistoryDrawerAppId(app.id);
+                                }}
+                                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-white rounded transition-colors shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">History</span>
+                              </button>
+                            </div>
+                          );
+                        })()}
+
                         <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                           <span className="text-[10px] text-slate-400 font-medium">{formatDate(app.appliedDate)}</span>
                           
@@ -982,6 +1072,15 @@ export default function JobDetail() {
                               title="Schedule Interview"
                             >
                               <Calendar className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setHistoryDrawerAppId(app.id); }}
+                              className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-blue-600 rounded-md transition-colors border border-slate-200"
+                              title="View interview history"
+                              aria-label="View interview history"
+                            >
+                              <History className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-center gap-2">
                               {(app.currentStage === 'Selected' || app.currentStage === 'Offered') && (() => {
@@ -1488,6 +1587,18 @@ export default function JobDetail() {
           />
         );
       })()}
+
+      {historyDrawerAppId && (
+        <InterviewHistoryDrawer
+          isOpen={!!historyDrawerAppId}
+          onClose={() => setHistoryDrawerAppId(null)}
+          applicationId={historyDrawerAppId}
+          onScheduleNextRound={(candidateId, jobId, nextRoundNum) => {
+            setScheduleCandidateId(candidateId);
+            setHistoryDrawerAppId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

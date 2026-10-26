@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch, CandidateJobSource, HiringModel, Placement, PlacementBillingStatus, PlacementStatus, PlacementBillingHistoryItem } from '../types';
+import { User, Job, Candidate, Application, Project, Client, ApplicationStage, ApplicationSubstate, Priority, ProjectStatus, JobStatus, JobMatch, Interview, InterviewStatus, InterviewerInvitation, RecruiterInterviewOutcome, DerivedFeedbackStatus, Offer, OfferStatus, OfferActivity, Onboarding, OnboardingStatus, JobMatchRun, InformationRequest, RequestResponse, ClientReviewBatch, CandidateJobSource, HiringModel, Placement, PlacementBillingStatus, PlacementStatus, PlacementBillingHistoryItem } from '../types';
 import { mockUsers, mockJobs, mockCandidates, mockApplications, mockProjects, mockClients, mockInterviews, mockOffers, mockOnboardings, mockPlacements } from '../data/mockData';
 import { mockWarehouseCandidates, mockWarehouseMatches, getMockWarehouseMatchRun } from '../data/mockCandidateMatches';
 import { calculateMatch } from '../lib/matchingEngine';
 import { normalizeJob, normalizeApplication, normalizeOffer } from '../lib/statusNormalization';
 import { normalizeSource } from '../lib/sourceUtils';
 import { isJobHiringModelLocked } from '../lib/hiringModelUtils';
+import { normalizeInterviewers, getInterviewFeedbackSummary, generateSecureFeedbackToken } from '../lib/interviewUtils';
 
 interface AppContextType {
   currentUser: User | null;
@@ -72,6 +73,9 @@ interface AppContextType {
   updateProjectStatus: (projectId: string, status: ProjectStatus, reason?: string) => { success: boolean; error?: string };
   updateProject: (projectId: string, updates: Partial<Project>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
+  submitIndividualFeedback: (interviewId: string, tokenOrInterviewerId: string, feedbackData: Partial<InterviewerInvitation>) => { success: boolean; error?: string };
+  confirmRecruiterOutcome: (interviewId: string, outcome: RecruiterInterviewOutcome, notes?: string, confirmStageChange?: boolean) => { success: boolean; error?: string };
+  sendFeedbackReminder: (interviewId: string, interviewerIdOrEmail: string) => { success: boolean; message: string };
   scheduleInterview: (interviewDetails: Omit<Interview, 'id' | 'status' | 'feedbackStatus'>) => { success: boolean; error?: string };
   rescheduleInterview: (interviewId: string, updatedSchedule: Partial<Interview>) => void;
   cancelInterview: (interviewId: string, reason: string) => void;
@@ -364,7 +368,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (localStorage.getItem('spc_interviews') === null) {
       localStorage.setItem('spc_interviews', JSON.stringify(mockInterviews));
     }
-    return safeParse<Interview[]>('spc_interviews', mockInterviews);
+    const parsed = safeParse<Interview[]>('spc_interviews', mockInterviews);
+    return parsed.map(iv => ({
+      ...iv,
+      roundNumber: iv.roundNumber || 1,
+      interviewers: normalizeInterviewers(iv)
+    }));
   });
 
   const [offers, setOffers] = useState<Offer[]>(() => {
@@ -1339,36 +1348,178 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const submitInterviewFeedback = (interviewId: string, feedbackData: Partial<Interview>) => {
     const updated = interviews.map(i => {
       if (i.id === interviewId) {
-        return { 
-          ...i, 
-          ...feedbackData, 
-          feedbackStatus: 'Submitted' as const,
+        const interviewers = normalizeInterviewers(i);
+        const updatedInterviewers = interviewers.map((inv, idx) => {
+          if (idx === 0 || inv.feedbackStatus !== 'Submitted') {
+            return {
+              ...inv,
+              feedbackStatus: 'Submitted' as const,
+              submittedAt: new Date().toISOString(),
+              overallRating: feedbackData.overallRating ?? inv.overallRating,
+              overallResult: feedbackData.overallResult ?? inv.overallResult,
+              recommendation: feedbackData.recommendation ?? inv.recommendation,
+              strengths: feedbackData.strengths ?? inv.strengths,
+              concerns: feedbackData.concerns ?? inv.concerns,
+              feedbackNotes: feedbackData.feedbackNotes ?? inv.feedbackNotes
+            };
+          }
+          return inv;
+        });
+
+        const updatedInterview: Interview = {
+          ...i,
+          ...feedbackData,
+          interviewers: updatedInterviewers,
           status: 'Completed' as const
         };
+
+        const summary = getInterviewFeedbackSummary(updatedInterview);
+        updatedInterview.feedbackStatus = summary.status;
+        return updatedInterview;
       }
       return i;
     });
     persistInterviews(updated);
+    // Feedback submission NEVER automatically changes pipeline stage
   };
 
-  const rescheduleInterview = (interviewId: string, updatedSchedule: Partial<Interview>) => {
+  const submitIndividualFeedback = (
+    interviewId: string,
+    tokenOrInterviewerId: string,
+    feedbackData: Partial<InterviewerInvitation>
+  ): { success: boolean; error?: string } => {
+    let found = false;
+    const updated = interviews.map(i => {
+      const interviewers = normalizeInterviewers(i);
+      const matchesInterview = i.id === interviewId || interviewers.some(inv => inv.secureFeedbackToken === tokenOrInterviewerId || inv.id === tokenOrInterviewerId);
+      
+      if (matchesInterview) {
+        const updatedInterviewers = interviewers.map(inv => {
+          if (inv.id === tokenOrInterviewerId || inv.secureFeedbackToken === tokenOrInterviewerId || inv.email === tokenOrInterviewerId) {
+            found = true;
+            return {
+              ...inv,
+              ...feedbackData,
+              feedbackStatus: 'Submitted' as const,
+              submittedAt: new Date().toISOString()
+            };
+          }
+          return inv;
+        });
+
+        const updatedInterview: Interview = {
+          ...i,
+          interviewers: updatedInterviewers,
+          status: i.status === 'Scheduled' ? 'Completed' : i.status
+        };
+
+        const summary = getInterviewFeedbackSummary(updatedInterview);
+        updatedInterview.feedbackStatus = summary.status;
+
+        const submittedList = updatedInterviewers.filter(inv => inv.feedbackStatus === 'Submitted');
+        if (submittedList.length > 0) {
+          const avgRating = Math.round(submittedList.reduce((acc, curr) => acc + (curr.overallRating || 3), 0) / submittedList.length);
+          updatedInterview.overallRating = avgRating;
+          if (feedbackData.feedbackNotes) updatedInterview.feedbackNotes = feedbackData.feedbackNotes;
+          if (feedbackData.strengths) updatedInterview.strengths = feedbackData.strengths;
+          if (feedbackData.concerns) updatedInterview.concerns = feedbackData.concerns;
+          if (feedbackData.recommendation) updatedInterview.recommendation = feedbackData.recommendation;
+          if (feedbackData.overallResult) updatedInterview.overallResult = feedbackData.overallResult;
+        }
+
+        return updatedInterview;
+      }
+      return i;
+    });
+
+    if (!found) {
+      return { success: false, error: 'Interviewer invitation token not found.' };
+    }
+
+    persistInterviews(updated);
+    // Feedback submission NEVER automatically changes pipeline stage
+    return { success: true };
+  };
+
+  const confirmRecruiterOutcome = (
+    interviewId: string,
+    outcome: RecruiterInterviewOutcome,
+    notes?: string,
+    confirmStageChange: boolean = true
+  ): { success: boolean; error?: string } => {
+    const interview = interviews.find(i => i.id === interviewId);
+    if (!interview) {
+      return { success: false, error: 'Interview not found.' };
+    }
+
     const updated = interviews.map(i => {
       if (i.id === interviewId) {
-        return { 
-          ...i, 
-          ...updatedSchedule, 
-          status: 'Scheduled' as const,
-          rescheduledAt: new Date().toISOString()
+        return {
+          ...i,
+          recruiterOutcome: outcome,
+          recruiterOutcomeNotes: notes,
+          recruiterOutcomeConfirmedAt: new Date().toISOString()
         };
       }
       return i;
     });
     persistInterviews(updated);
+
+    if (confirmStageChange && interview.applicationId) {
+      switch (outcome) {
+        case 'Selected':
+          updateApplicationStage(interview.applicationId, 'Selected');
+          break;
+        case 'Rejected':
+          updateApplicationStage(interview.applicationId, 'Rejected', undefined, notes || 'Rejected after interview review');
+          break;
+        case 'On Hold':
+          updateApplicationStage(interview.applicationId, 'Interviewing', 'On Hold', notes || 'Placed on hold by recruiter');
+          break;
+        case 'Next Round':
+          updateApplicationStage(interview.applicationId, 'Interviewing', 'Next Round To Schedule', notes);
+          break;
+        case 'Additional Discussion Required':
+          updateApplicationStage(interview.applicationId, 'Interviewing', 'Additional Discussion Required', notes);
+          break;
+      }
+    }
+
+    return { success: true };
   };
 
-  const updateInterviewStatus = (interviewId: string, status: InterviewStatus) => {
-    const updated = interviews.map(i => i.id === interviewId ? { ...i, status } : i);
+  const sendFeedbackReminder = (
+    interviewId: string,
+    interviewerIdOrEmail: string
+  ): { success: boolean; message: string } => {
+    let found = false;
+    let recipientName = 'Interviewer';
+    const updated = interviews.map(i => {
+      if (i.id === interviewId) {
+        const interviewers = normalizeInterviewers(i);
+        const updatedInterviewers = interviewers.map(inv => {
+          if (inv.id === interviewerIdOrEmail || inv.email === interviewerIdOrEmail || inv.secureFeedbackToken === interviewerIdOrEmail) {
+            found = true;
+            recipientName = inv.name;
+            return {
+              ...inv,
+              reminderSentAt: new Date().toISOString(),
+              reminderCount: (inv.reminderCount || 0) + 1
+            };
+          }
+          return inv;
+        });
+        return { ...i, interviewers: updatedInterviewers };
+      }
+      return i;
+    });
+
+    if (!found) {
+      return { success: false, message: 'Interviewer not found.' };
+    }
+
     persistInterviews(updated);
+    return { success: true, message: `Feedback reminder successfully sent to ${recipientName}.` };
   };
 
   const scheduleInterview = (interviewDetails: Omit<Interview, 'id' | 'status' | 'feedbackStatus'>) => {
@@ -1381,25 +1532,76 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return { success: false, error: 'An active interview of this type is already scheduled for this application.' };
     }
 
+    const durationMinutes = interviewDetails.durationMinutes || 45;
+    const scheduledEndAt = interviewDetails.scheduledEndAt || 
+      new Date(new Date(interviewDetails.scheduledAt).getTime() + durationMinutes * 60000).toISOString();
+
+    const finalInterviewers: InterviewerInvitation[] = (interviewDetails.interviewers && interviewDetails.interviewers.length > 0)
+      ? interviewDetails.interviewers.map((inv, idx) => ({
+          ...inv,
+          id: inv.id || `inv_${Date.now()}_${idx + 1}`,
+          secureFeedbackToken: inv.secureFeedbackToken || generateSecureFeedbackToken(),
+          feedbackStatus: inv.feedbackStatus || 'Not Due',
+          invitedAt: inv.invitedAt || new Date().toISOString()
+        }))
+      : [
+          {
+            id: `inv_${Date.now()}_1`,
+            name: interviewDetails.interviewerName || 'Assigned Interviewer',
+            email: interviewDetails.interviewerEmail || '',
+            role: 'Lead Interviewer',
+            secureFeedbackToken: generateSecureFeedbackToken(),
+            feedbackStatus: 'Not Due',
+            invitedAt: new Date().toISOString()
+          }
+        ];
+
     const newInterview: Interview = {
       ...interviewDetails,
       id: `iv${Date.now()}`,
+      roundNumber: interviewDetails.roundNumber || 1,
+      scheduledEndAt,
+      interviewers: finalInterviewers,
       status: 'Scheduled',
-      feedbackStatus: 'Not Started',
+      feedbackStatus: 'Not Due',
     };
 
     persistInterviews([...interviews, newInterview]);
     
-    // Automatically update the application stage to the correct Interviewing substate
+    // Update the application stage substate to indicate round scheduled
     if (newInterview.applicationId) {
-      const isFirstInterview = !interviews.some(i => i.applicationId === newInterview.applicationId);
-      if (isFirstInterview) {
-        const substate = newInterview.roundName ? `${newInterview.roundName} Scheduled` : 'Round 1 Scheduled';
-        updateApplicationStage(newInterview.applicationId, 'Interviewing', substate);
-      }
+      const substate = newInterview.roundName ? `${newInterview.roundName} Scheduled` : `Round ${newInterview.roundNumber} Scheduled`;
+      updateApplicationStage(newInterview.applicationId, 'Interviewing', substate);
     }
 
     return { success: true };
+  };
+
+  const rescheduleInterview = (interviewId: string, updatedSchedule: Partial<Interview>) => {
+    const updated = interviews.map(i => {
+      if (i.id === interviewId) {
+        const scheduledAt = updatedSchedule.scheduledAt || i.scheduledAt;
+        const durationMinutes = updatedSchedule.durationMinutes || i.durationMinutes || 45;
+        const scheduledEndAt = updatedSchedule.scheduledEndAt || new Date(new Date(scheduledAt).getTime() + durationMinutes * 60000).toISOString();
+        
+        return { 
+          ...i, 
+          ...updatedSchedule, 
+          scheduledAt,
+          durationMinutes,
+          scheduledEndAt,
+          status: 'Scheduled' as const,
+          rescheduledAt: new Date().toISOString()
+        };
+      }
+      return i;
+    });
+    persistInterviews(updated);
+  };
+
+  const updateInterviewStatus = (interviewId: string, status: InterviewStatus) => {
+    const updated = interviews.map(i => i.id === interviewId ? { ...i, status } : i);
+    persistInterviews(updated);
   };
 
   const markInterviewNoShow = (interviewId: string, who: 'Candidate' | 'Interviewer' | 'Both', note?: string) => {
@@ -1792,6 +1994,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateProjectStatus,
         updateProject,
         submitInterviewFeedback,
+        submitIndividualFeedback,
+        confirmRecruiterOutcome,
+        sendFeedbackReminder,
         scheduleInterview,
         rescheduleInterview,
         cancelInterview,
