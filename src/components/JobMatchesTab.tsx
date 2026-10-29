@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Job, JobMatch } from '../types';
-import { Search, UserPlus, X, Filter, ChevronDown, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
+import { Job, JobMatch, Candidate } from '../types';
+import { Search, UserPlus, X, Filter, ChevronDown, CheckCircle2, Eye, RotateCcw, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
@@ -12,13 +12,18 @@ interface JobMatchesTabProps {
 }
 
 export default function JobMatchesTab({ job }: JobMatchesTabProps) {
-  const { matchRuns, candidates, addMatchToPipeline, dismissMatch, currentUser, runJobMatching } = useApp();
+  const { matchRuns, candidates, applications, clients, addMatchToPipeline, dismissMatch, currentUser, runJobMatching } = useApp();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState<string>('All');
   const [locationFilter, setLocationFilter] = useState<string>('All');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [candidateToAddToPipeline, setCandidateToAddToPipeline] = useState<Candidate | null>(null);
+  const [candidateToDismiss, setCandidateToDismiss] = useState<Candidate | null>(null);
+  const [isSubmittingPipeline, setIsSubmittingPipeline] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
+  const client = clients.find(c => c.id === job.clientId);
   const run = matchRuns.find(r => r.jobId === job.id);
   const matches = run?.matches || [];
   
@@ -68,12 +73,30 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
     return true;
   });
 
-  const handleAddToPipeline = (candidateId: string) => {
-    addMatchToPipeline(job.id, candidateId, 'Matched from AI Engine', 'AI Match');
+  const handleConfirmAddToPipeline = () => {
+    if (!candidateToAddToPipeline) return;
+    setIsSubmittingPipeline(true);
+    const cand = candidateToAddToPipeline;
+    const res = addMatchToPipeline(job.id, cand.id, 'Matched from AI Engine', 'AI Match');
+    setIsSubmittingPipeline(false);
+    setCandidateToAddToPipeline(null);
+
+    if (res.success) {
+      setToast({ message: `${cand.fullName} has been moved to the Pipeline (Sourced).`, type: 'success' });
+      setTimeout(() => setToast(null), 3500);
+    } else {
+      setToast({ message: res.error || 'Failed to add to pipeline.', type: 'error' });
+      setTimeout(() => setToast(null), 3500);
+    }
   };
 
-  const handleDismiss = (candidateId: string) => {
-    dismissMatch(job.id, candidateId);
+  const handleConfirmDismiss = () => {
+    if (!candidateToDismiss) return;
+    const cand = candidateToDismiss;
+    dismissMatch(job.id, cand.id);
+    setCandidateToDismiss(null);
+    setToast({ message: `${cand.fullName} has been dismissed from matches.`, type: 'success' });
+    setTimeout(() => setToast(null), 3000);
   };
 
   const canAction = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId;
@@ -245,31 +268,49 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      {canAction && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => setSelectedProfileId(candidate.id)}
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="View Profile"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleAddToPipeline(candidate.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-medium transition-colors"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            Pipeline
-                          </button>
-                          <button 
-                            onClick={() => handleDismiss(candidate.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Dismiss Match"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                      {canAction && (() => {
+                        const isInPipeline = applications.some(a => a.jobId === job.id && a.candidateId === match.candidateId);
+                        return (
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => setSelectedProfileId(candidate.id)}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="View Match Profile"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {isInPipeline ? (
+                              <span 
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold"
+                                title="Candidate is already active in the pipeline for this job"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                In Pipeline
+                              </span>
+                            ) : (
+                              <button 
+                                onClick={() => setCandidateToAddToPipeline(candidate)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-medium transition-colors shadow-sm"
+                                title="Add to Pipeline"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                Pipeline
+                              </button>
+                            )}
+
+                            {!isInPipeline && (
+                              <button 
+                                onClick={() => setCandidateToDismiss(candidate)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Dismiss Match"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );
@@ -285,12 +326,178 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
           </table>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-[70] animate-slide-in-right">
+          <div className={cn(
+            "flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium",
+            toast.type === 'success' 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              : "bg-red-50 border-red-200 text-red-800"
+          )}>
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-slate-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add to Pipeline Confirmation Modal */}
+      {candidateToAddToPipeline && (() => {
+        const matchData = run.matches.find(m => m.candidateId === candidateToAddToPipeline.id);
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+              <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">Add to Pipeline</h3>
+                    <p className="text-xs text-slate-500">Confirm candidate workflow entry</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setCandidateToAddToPipeline(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600">
+                  Are you sure you want to move <strong className="text-slate-900">{candidateToAddToPipeline.fullName}</strong> into the active recruitment pipeline?
+                </p>
+
+                {/* Candidate & Job Summary Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-xs text-slate-500">Candidate</div>
+                      <div className="text-sm font-semibold text-slate-900">{candidateToAddToPipeline.fullName}</div>
+                      <div className="text-xs text-slate-600">{candidateToAddToPipeline.currentRole} • {candidateToAddToPipeline.currentLocation}</div>
+                    </div>
+                    {matchData && (
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs font-bold",
+                        matchData.score >= 85 ? "bg-emerald-100 text-emerald-800" :
+                        matchData.score >= 70 ? "bg-blue-100 text-blue-800" :
+                        "bg-amber-100 text-amber-800"
+                      )}>
+                        {matchData.score}% Match
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200">
+                    <div className="text-xs text-slate-500">Target Job</div>
+                    <div className="text-sm font-medium text-slate-800">{job.title}</div>
+                    <div className="text-xs text-slate-500">{client?.name || 'Client'} • {job.code}</div>
+                  </div>
+                </div>
+
+                {/* Initial Workflow Parameters */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-blue-50/50 border border-blue-100 rounded-lg p-2.5">
+                  <div>
+                    <span className="text-slate-500 block">Initial Stage:</span>
+                    <span className="font-semibold text-blue-900">Sourced</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Origin / Source:</span>
+                    <span className="font-semibold text-blue-900">AI Match</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setCandidateToAddToPipeline(null)}
+                  disabled={isSubmittingPipeline}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAddToPipeline}
+                  disabled={isSubmittingPipeline}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  {isSubmittingPipeline ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Confirm & Move to Pipeline
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Dismiss Match Confirmation Modal */}
+      {candidateToDismiss && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="p-6">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">Dismiss Match Recommendation</h3>
+              <p className="text-sm text-slate-600">
+                Are you sure you want to dismiss <strong className="text-slate-900">{candidateToDismiss.fullName}</strong> from matches for this job?
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                This candidate will be hidden from the active match list for {job.title}. They remain in the candidate database and will still match other jobs.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setCandidateToDismiss(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDismiss}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Dismiss Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <CandidateMatchProfileDrawer 
         isOpen={!!selectedProfileId}
         onClose={() => setSelectedProfileId(null)}
         candidate={candidates.find(c => c.id === selectedProfileId) || null}
         match={run.matches.find(m => m.candidateId === selectedProfileId) || null}
+        isInPipeline={!!selectedProfileId && applications.some(a => a.jobId === job.id && a.candidateId === selectedProfileId)}
+        onAddToPipeline={(cand) => {
+          setSelectedProfileId(null);
+          setCandidateToAddToPipeline(cand);
+        }}
+        canAction={canAction}
       />
     </div>
   );

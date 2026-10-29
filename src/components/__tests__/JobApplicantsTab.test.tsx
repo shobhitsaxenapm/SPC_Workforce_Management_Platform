@@ -171,19 +171,21 @@ describe('JobApplicantsTab Filtering', () => {
   });
 
   it('asks for confirmation and updates stage when Move to Pipeline is clicked', () => {
-    // Mock window.confirm
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-
     render(<JobApplicantsTab jobId="j1" applications={mockApplications} candidates={mockCandidates} />);
     
     // Find the move to pipeline button for Alice (who is in 'New' stage)
     const moveBtn = screen.getByTitle('Move to Pipeline');
     fireEvent.click(moveBtn);
     
-    expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to move this applicant to the pipeline?');
+    // Verify confirmation modal opens
+    expect(screen.getByText('Move Applicant to Pipeline')).toBeInTheDocument();
+    
+    // Click confirm button in modal
+    const confirmBtn = screen.getByRole('button', { name: /Confirm & Move to Pipeline/i });
+    fireEvent.click(confirmBtn);
+
     expect(mockUpdateStage).toHaveBeenCalledWith('a1', 'Sourced');
     
-    confirmSpy.mockRestore();
     mockUpdateStage.mockClear();
   });
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History, X, XCircle, AlertTriangle, Send } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage, CANONICAL_SOURCES, Placement, HiringModel } from '../types';
 import { useApp } from '../context/AppContext';
@@ -72,6 +72,21 @@ export default function JobDetail() {
   const [selectedForClientReview, setSelectedForClientReview] = useState<string[]>([]);
   const [clientReviewMessage, setClientReviewMessage] = useState('');
   const [clientReviewSuccess, setClientReviewSuccess] = useState<{token: string, count: number, date: string} | null>(null);
+
+  const [showSubmitClientReviewModal, setShowSubmitClientReviewModal] = useState(false);
+  const [clientReviewCandidateToAdvance, setClientReviewCandidateToAdvance] = useState<{
+    app: typeof applications[0];
+    candidate: typeof candidates[0];
+    targetStage: 'Interviewing' | 'Rejected';
+  } | null>(null);
+  const [stageChangePrompt, setStageChangePrompt] = useState<{
+    appId: string;
+    candidateName: string;
+    newStage: 'Rejected' | 'Withdrawn';
+  } | null>(null);
+  const [stageChangeReason, setStageChangeReason] = useState('Technical Skills Not Aligned');
+  const [stageChangeNotes, setStageChangeNotes] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -155,13 +170,58 @@ export default function JobDetail() {
   };
 
   const updateStage = (appId: string, newStage: ApplicationStage) => {
+    const targetApp = applications.find(a => a.id === appId);
+    const cand = candidates.find(c => c.id === targetApp?.candidateId);
+    const candidateName = cand?.fullName || 'Candidate';
 
     if (newStage === 'Rejected' || newStage === 'Withdrawn') {
-       const reason = window.prompt(`Please provide a reason for marking as ${newStage}:`);
-       if (reason === null) return; // Cancelled
-       updateApplicationStage(appId, newStage, undefined, reason);
+      setStageChangeReason(newStage === 'Rejected' ? 'Technical Skills Not Aligned' : 'Accepted Another Offer');
+      setStageChangeNotes('');
+      setStageChangePrompt({ appId, candidateName, newStage });
     } else {
-       updateApplicationStage(appId, newStage);
+      updateApplicationStage(appId, newStage);
+      setToast({ message: `${candidateName} moved to ${newStage}.`, type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleConfirmStageChangePrompt = () => {
+    if (!stageChangePrompt) return;
+    const { appId, newStage, candidateName } = stageChangePrompt;
+    const fullReason = stageChangeNotes.trim() ? `${stageChangeReason}: ${stageChangeNotes.trim()}` : stageChangeReason;
+    updateApplicationStage(appId, newStage, undefined, fullReason);
+    setToast({ message: `${candidateName} marked as ${newStage}.`, type: 'success' });
+    setStageChangePrompt(null);
+    setStageChangeNotes('');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleConfirmSubmitClientReview = () => {
+    const token = createClientReviewBatch({
+      jobId: job.id,
+      clientId: job.clientId,
+      applicationIds: selectedForClientReview,
+      targetCount: 10,
+      message: clientReviewMessage
+    });
+    setClientReviewSuccess({ token, count: selectedForClientReview.length, date: new Date().toISOString() });
+    setToast({ message: `Successfully submitted ${selectedForClientReview.length} candidate(s) to ${client?.name || 'client'}.`, type: 'success' });
+    setIsPreparingClientReview(false);
+    setSelectedForClientReview([]);
+    setClientReviewMessage('');
+    setShowSubmitClientReviewModal(false);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleConfirmAdvanceFromReview = (scheduleInterviewNow = false) => {
+    if (!clientReviewCandidateToAdvance) return;
+    const { app, candidate, targetStage } = clientReviewCandidateToAdvance;
+    
+    updateStage(app.id, targetStage);
+    setClientReviewCandidateToAdvance(null);
+    
+    if (scheduleInterviewNow && targetStage === 'Interviewing') {
+      setScheduleCandidateId(candidate.id);
     }
   };
 
@@ -826,21 +886,7 @@ export default function JobDetail() {
                       </span>
                       <button
                         disabled={selectedForClientReview.length === 0}
-                        onClick={() => {
-                          if (window.confirm(`Submit ${selectedForClientReview.length} candidate(s) to client?`)) {
-                            const token = createClientReviewBatch({
-                              jobId: job.id,
-                              clientId: job.clientId,
-                              applicationIds: selectedForClientReview,
-                              targetCount: 10,
-                              message: clientReviewMessage
-                            });
-                            setClientReviewSuccess({ token, count: selectedForClientReview.length, date: new Date().toISOString() });
-                            setIsPreparingClientReview(false);
-                            setSelectedForClientReview([]);
-                            setClientReviewMessage('');
-                          }
-                        }}
+                        onClick={() => setShowSubmitClientReviewModal(true)}
                         className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Submit
@@ -1209,8 +1255,8 @@ export default function JobDetail() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (window.confirm('Move candidate to Interviewing?')) {
-                                      updateStage(app.id, 'Interviewing');
+                                    if (candidate) {
+                                      setClientReviewCandidateToAdvance({ app, candidate, targetStage: 'Interviewing' });
                                     }
                                   }}
                                   className="px-2 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors text-[10px] font-bold"
@@ -1223,8 +1269,8 @@ export default function JobDetail() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (window.confirm('Move candidate to Rejected?')) {
-                                      updateStage(app.id, 'Rejected');
+                                    if (candidate) {
+                                      setClientReviewCandidateToAdvance({ app, candidate, targetStage: 'Rejected' });
                                     }
                                   }}
                                   className="px-2 py-1.5 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors text-[10px] font-bold"
@@ -1589,6 +1635,298 @@ export default function JobDetail() {
             setHistoryDrawerAppId(null);
           }}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-[70] animate-slide-in-right">
+          <div className={cn(
+            "flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium",
+            toast.type === 'success' 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              : "bg-red-50 border-red-200 text-red-800"
+          )}>
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-slate-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Submit to Client Review Confirmation Modal */}
+      {showSubmitClientReviewModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <Send className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Submit to Client Review</h3>
+                  <p className="text-xs text-slate-500">Dispatch batch to client review portal</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowSubmitClientReviewModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                You are about to submit <strong className="text-slate-900">{selectedForClientReview.length} candidate(s)</strong> to <strong className="text-slate-900">{client?.name || 'the client'}</strong> for review.
+              </p>
+
+              {/* Candidates Selected Preview */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Selected Candidates ({selectedForClientReview.length})
+                </label>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 border border-slate-200 rounded-xl p-2.5 bg-slate-50">
+                  {selectedForClientReview.map(appId => {
+                    const app = applications.find(a => a.id === appId);
+                    const cand = candidates.find(c => c.id === app?.candidateId);
+                    if (!cand) return null;
+                    return (
+                      <div key={appId} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-200 text-xs">
+                        <span className="font-semibold text-slate-800">{cand.fullName}</span>
+                        <span className="text-slate-500">{cand.currentRole || 'Candidate'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Message to Client */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Message for Client (Optional)
+                </label>
+                <textarea
+                  value={clientReviewMessage}
+                  onChange={e => setClientReviewMessage(e.target.value)}
+                  placeholder="E.g., Please review these top shortlisted profiles for your initial review..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowSubmitClientReviewModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmitClientReview}
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center gap-1.5"
+              >
+                <Send className="w-4 h-4" />
+                Confirm & Submit to Client
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advance / Reject from Client Review Confirmation Modal */}
+      {clientReviewCandidateToAdvance && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center font-bold",
+                  clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                )}>
+                  {clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? (
+                    <Calendar className="w-4 h-4" />
+                  ) : (
+                    <XCircle className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? 'Advance to Interviewing' : 'Move to Rejected'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Post-client review transition</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setClientReviewCandidateToAdvance(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                {clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? (
+                  <>The client shortlisted <strong className="text-slate-900">{clientReviewCandidateToAdvance.candidate.fullName}</strong>. Advance them to the Interviewing stage?</>
+                ) : (
+                  <>The client rejected <strong className="text-slate-900">{clientReviewCandidateToAdvance.candidate.fullName}</strong>. Move them to the Rejected stage?</>
+                )}
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+                <div>Candidate: <span className="font-semibold text-slate-800">{clientReviewCandidateToAdvance.candidate.fullName}</span></div>
+                <div>Client Status: <span className={cn(
+                  "font-bold",
+                  clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? "text-emerald-700" : "text-red-700"
+                )}>{clientReviewCandidateToAdvance.app.clientReviewStatus || 'Reviewed'}</span></div>
+                {clientReviewCandidateToAdvance.app.clientReviewFeedback && (
+                  <div className="text-slate-600 italic mt-1">"{clientReviewCandidateToAdvance.app.clientReviewFeedback}"</div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setClientReviewCandidateToAdvance(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+
+              {clientReviewCandidateToAdvance.targetStage === 'Interviewing' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmAdvanceFromReview(false)}
+                    className="px-4 py-2 text-sm font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors"
+                  >
+                    Move Stage Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmAdvanceFromReview(true)}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm inline-flex items-center gap-1.5"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Move & Schedule Round 1
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConfirmAdvanceFromReview(false)}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+                >
+                  Confirm Rejection
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection / Withdrawal Reason Capture Modal */}
+      {stageChangePrompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Mark as {stageChangePrompt.newStage}</h3>
+                  <p className="text-xs text-slate-500">Record reason for stage transition</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setStageChangePrompt(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                Please specify a reason for marking <strong className="text-slate-900">{stageChangePrompt.candidateName}</strong> as <strong className="text-slate-900">{stageChangePrompt.newStage}</strong>:
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Reason *
+                </label>
+                <select
+                  value={stageChangeReason}
+                  onChange={e => setStageChangeReason(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none"
+                >
+                  {stageChangePrompt.newStage === 'Rejected' ? (
+                    <>
+                      <option value="Technical Skills Not Aligned">Technical Skills Not Aligned</option>
+                      <option value="Culture / Communication Fit">Culture / Communication Fit</option>
+                      <option value="Candidate Notice Period Unsuitable">Candidate Notice Period Unsuitable</option>
+                      <option value="Candidate Compensation Expectations Mismatch">Candidate Compensation Expectations Mismatch</option>
+                      <option value="Client Rejected Post-Interview">Client Rejected Post-Interview</option>
+                      <option value="Failed Background / Reference Check">Failed Background / Reference Check</option>
+                      <option value="Other">Other</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Accepted Another Offer">Accepted Another Offer</option>
+                      <option value="No Longer Interested in Role">No Longer Interested in Role</option>
+                      <option value="Relocation / Location Constraint">Relocation / Location Constraint</option>
+                      <option value="Personal / Family Reasons">Personal / Family Reasons</option>
+                      <option value="Current Employer Retained / Counter-Offer">Current Employer Retained / Counter-Offer</option>
+                      <option value="Unresponsive / Ghosted">Unresponsive / Ghosted</option>
+                      <option value="Other">Other</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Additional Notes (Optional)
+                </label>
+                <textarea
+                  value={stageChangeNotes}
+                  onChange={e => setStageChangeNotes(e.target.value)}
+                  placeholder="Provide context or internal feedback..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setStageChangePrompt(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStageChangePrompt}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Confirm {stageChangePrompt.newStage}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

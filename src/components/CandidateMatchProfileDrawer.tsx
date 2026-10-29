@@ -1,6 +1,6 @@
 import React from 'react';
 import { Candidate, JobMatch } from '../types';
-import { X, MapPin, Briefcase, GraduationCap, Calendar, CheckCircle2, AlertCircle, Users } from 'lucide-react';
+import { X, MapPin, Briefcase, GraduationCap, Calendar, CheckCircle2, AlertCircle, Users, UserPlus } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import SourceBadge from './SourceBadge';
 
@@ -9,9 +9,20 @@ interface CandidateMatchProfileDrawerProps {
   onClose: () => void;
   candidate: Candidate | null;
   match: JobMatch | null;
+  onAddToPipeline?: (candidate: Candidate) => void;
+  isInPipeline?: boolean;
+  canAction?: boolean;
 }
 
-export default function CandidateMatchProfileDrawer({ isOpen, onClose, candidate, match }: CandidateMatchProfileDrawerProps) {
+export default function CandidateMatchProfileDrawer({ 
+  isOpen, 
+  onClose, 
+  candidate, 
+  match,
+  onAddToPipeline,
+  isInPipeline,
+  canAction = true
+}: CandidateMatchProfileDrawerProps) {
   if (!isOpen || !candidate || !match) return null;
 
   return (
@@ -156,6 +167,29 @@ export default function CandidateMatchProfileDrawer({ isOpen, onClose, candidate
             Resume updated: {formatDate(candidate.createdAt || '')}
           </div>
         </div>
+
+        {/* Footer Actions */}
+        {(canAction || isInPipeline) && (
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+            {isInPipeline ? (
+              <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-lg text-xs font-semibold w-full justify-center">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                Candidate is already in the Pipeline
+              </div>
+            ) : (
+              canAction && onAddToPipeline && (
+                <button
+                  type="button"
+                  onClick={() => onAddToPipeline(candidate)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add to Pipeline
+                </button>
+              )
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
