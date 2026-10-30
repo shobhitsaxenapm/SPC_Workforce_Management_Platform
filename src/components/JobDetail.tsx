@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History, X, XCircle, AlertTriangle, Send } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History, X, XCircle, AlertTriangle, Send, Globe, EyeOff } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage, CANONICAL_SOURCES, Placement, HiringModel } from '../types';
 import { useApp } from '../context/AppContext';
@@ -109,6 +109,9 @@ export default function JobDetail() {
   
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [holdReason, setHoldReason] = useState<any>('Client Hold');
+
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showUnpublishModal, setShowUnpublishModal] = useState(false);
   
   if (!job) return <div>Job not found</div>;
 
@@ -294,18 +297,26 @@ export default function JobDetail() {
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 text-sm">
                   {job.status === 'Open' && !job.isPublished && (
                     <button 
-                      onClick={() => updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() })}
-                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                      onClick={() => {
+                        setShowActionMenu(false);
+                        setShowPublishModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      Publish Job
+                      <Globe className="w-4 h-4 text-emerald-600" />
+                      <span>Publish Job</span>
                     </button>
                   )}
                   {job.status === 'Open' && job.isPublished && (
                     <button 
-                      onClick={() => updateJob(job.id, { isPublished: false })}
-                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
+                      onClick={() => {
+                        setShowActionMenu(false);
+                        setShowUnpublishModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
-                      Unpublish Job
+                      <EyeOff className="w-4 h-4 text-slate-500" />
+                      <span>Unpublish Job</span>
                     </button>
                   )}
                   {job.status === 'Open' && (
@@ -318,7 +329,12 @@ export default function JobDetail() {
                   )}
                   {job.status === 'On Hold' && (
                     <button 
-                      onClick={() => updateJob(job.id, { status: 'Open', isPublished: false })}
+                      onClick={() => {
+                        setShowActionMenu(false);
+                        updateJob(job.id, { status: 'Open', isPublished: false });
+                        setToast({ message: `Job "${job.title}" has been resumed.`, type: 'success' });
+                        setTimeout(() => setToast(null), 3500);
+                      }}
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50"
                     >
                       Resume Job
@@ -334,7 +350,12 @@ export default function JobDetail() {
                   )}
                   {job.status === 'Closed' && (
                     <button 
-                      onClick={() => updateJob(job.id, { status: 'Open', isPublished: false })}
+                      onClick={() => {
+                        setShowActionMenu(false);
+                        updateJob(job.id, { status: 'Open', isPublished: false });
+                        setToast({ message: `Job "${job.title}" reopened as Open (Unpublished).`, type: 'success' });
+                        setTimeout(() => setToast(null), 3500);
+                      }}
                       className="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50"
                     >
                       Reopen Job
@@ -1480,6 +1501,8 @@ export default function JobDetail() {
                     closeNote
                   });
                   setShowCloseModal(false);
+                  setToast({ message: `Job "${job.title}" has been closed.`, type: 'success' });
+                  setTimeout(() => setToast(null), 3500);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
@@ -1534,10 +1557,192 @@ export default function JobDetail() {
                     holdReason
                   });
                   setShowHoldModal(false);
+                  setToast({ message: `Job "${job.title}" has been placed on hold.`, type: 'success' });
+                  setTimeout(() => setToast(null), 3500);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
               >
                 Confirm Hold
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Publish Job Confirmation Modal */}
+      {showPublishModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-100/70 text-emerald-700 rounded-xl border border-emerald-200 shadow-sm">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Publish Job Opening</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {job.code || job.id} &bull; {job.title}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowPublishModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl text-emerald-900 text-xs sm:text-sm space-y-1.5">
+                <div className="flex items-center gap-2 font-semibold text-emerald-800">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Public Careers Portal Visibility</span>
+                </div>
+                <p className="text-emerald-700 leading-relaxed pl-6">
+                  Publishing this opening makes it immediately visible on the public Careers portal. Candidates will be able to search, view full role requirements, and submit job applications online.
+                </p>
+              </div>
+
+              {/* Job Summary Card */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <h4 className="font-semibold text-slate-900 text-sm">{job.title}</h4>
+                    <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      {client?.name || 'Company Client'}
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Ready to Publish
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-2 border-t border-slate-200/60">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{job.location || 'Gurugram'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{job.type || 'Full-time'} &bull; {job.openings} opening{job.openings > 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You can unpublish or pause this opening at any time without losing candidate applications, interview logs, or pipeline history.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => setShowPublishModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() });
+                  setShowPublishModal(false);
+                  setToast({ 
+                    message: `"${job.title}" has been published to the Careers Portal.`, 
+                    type: 'success' 
+                  });
+                  setTimeout(() => setToast(null), 3500);
+                }}
+                className="px-5 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Globe className="w-4 h-4" />
+                Confirm & Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unpublish Job Confirmation Modal */}
+      {showUnpublishModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-amber-50/60 via-orange-50/30 to-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100/70 text-amber-700 rounded-xl border border-amber-200 shadow-sm">
+                  <EyeOff className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Unpublish Job Opening</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {job.code || job.id} &bull; {job.title}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowUnpublishModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs sm:text-sm space-y-1.5">
+                <div className="flex items-center gap-2 font-semibold text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Hidden from Public Careers Portal</span>
+                </div>
+                <p className="text-amber-700 leading-relaxed pl-6">
+                  Unpublishing will immediately remove this opening from public view on the Careers portal. Candidates will no longer be able to discover or apply for this role online.
+                </p>
+              </div>
+
+              {/* Data Safety Note */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Pipeline & Internal Sourcing Preserved</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  All existing applicants ({applicants.length}), active pipeline candidates ({pipelineApps.length}), scheduled interviews, and AI database matches remain completely intact and active for your team to manage.
+                </p>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You can republish this opening at any time whenever you are ready to receive public applications again.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => setShowUnpublishModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Keep Published
+              </button>
+              <button 
+                onClick={() => {
+                  updateJob(job.id, { isPublished: false });
+                  setShowUnpublishModal(false);
+                  setToast({ 
+                    message: `"${job.title}" has been unpublished from the Careers Portal.`, 
+                    type: 'success' 
+                  });
+                  setTimeout(() => setToast(null), 3500);
+                }}
+                className="px-5 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <EyeOff className="w-4 h-4" />
+                Confirm & Unpublish
               </button>
             </div>
           </div>
