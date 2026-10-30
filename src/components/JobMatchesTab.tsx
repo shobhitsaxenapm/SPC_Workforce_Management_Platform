@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Job, JobMatch, Candidate } from '../types';
 import { Search, UserPlus, X, Filter, ChevronDown, CheckCircle2, Eye, RotateCcw, AlertTriangle } from 'lucide-react';
@@ -72,6 +72,20 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
     
     return true;
   });
+
+  // Pagination state (10 matches per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, scoreFilter, locationFilter, job.id]);
+
+  const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
+  const paginatedMatches = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredMatches.slice(start, start + itemsPerPage);
+  }, [filteredMatches, currentPage]);
 
   const handleConfirmAddToPipeline = () => {
     if (!candidateToAddToPipeline) return;
@@ -229,7 +243,7 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredMatches.map(match => {
+              {paginatedMatches.map(match => {
                 const candidate = candidates.find(c => c.id === match.candidateId);
                 if (!candidate) return null;
                 
@@ -325,6 +339,47 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Toolbar */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 border-t border-slate-200 bg-slate-50/70">
+            <span className="text-xs sm:text-sm text-slate-500 font-medium">
+              Showing <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, filteredMatches.length)}</span> of <span className="font-semibold text-slate-800">{filteredMatches.length}</span> matches
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "w-8 h-8 text-xs font-semibold rounded-lg transition-colors",
+                      currentPage === page
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-200/60"
+                    )}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Toast Notification */}

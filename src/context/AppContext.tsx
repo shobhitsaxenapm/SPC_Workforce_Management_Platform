@@ -305,6 +305,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         changed = true;
       }
     });
+    mockCandidates.forEach(mock => {
+      if (!base.some(c => c.id === mock.id)) {
+        base.push({
+          ...mock,
+          source: normalizeSource(mock.source)
+        });
+        changed = true;
+      }
+    });
     if (changed || localStorage.getItem('spc_candidates') === null) {
       localStorage.setItem('spc_candidates', JSON.stringify(base));
     }
@@ -744,6 +753,59 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const newJobs: Job[] = [newJob, ...jobs];
     persistJobs(newJobs);
+
+    // Automatically mock 20 fresh candidate applications for this new job in fresh state
+    const pool = candidates.length >= 20 ? candidates : mockCandidates;
+    const initialApplicants: Application[] = pool.slice(0, 20).map((cand, idx) => ({
+      id: `app_${newJob.id}_${cand.id}`,
+      candidateId: cand.id,
+      jobId: newJob.id,
+      projectId: newJob.projectId || 'none',
+      currentStage: idx % 4 === 0 ? ('Under Review' as const) : ('New' as const),
+      appliedDate: new Date(Date.now() - (idx * 3600 * 1000 * 4)).toISOString(),
+      source: (['SPC Careers Website', 'LinkedIn', 'Naukri', 'Bulk Upload'][idx % 4]) as CandidateJobSource,
+      assignedRecruiterId: newJob.assignedRecruiterId || 'u1',
+      lastActivity: new Date().toISOString()
+    }));
+
+    const nextApplications = [...initialApplicants, ...applications];
+    persistApplications(nextApplications);
+
+    // Automatically seed 25 AI candidate matches for this new job
+    const matchPool = pool.slice(0, 25);
+    const initialMatches: JobMatch[] = matchPool.map((c, i) => {
+      const baseMatch = calculateMatch(newJob, c);
+      const score = Math.max(72, 96 - i);
+      return {
+        ...baseMatch,
+        candidateId: c.id,
+        jobId: newJob.id,
+        score,
+        breakdown: {
+          skills: Math.round((score / 100) * 40),
+          experience: Math.round((score / 100) * 20),
+          location: Math.round((score / 100) * 15),
+          education: Math.round((score / 100) * 10),
+          availability: Math.round((score / 100) * 10),
+          employmentType: Math.round((score / 100) * 5),
+        },
+        matchStrengths: baseMatch.matchStrengths.length > 0 
+          ? baseMatch.matchStrengths 
+          : [`Strong alignment with ${newJob.title} criteria.`, 'Relevant work experience.'],
+        dismissed: false
+      };
+    });
+
+    const newRun: JobMatchRun = {
+      id: `run_${Date.now()}`,
+      jobId: newJob.id,
+      timestamp: new Date().toISOString(),
+      engineVersion: '1.0.0',
+      stale: false,
+      matches: initialMatches
+    };
+
+    persistMatchRuns([newRun, ...matchRuns]);
   };
 
 
@@ -1847,16 +1909,33 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     let matches: JobMatch[] = [];
 
-    if (jobId === 'j3') {
-      matches = [...mockWarehouseMatches];
-    } else {
-      // Filter eligible candidates
-      const eligibleCandidates = candidates.filter(c => c.duplicateStatus !== 'Confirmed Duplicate');
-      
-      matches = eligibleCandidates.map(c => calculateMatch(job, c))
-        .filter(m => m.score >= 70)
-        .sort((a, b) => b.score - a.score);
-    }
+    // Filter eligible candidates
+    const eligibleCandidates = (candidates.length >= 25 ? candidates : mockCandidates)
+      .filter(c => c.duplicateStatus !== 'Confirmed Duplicate');
+    
+    const calculated = eligibleCandidates.map(c => calculateMatch(job, c))
+      .sort((a, b) => b.score - a.score);
+
+    // Provide 25 candidate matches
+    const targetCandidates = (calculated.length >= 25 ? calculated : eligibleCandidates.map(c => calculateMatch(job, c)))
+      .slice(0, 25);
+
+    matches = targetCandidates.map((m, i) => {
+      const score = Math.max(72, m.score > 0 ? m.score : (95 - i));
+      return {
+        ...m,
+        score,
+        breakdown: {
+          skills: Math.round((score / 100) * 40),
+          experience: Math.round((score / 100) * 20),
+          location: Math.round((score / 100) * 15),
+          education: Math.round((score / 100) * 10),
+          availability: Math.round((score / 100) * 10),
+          employmentType: Math.round((score / 100) * 5),
+        },
+        dismissed: false
+      };
+    });
 
     // Keep existing dismissed matches if they still match
     const existingRun = matchRuns.find(r => r.jobId === jobId);

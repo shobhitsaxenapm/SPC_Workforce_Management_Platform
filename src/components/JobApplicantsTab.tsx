@@ -25,9 +25,14 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
   const [rejectionNotes, setRejectionNotes] = useState<string>('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Reset filters when changing jobs
+  // Pagination state (10 applicants per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset filters and page when changing jobs
   useEffect(() => {
     setFilters(createEmptyFilters());
+    setCurrentPage(1);
   }, [jobId]);
 
   // Compute available locations, statuses and sources based on current applicants
@@ -109,6 +114,17 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
     });
   }, [applications, candidates, filters]);
 
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const paginatedApplications = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredApplications.slice(start, start + itemsPerPage);
+  }, [filteredApplications, currentPage]);
+
   // We only show website applications in this tab. The logic to filter them can be handled here or in JobDetail,
   // but to be safe we'll show whatever applications are passed in.
   
@@ -176,7 +192,7 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredApplications.length === 0 ? (
+            {paginatedApplications.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-500">
@@ -195,7 +211,7 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                 </td>
               </tr>
             ) : (
-              filteredApplications.map((app) => {
+              paginatedApplications.map((app) => {
                 const candidate = candidates.find((c) => c.id === app.candidateId);
                 if (!candidate) return null;
 
@@ -297,6 +313,47 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
         </table>
       </div>
       </div>
+
+      {/* Pagination Toolbar */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 border border-slate-200 bg-slate-50/70 mt-3 rounded-xl">
+          <span className="text-xs sm:text-sm text-slate-500 font-medium">
+            Showing <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, filteredApplications.length)}</span> of <span className="font-semibold text-slate-800">{filteredApplications.length}</span> applicants
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1 px-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={cn(
+                    "w-8 h-8 text-xs font-semibold rounded-lg transition-colors",
+                    currentPage === page
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-200/60"
+                  )}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {viewResumeId && (
         <ResumeModal candidateId={viewResumeId} onClose={() => setViewResumeId(null)} />
