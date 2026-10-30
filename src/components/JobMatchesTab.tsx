@@ -225,7 +225,13 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
         </div>
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
-          <span>Showing {filteredMatches.length} of {activeMatches.length} candidate matches (All matched from AI Engine)</span>
+          <span>
+            {filteredMatches.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredMatches.length)}</span> of <span className="font-semibold text-slate-700">{filteredMatches.length}</span> candidate matches (All matched from AI Engine)</>
+            ) : (
+              '0 candidate matches'
+            )}
+          </span>
         </div>
       </div>
 
