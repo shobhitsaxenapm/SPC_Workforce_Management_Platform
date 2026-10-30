@@ -1439,6 +1439,10 @@ export default function JobDetail() {
           jobId={job.id} 
           isOpen={showAddCandidateModal} 
           onClose={() => setShowAddCandidateModal(false)} 
+          onSuccess={(msg) => {
+            setToast({ message: msg, type: 'success' });
+            setTimeout(() => setToast(null), 3500);
+          }}
         />
       )}
 

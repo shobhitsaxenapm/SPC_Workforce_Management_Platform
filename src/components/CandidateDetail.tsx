@@ -53,6 +53,7 @@ export default function CandidateDetail() {
   const [showOnboardingModal, setShowOnboardingModal] = useState<{jobId: string} | null>(null);
   const [showOfferPreparationModal, setShowOfferPreparationModal] = useState<string | null>(null); // appId
   const [showConfirmSelectionModal, setShowConfirmSelectionModal] = useState<string | null>(null); // appId
+  const [showDismissMatchModal, setShowDismissMatchModal] = useState<string | null>(null); // jobId
   const [showRecordFeedbackModal, setShowRecordFeedbackModal] = useState<string | null>(null); // interviewId
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // jobId
   
@@ -313,9 +314,7 @@ export default function CandidateDetail() {
   };
 
   const handleDismiss = (jobId: string) => {
-    if (window.confirm('Are you sure you want to dismiss this match? It will be hidden from the matching jobs list.')) {
-      setDismissedMatches([...dismissedMatches, jobId]);
-    }
+    setShowDismissMatchModal(jobId);
   };
 
   const confirmStartOnboarding = () => {
@@ -1272,6 +1271,58 @@ export default function CandidateDetail() {
           </div>
         </div>
       )}
+
+      {/* Dismiss Match Confirmation Modal */}
+      {showDismissMatchModal && (() => {
+        const targetJob = mockJobs.find(j => j.id === showDismissMatchModal);
+        const targetClient = mockClients.find(c => c.id === targetJob?.clientId);
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-semibold text-slate-800">Dismiss Job Match</h3>
+                <button onClick={() => setShowDismissMatchModal(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-slate-600 text-sm">
+                  Are you sure you want to dismiss the recommended match between <strong>{candidate.fullName}</strong> and:
+                </p>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1">
+                  <p className="font-semibold text-slate-900 text-sm">{targetJob?.title || 'Job Opening'}</p>
+                  <p className="text-xs text-slate-500">{targetClient?.name || 'Client'}</p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3.5 py-2.5 rounded-lg">
+                  This role will be hidden from the candidate's active match recommendations. The candidate record remains intact.
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                <button 
+                  onClick={() => setShowDismissMatchModal(null)} 
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setDismissedMatches([...dismissedMatches, showDismissMatchModal]);
+                    const jobTitle = targetJob?.title || 'Job';
+                    setShowDismissMatchModal(null);
+                    setToast({ message: `Match with "${jobTitle}" dismissed.`, type: 'success' });
+                    setTimeout(() => setToast(null), 3000);
+                  }} 
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  Confirm Dismissal
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Schedule Interview Modal */}
       <ScheduleInterviewModal 

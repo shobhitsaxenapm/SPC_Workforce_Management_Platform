@@ -73,6 +73,7 @@ interface AppContextType {
   updateProjectStatus: (projectId: string, status: ProjectStatus, reason?: string) => { success: boolean; error?: string };
   updateProject: (projectId: string, updates: Partial<Project>, reason?: string, impactSnapshot?: any) => { success: boolean; error?: string };
   submitInterviewFeedback: (interviewId: string, feedbackData: Partial<Interview>) => void;
+  updateOnboarding: (onboardingId: string, updates: Partial<Onboarding>) => void;
   submitIndividualFeedback: (interviewId: string, tokenOrInterviewerId: string, feedbackData: Partial<InterviewerInvitation>) => { success: boolean; error?: string };
   confirmRecruiterOutcome: (interviewId: string, outcome: RecruiterInterviewOutcome, notes?: string, confirmStageChange?: boolean) => { success: boolean; error?: string };
   sendFeedbackReminder: (interviewId: string, interviewerIdOrEmail: string) => { success: boolean; message: string };
@@ -548,6 +549,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const persistOnboardings = (newOnboardings: Onboarding[]) => {
     setOnboardings(newOnboardings);
     localStorage.setItem('spc_onboardings', JSON.stringify(newOnboardings));
+  };
+
+  const updateOnboarding = (onboardingId: string, updates: Partial<Onboarding>) => {
+    const next = onboardings.map(o => o.id === onboardingId ? { ...o, ...updates } : o);
+    persistOnboardings(next);
   };
 
   const login = (email: string) => {
@@ -1951,6 +1957,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         interviews,
         offers,
         onboardings,
+        updateOnboarding,
         placements,
         matchRuns,
         informationRequests,

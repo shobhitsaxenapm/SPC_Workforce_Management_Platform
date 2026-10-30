@@ -7,9 +7,10 @@ interface AddCandidateToJobModalProps {
   jobId: string;
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (message: string) => void;
 }
 
-export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCandidateToJobModalProps) {
+export default function AddCandidateToJobModal({ jobId, isOpen, onClose, onSuccess }: AddCandidateToJobModalProps) {
   const { addMatchToPipeline } = useApp();
 
   const [showUpload, setShowUpload] = useState(true);
@@ -45,10 +46,8 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose }: AddCa
           isEditMode={false}
           onSaveSuccess={(candidateId) => {
             const result = addMatchToPipeline(jobId, candidateId, 'Candidate uploaded directly against Job', 'Manual Upload');
-            if (result.success) {
-              alert('Candidate added to the Sourced stage for this Job.');
-            } else {
-              alert(result.error);
+            if (result.success && onSuccess) {
+              onSuccess('Candidate successfully uploaded and added to the Sourced stage for this Job.');
             }
             onClose();
           }}

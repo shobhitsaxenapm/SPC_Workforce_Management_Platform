@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Client, PrimaryIndustry } from '../types';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
@@ -16,6 +16,7 @@ export default function ClientFormModal({ mode, initialClient, onClose }: Client
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   
   const getInitialFormState = () => {
     if (mode === 'edit' && initialClient) {
@@ -54,9 +55,8 @@ export default function ClientFormModal({ mode, initialClient, onClose }: Client
 
   const handleClose = () => {
     if (isDirty && !isSuccess) {
-      if (!window.confirm('You have unsaved changes. Are you sure you want to discard them?')) {
-        return;
-      }
+      setShowDiscardConfirm(true);
+      return;
     }
     onClose();
   };
@@ -255,6 +255,43 @@ export default function ClientFormModal({ mode, initialClient, onClose }: Client
           )}
         </div>
       </div>
+
+      {/* DISCARD CHANGES CONFIRMATION MODAL */}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200">
+            <div className="p-6 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Discard Unsaved Changes?</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You have unsaved changes in this client form. If you discard now, any modifications you made will be lost.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                type="button"
+                onClick={() => setShowDiscardConfirm(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Keep Editing
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  onClose();
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Discard Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

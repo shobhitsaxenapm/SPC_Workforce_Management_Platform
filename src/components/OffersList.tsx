@@ -49,7 +49,7 @@ export default function OffersList() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Active Modals
-  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'draft_form' | 'return_comment' | 'letter_preview' | 'start_negotiation' | 'create_revision' | 'record_response' | 'submit_approval' | null>(null);
+  const [activeModal, setActiveModal] = useState<'view' | 'onboarding_confirm' | 'draft_form' | 'return_comment' | 'letter_preview' | 'start_negotiation' | 'create_revision' | 'record_response' | 'submit_approval' | 'approve_confirm' | 'issue_confirm' | null>(null);
   const [approvalEmail, setApprovalEmail] = useState('');
   const [previewSource, setPreviewSource] = useState<'view' | 'draft_form' | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
@@ -306,23 +306,26 @@ export default function OffersList() {
 
   const handleApproveOffer = () => {
     if (!selectedOffer) return;
-    if (window.confirm('Are you sure you want to approve this offer?')) {
-      updateOffer(selectedOffer.id, {
-        status: 'Approved',
-        activities: [
-          ...(selectedOffer.activities || []),
-          {
-            id: Date.now().toString(),
-            action: 'Offer approved',
-            date: new Date().toISOString(),
-            actor: 'Current user'
-          }
-        ]
-      });
-      triggerToast('Offer approved successfully.');
-      setActiveModal(null);
-      setSelectedOffer(null);
-    }
+    setActiveModal('approve_confirm');
+  };
+
+  const confirmApproveOffer = () => {
+    if (!selectedOffer) return;
+    updateOffer(selectedOffer.id, {
+      status: 'Approved',
+      activities: [
+        ...(selectedOffer.activities || []),
+        {
+          id: Date.now().toString(),
+          action: 'Offer approved',
+          date: new Date().toISOString(),
+          actor: 'Current user'
+        }
+      ]
+    });
+    triggerToast('Offer approved successfully.');
+    setActiveModal(null);
+    setSelectedOffer(null);
   };
 
   const handleReturnToDraft = () => {
@@ -348,12 +351,15 @@ export default function OffersList() {
 
   const handleIssueOffer = () => {
     if (!selectedOffer) return;
-    if (window.confirm('Are you sure you want to issue this offer to the candidate?')) {
-      issueOffer(selectedOffer.id);
-      triggerToast('Offer sent to candidate.');
-      setActiveModal(null);
-      setSelectedOffer(null);
-    }
+    setActiveModal('issue_confirm');
+  };
+
+  const confirmIssueOffer = () => {
+    if (!selectedOffer) return;
+    issueOffer(selectedOffer.id);
+    triggerToast('Offer sent to candidate.');
+    setActiveModal(null);
+    setSelectedOffer(null);
   };
 
   const handleStartNegotiation = () => {
@@ -1247,6 +1253,144 @@ export default function OffersList() {
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
               >
                 <Check className="w-4 h-4" /> Submit Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APPROVE OFFER CONFIRMATION MODAL */}
+      {activeModal === 'approve_confirm' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-emerald-50/70 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Approve Offer</h3>
+                  <p className="text-xs text-slate-500">{selectedOffer.offerCode || selectedOffer.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                Are you sure you want to approve this employment offer for <strong>{selectedOffer.candidateName}</strong>?
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Designation</span>
+                  <span className="font-semibold text-slate-800">{selectedOffer.jobTitle}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Client / Company</span>
+                  <span className="font-medium text-slate-700">{selectedOffer.clientName}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-500">Annual CTC</span>
+                  <span className="font-bold text-emerald-700">{selectedOffer.currency} {Number(selectedOffer.annualCtc).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Planned Joining</span>
+                  <span className="font-medium text-slate-700">{formatDate(selectedOffer.joiningDate)}</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3.5 py-2.5 rounded-lg">
+                Approving transitions this offer to <strong>Approved</strong>, allowing the recruitment team to issue the formal offer letter to the candidate.
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                type="button"
+                onClick={() => setActiveModal(null)} 
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={confirmApproveOffer} 
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                Confirm & Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ISSUE OFFER CONFIRMATION MODAL */}
+      {activeModal === 'issue_confirm' && selectedOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-blue-50/70 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <Send className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Issue Offer to Candidate</h3>
+                  <p className="text-xs text-slate-500">{selectedOffer.offerCode || selectedOffer.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                You are about to officially issue the approved offer letter to:
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Candidate</span>
+                  <span className="font-semibold text-slate-800">{selectedOffer.candidateName}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Email Address</span>
+                  <span className="font-medium text-slate-700">{selectedOffer.candidateEmail || 'Candidate Email'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-500">Target Joining Date</span>
+                  <span className="font-semibold text-slate-800">{formatDate(selectedOffer.joiningDate)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Offer Validity / Expiry</span>
+                  <span className="font-semibold text-amber-700">{formatDate(selectedOffer.expiryDate)}</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3.5 py-2.5 rounded-lg">
+                This will change the status to <strong>Sent</strong> and record this issuance in the candidate's hiring audit trail.
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                type="button"
+                onClick={() => setActiveModal(null)} 
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={confirmIssueOffer} 
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                <Send className="w-4 h-4" />
+                Confirm & Issue Offer
               </button>
             </div>
           </div>
