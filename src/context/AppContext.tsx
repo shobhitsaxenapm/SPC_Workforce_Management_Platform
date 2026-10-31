@@ -233,6 +233,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       let healed = { ...j, title: j.title || j.projectName || '' };
       healed = normalizeJob(healed);
 
+      if (healed.isPublished && !healed.publishedAt) {
+        healed.publishedAt = healed.targetJoiningDate 
+          ? new Date(new Date(healed.targetJoiningDate).getTime() - 15 * 86400000).toISOString() 
+          : '2026-06-20T10:00:00Z';
+      }
+
       // Legacy data rule:
       // A legacy Job with an existing linked SPC offer or onboarding record may be classified as SPC Hire because the existing data proves it.
       // Do not infer Client Hire merely because no offer exists.
@@ -250,7 +256,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
 
     // If any were healed, save back to storage so they persist
-    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status || j.hiringModel !== parsedJobs[i].hiringModel)) {
+    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status || j.hiringModel !== parsedJobs[i].hiringModel || j.publishedAt !== parsedJobs[i].publishedAt)) {
       localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
     }
     return healedJobs;
@@ -739,6 +745,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     }
 
+    const isJobPublished = jobData.isPublished !== undefined ? jobData.isPublished : (jobData.status === 'Open');
     const newJob: Job = {
       ...jobData,
       id: jobId,
@@ -749,6 +756,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       filled: 0,
       hiringModel: jobData.hiringModel || 'Client Hire',
       status: jobData.status || 'Draft',
+      isPublished: isJobPublished,
+      publishedAt: jobData.publishedAt || (isJobPublished ? new Date().toISOString() : undefined),
     };
 
     const newJobs: Job[] = [newJob, ...jobs];

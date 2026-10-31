@@ -180,7 +180,8 @@ export const mockJobs: Job[] = [
     applicationDeadline: '2026-07-12T00:00:00Z',
     visibility: 'Public',
     status: 'Open',
-    isPublished: true
+    isPublished: true,
+    publishedAt: '2026-06-18T10:00:00Z'
   },
   {
     id: 'j3',
@@ -205,7 +206,8 @@ export const mockJobs: Job[] = [
     applicationDeadline: '2026-07-15T00:00:00Z',
     visibility: 'Public',
     status: 'Open',
-    isPublished: true
+    isPublished: true,
+    publishedAt: '2026-06-20T10:00:00Z'
   },
   {
     id: 'j4',
@@ -230,7 +232,8 @@ export const mockJobs: Job[] = [
     applicationDeadline: '2026-07-20T00:00:00Z',
     visibility: 'Public',
     status: 'Open',
-    isPublished: true
+    isPublished: true,
+    publishedAt: '2026-06-25T10:00:00Z'
   }
 ];
 
