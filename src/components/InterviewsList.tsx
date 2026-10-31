@@ -9,7 +9,7 @@ import { cn, formatDateTime, formatDate } from '../lib/utils';
 import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
-import { Interview, InterviewStatus } from '../types';
+import { Interview, InterviewStatus, InterviewActionRecommendation } from '../types';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import { getInterviewFeedbackSummary, getInterviewEndTime, normalizeInterviewers } from '../lib/interviewUtils';
 import InterviewHistoryDrawer from './InterviewHistoryDrawer';
@@ -71,7 +71,7 @@ export default function InterviewsList() {
     strengths: '',
     concerns: '',
     feedbackNotes: '',
-    recommendation: '' as 'Hire' | 'Hold' | 'Reject' | ''
+    recommendation: '' as InterviewActionRecommendation | ''
   });
   const [feedbackError, setFeedbackError] = useState('');
 
@@ -204,15 +204,15 @@ export default function InterviewsList() {
     if (!selectedInterview) return;
 
     if (!feedbackForm.overallResult) {
-      setFeedbackError('Overall result recommendation is required.');
+      setFeedbackError('Evaluation recommendation is required.');
       return;
     }
     if (!feedbackForm.recommendation) {
-      setFeedbackError('Action recommendation is required.');
+      setFeedbackError('Recommended next step is required.');
       return;
     }
     if (!feedbackForm.feedbackNotes.trim()) {
-      setFeedbackError('Interview notes and recommendations details are required.');
+      setFeedbackError('Detailed assessment notes are required.');
       return;
     }
 
@@ -772,16 +772,21 @@ export default function InterviewsList() {
             </div>
             <form onSubmit={handleFeedbackSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
               {feedbackError && <div className="text-red-700 text-sm bg-red-50 p-3 rounded-lg">{feedbackError}</div>}
-              {/* Form fields identical to original */}
+              {/* Form fields: Option A - Clear separation of Evaluation Result and Recommended Next Step */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Overall Result Recommendation *</label>
-                  <select required value={feedbackForm.overallResult} onChange={e => setFeedbackForm({...feedbackForm, overallResult: e.target.value as any})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Evaluation Recommendation *</label>
+                  <select 
+                    required 
+                    value={feedbackForm.overallResult} 
+                    onChange={e => setFeedbackForm({...feedbackForm, overallResult: e.target.value as any})} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
                     <option value="">Select recommendation...</option>
-                    <option value="Strong Hire">Strong Hire</option>
-                    <option value="Hire">Hire</option>
-                    <option value="Hold">Hold</option>
-                    <option value="Reject">Reject</option>
+                    <option value="Strong Hire">Strong Hire (Exceeds bar; top candidate)</option>
+                    <option value="Hire">Hire (Meets bar; recommended)</option>
+                    <option value="Hold">Hold (Borderline / discussion needed)</option>
+                    <option value="Reject">Reject (Does not meet bar)</option>
                   </select>
                 </div>
                 <div>
@@ -796,16 +801,60 @@ export default function InterviewsList() {
                   </div>
                 </div>
               </div>
+
               <div className="space-y-4">
-                <textarea rows={2} value={feedbackForm.strengths} onChange={e => setFeedbackForm({...feedbackForm, strengths: e.target.value})} placeholder="Candidate strengths..." className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
-                <textarea rows={2} value={feedbackForm.concerns} onChange={e => setFeedbackForm({...feedbackForm, concerns: e.target.value})} placeholder="Potential concerns..." className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
-                <textarea rows={3} required value={feedbackForm.feedbackNotes} onChange={e => setFeedbackForm({...feedbackForm, feedbackNotes: e.target.value})} placeholder="Detailed assessment notes... *" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
-                <select required value={feedbackForm.recommendation} onChange={e => setFeedbackForm({...feedbackForm, recommendation: e.target.value as any})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                  <option value="">Select action recommendation...</option>
-                  <option value="Hire">Proceed to Offer</option>
-                  <option value="Hold">Keep in Pipeline / Hold</option>
-                  <option value="Reject">Reject Application</option>
-                </select>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Key Strengths</label>
+                  <textarea 
+                    rows={2} 
+                    value={feedbackForm.strengths} 
+                    onChange={e => setFeedbackForm({...feedbackForm, strengths: e.target.value})} 
+                    placeholder="Candidate strengths, highlights, relevant competencies..." 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Areas of Concern</label>
+                  <textarea 
+                    rows={2} 
+                    value={feedbackForm.concerns} 
+                    onChange={e => setFeedbackForm({...feedbackForm, concerns: e.target.value})} 
+                    placeholder="Potential concerns, red flags, or skill gaps..." 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Detailed Assessment Notes *</label>
+                  <textarea 
+                    rows={3} 
+                    required 
+                    value={feedbackForm.feedbackNotes} 
+                    onChange={e => setFeedbackForm({...feedbackForm, feedbackNotes: e.target.value})} 
+                    placeholder="Comprehensive interview notes and evaluation reasoning... *" 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Recommended Next Step *</label>
+                  <select 
+                    required 
+                    value={feedbackForm.recommendation} 
+                    onChange={e => setFeedbackForm({...feedbackForm, recommendation: e.target.value as any})} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select recommended next step...</option>
+                    <option value="Advance to Next Round">Advance to Next Round</option>
+                    <option value="Proceed to Offer">Proceed to Offer</option>
+                    <option value="Keep on Hold">Keep on Hold / Review Later</option>
+                    <option value="Reject Application">Reject Application</option>
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Your recommendation assists the recruiter. Feedback submission records your assessment and does not alter the candidate's stage directly.
+                  </p>
+                </div>
               </div>
               <div className="pt-4 border-t flex justify-end gap-3 bg-white sticky bottom-0">
                 <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
@@ -825,26 +874,42 @@ export default function InterviewsList() {
               <button onClick={() => setActiveModal(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 overflow-y-auto space-y-6">
-              <div className="space-y-4 text-sm">
-                <p><strong>Result:</strong> {selectedInterview.overallResult}</p>
-                <p><strong>Rating:</strong> {selectedInterview.overallRating}/5</p>
-                <p><strong>Notes:</strong> {selectedInterview.feedbackNotes}</p>
+              <div className="space-y-3 text-sm">
+                <p><strong>Evaluation Result:</strong> {selectedInterview.overallResult || '—'}</p>
+                <p><strong>Rating:</strong> {selectedInterview.overallRating || 3}/5</p>
+                <p><strong>Recommended Next Step:</strong> {selectedInterview.recommendation || '—'}</p>
+                {selectedInterview.strengths && (
+                  <div>
+                    <span className="font-semibold text-slate-700">Key Strengths:</span>
+                    <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-1">{selectedInterview.strengths}</p>
+                  </div>
+                )}
+                {selectedInterview.concerns && (
+                  <div>
+                    <span className="font-semibold text-slate-700">Areas of Concern:</span>
+                    <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-1">{selectedInterview.concerns}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="font-semibold text-slate-700">Assessment Notes:</span>
+                  <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-1 whitespace-pre-wrap">{selectedInterview.feedbackNotes}</p>
+                </div>
               </div>
               <div className="flex flex-col gap-3 border-t pt-4">
-                {selectedInterview.recommendation === 'Hold' && (
+                {(selectedInterview.recommendation === 'Advance to Next Round' || selectedInterview.recommendation === 'Hold' || selectedInterview.recommendation === 'Keep on Hold') && (
                   <div className="flex flex-wrap gap-2 justify-center mb-2">
                     <button onClick={() => handleScheduleNextRound(selectedInterview)} className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">Schedule Next Round</button>
                     <button onClick={() => setActiveModal('confirm_selection')} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">Confirm Selection</button>
                     <button onClick={() => setActiveModal('confirm_rejection')} className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Confirm Rejection</button>
                   </div>
                 )}
-                {selectedInterview.recommendation === 'Hire' && (
+                {(selectedInterview.recommendation === 'Proceed to Offer' || selectedInterview.recommendation === 'Hire') && (
                   <div className="flex flex-wrap gap-2 justify-center mb-2">
                     <button onClick={() => setActiveModal('confirm_selection')} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">Confirm Selection</button>
                     <button onClick={() => handleScheduleNextRound(selectedInterview)} className="px-4 py-2 text-sm text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shadow-sm">Schedule Next Round Instead</button>
                   </div>
                 )}
-                {selectedInterview.recommendation === 'Reject' && (
+                {(selectedInterview.recommendation === 'Reject Application' || selectedInterview.recommendation === 'Reject') && (
                   <div className="flex flex-wrap gap-2 justify-center mb-2">
                     <button onClick={() => setActiveModal('confirm_rejection')} className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Confirm Rejection</button>
                   </div>

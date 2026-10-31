@@ -301,8 +301,8 @@ export default function InterviewHistoryDrawer({
                                         {inv.recommendation && (
                                           <span className={cn(
                                             "text-[10px] font-bold px-2 py-0.5 rounded",
-                                            inv.recommendation === 'Hire' ? "bg-emerald-100 text-emerald-800" :
-                                            inv.recommendation === 'Reject' ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
+                                            inv.recommendation === 'Hire' || inv.recommendation === 'Proceed to Offer' || inv.recommendation === 'Advance to Next Round' ? "bg-emerald-100 text-emerald-800" :
+                                            inv.recommendation === 'Reject' || inv.recommendation === 'Reject Application' ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
                                           )}>
                                             Rec: {inv.recommendation}
                                           </span>

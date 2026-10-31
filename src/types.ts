@@ -445,6 +445,15 @@ export type RecruiterInterviewOutcome =
   | 'On Hold' 
   | 'Additional Discussion Required';
 
+export type InterviewActionRecommendation = 
+  | 'Advance to Next Round'
+  | 'Proceed to Offer'
+  | 'Keep on Hold'
+  | 'Reject Application'
+  | 'Hire'
+  | 'Hold'
+  | 'Reject';
+
 export interface InterviewerInvitation {
   id: string;
   interviewerId?: string;
@@ -456,7 +465,7 @@ export interface InterviewerInvitation {
   submittedAt?: string;
   overallRating?: number;
   overallResult?: 'Strong Hire' | 'Hire' | 'Hold' | 'Reject';
-  recommendation?: 'Hire' | 'Hold' | 'Reject';
+  recommendation?: InterviewActionRecommendation | string;
   strengths?: string;
   concerns?: string;
   feedbackNotes?: string;
@@ -489,7 +498,7 @@ export interface Interview {
   meetingLink?: string;
   overallRating?: number;
   feedbackNotes?: string;
-  recommendation?: 'Hire' | 'Hold' | 'Reject';
+  recommendation?: InterviewActionRecommendation | string;
   overallResult?: 'Strong Hire' | 'Hire' | 'Hold' | 'Reject';
   strengths?: string;
   concerns?: string;
