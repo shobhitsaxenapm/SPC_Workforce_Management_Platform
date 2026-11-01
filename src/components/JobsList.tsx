@@ -305,19 +305,17 @@ export default function JobsList() {
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+          <table className="w-full text-left text-sm table-fixed">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Job Title</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Client</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Hiring Model</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Location</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Fulfillment</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Published Date</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Target Date</th>
-                <th className="px-5 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">Job Status</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Job & Details</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Client</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%]">Hiring Model</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%]">Fulfillment</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[13%]">Target Date</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[13%]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -326,11 +324,12 @@ export default function JobsList() {
                 const progress = (job.filled / job.openings) * 100;
                 
                 return (
-                  <tr key={job.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
-                    <td className="px-5 py-3.5 max-w-[280px]">
+                  <tr key={job.id} className="hover:bg-slate-50/70 transition-colors group cursor-pointer">
+                    {/* 1. Job & Details */}
+                    <td className="px-5 py-3.5">
                       <Link to={`/job-desk/${job.id}`} className="block group">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                             {job.title}
                           </p>
                           {(() => {
@@ -345,39 +344,59 @@ export default function JobsList() {
                             const now = new Date('2026-07-13T12:00:00Z').getTime();
                             const isDormant = (now - latestActivity) >= 7 * 24 * 60 * 60 * 1000;
                             if (isDormant) {
-                              return <span className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1 shrink-0" title="No Activity for 7+ Days"><AlertCircle className="w-3 h-3 text-amber-600" /> Dormant</span>;
+                              return (
+                                <span className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-1 shrink-0" title="No Activity for 7+ Days">
+                                  <AlertCircle className="w-3 h-3 text-amber-600" /> Dormant
+                                </span>
+                              );
                             }
                             return null;
                           })()}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                          <span className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200/60 font-medium">{job.code}</span>
+                        <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 truncate">
+                          <span className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200/60 font-medium text-[11px]">
+                            {job.code}
+                          </span>
                           <span>•</span>
                           <span>{job.employmentType}</span>
-                          {job.createdAt && (
+                          {job.location && (
                             <>
                               <span>•</span>
-                              <span className="text-slate-400">Created {formatDate(job.createdAt)}</span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                {job.location}
+                              </span>
                             </>
                           )}
                         </div>
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-700 max-w-[200px]">
-                      <p className="truncate font-medium text-slate-800" title={client?.name}>
-                        {client?.name || '—'}
-                      </p>
+
+                    {/* 2. Client */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-col">
+                        <p className="truncate font-medium text-slate-800 text-sm" title={client?.name}>
+                          {client?.name || '—'}
+                        </p>
+                        {job.createdAt && (
+                          <span className="text-[11px] text-slate-400 mt-0.5">
+                            Created {formatDate(job.createdAt)}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5">
+
+                    {/* 3. Hiring Model */}
+                    <td className="px-4 py-3.5">
                       {(() => {
                         const config = getHiringModelBadgeConfig(job.hiringModel);
                         const Icon = config.icon;
                         if (!config.isConfigured) {
                           return (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
-                                <Icon className="w-3.5 h-3.5 text-amber-600" />
-                                Not Configured
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                                <Icon className="w-3 h-3 text-amber-600" />
+                                Unconfigured
                               </span>
                               <button
                                 type="button"
@@ -386,9 +405,9 @@ export default function JobsList() {
                                   e.stopPropagation();
                                   setJobToConfigure(job);
                                 }}
-                                className="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-md transition-colors shadow-xs"
+                                className="px-2 py-0.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded transition-colors shadow-2xs"
                               >
-                                Configure
+                                Set
                               </button>
                             </div>
                           );
@@ -404,18 +423,14 @@ export default function JobsList() {
                         );
                       })()}
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{job.location}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-between text-xs mb-1.5 gap-2">
-                        <span className="font-semibold text-slate-700">{job.filled} / {job.openings}</span>
+
+                    {/* 4. Fulfillment */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center justify-between text-xs mb-1.5 gap-2 max-w-[130px]">
+                        <span className="font-semibold text-slate-800">{job.filled} / {job.openings}</span>
                         <span className="text-slate-400 text-[11px]">{job.openings - job.filled} rem</span>
                       </div>
-                      <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div className="w-full max-w-[130px] bg-slate-100 rounded-full h-1.5 overflow-hidden">
                         <div 
                           className={cn(
                             "h-1.5 rounded-full transition-all duration-300",
@@ -425,44 +440,9 @@ export default function JobsList() {
                         />
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      {job.isPublished ? (
-                        <div className="flex flex-col">
-                          <span className="text-slate-800 font-medium text-sm">
-                            {job.publishedAt ? formatDate(job.publishedAt) : 'Published'}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            {job.firstPublishedAt && job.publishedAt && new Date(job.publishedAt).getTime() > new Date(job.firstPublishedAt).getTime() + 60000 
-                              ? 'Republished' 
-                              : 'Live on Careers'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          {job.unpublishedAt || job.publishedAt ? (
-                            <>
-                              <span className="text-slate-700 text-xs font-medium">
-                                Last Live: {formatDate(job.unpublishedAt || job.publishedAt!)}
-                              </span>
-                              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-medium mt-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                Unpublished
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-slate-400 text-sm font-medium">—</span>
-                              <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium mt-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                Not Published
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
+
+                    {/* 5. Target Date */}
+                    <td className="px-4 py-3.5">
                       <div className="flex flex-col">
                         <span className="text-slate-800 font-medium text-sm">
                           {job.targetJoiningDate ? formatDate(job.targetJoiningDate) : '—'}
@@ -472,10 +452,12 @@ export default function JobsList() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
+
+                    {/* 6. Status & Publication */}
+                    <td className="px-4 py-3.5">
                       <div className="flex flex-col items-start gap-1">
                         <span className={cn(
-                          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border shadow-2xs",
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border shadow-2xs",
                           job.status === 'Open' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                           job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200" :
                           job.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
@@ -485,20 +467,32 @@ export default function JobsList() {
                             "w-1.5 h-1.5 rounded-full mr-1.5",
                             job.status === 'Open' ? "bg-emerald-500" :
                             job.status === 'On Hold' ? "bg-amber-500" :
-                            job.status === 'Draft' ? "bg-slate-400" :
                             "bg-slate-400"
                           )} />
                           {job.status}
                         </span>
+
+                        {job.isPublished ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium pl-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Live {job.publishedAt ? `• ${formatDate(job.publishedAt)}` : 'on Careers'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium pl-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                            {job.unpublishedAt || job.publishedAt ? 'Unpublished' : 'Not Published'}
+                          </span>
+                        )}
+
                         {job.status === 'On Hold' && job.holdReason && (
-                           <span className="text-[10px] text-amber-700 font-medium ml-0.5 flex items-center gap-1">
-                             <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" /> {job.holdReason}
-                           </span>
+                          <span className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
+                            <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" /> {job.holdReason}
+                          </span>
                         )}
                         {job.status === 'Closed' && job.closeReason && (
-                           <span className="text-[10px] text-slate-500 font-medium ml-0.5">
-                             {job.closeReason}
-                           </span>
+                          <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                            {job.closeReason}
+                          </span>
                         )}
                       </div>
                     </td>
