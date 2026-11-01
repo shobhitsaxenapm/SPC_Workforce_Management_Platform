@@ -155,7 +155,9 @@ export const mockJobs: Job[] = [
     visibility: 'Public',
     status: 'Open',
     isPublished: true,
-    publishedAt: '2026-06-16T10:00:00Z'
+    createdAt: '2026-06-10T09:00:00Z',
+    publishedAt: '2026-06-16T10:00:00Z',
+    firstPublishedAt: '2026-06-16T10:00:00Z'
   },
   {
     id: 'j2',
@@ -181,7 +183,9 @@ export const mockJobs: Job[] = [
     visibility: 'Public',
     status: 'Open',
     isPublished: true,
-    publishedAt: '2026-06-18T10:00:00Z'
+    createdAt: '2026-06-12T10:00:00Z',
+    publishedAt: '2026-06-18T10:00:00Z',
+    firstPublishedAt: '2026-06-18T10:00:00Z'
   },
   {
     id: 'j3',
@@ -207,7 +211,9 @@ export const mockJobs: Job[] = [
     visibility: 'Public',
     status: 'Open',
     isPublished: true,
-    publishedAt: '2026-06-20T10:00:00Z'
+    createdAt: '2026-06-15T11:00:00Z',
+    publishedAt: '2026-06-20T10:00:00Z',
+    firstPublishedAt: '2026-06-20T10:00:00Z'
   },
   {
     id: 'j4',
@@ -233,7 +239,9 @@ export const mockJobs: Job[] = [
     visibility: 'Public',
     status: 'Open',
     isPublished: true,
-    publishedAt: '2026-06-25T10:00:00Z'
+    createdAt: '2026-06-20T14:00:00Z',
+    publishedAt: '2026-06-25T10:00:00Z',
+    firstPublishedAt: '2026-06-25T10:00:00Z'
   }
 ];
 

@@ -304,7 +304,7 @@ export default function JobDetail() {
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
                       <Globe className="w-4 h-4 text-emerald-600" />
-                      <span>Publish Job</span>
+                      <span>{job.publishedAt ? 'Republish Job' : 'Publish Job'}</span>
                     </button>
                   )}
                   {job.status === 'Open' && job.isPublished && (
@@ -591,6 +591,47 @@ export default function JobDetail() {
               <h3 className="font-semibold text-slate-800 mb-4">Details</h3>
               
               <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Created Date</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {job.createdAt ? formatDate(job.createdAt) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Careers Portal Publication</p>
+                  {job.isPublished ? (
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                        Live on Careers
+                      </p>
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        Published: {job.publishedAt ? formatDate(job.publishedAt) : 'Yes'}
+                      </p>
+                      {job.firstPublishedAt && job.publishedAt && new Date(job.publishedAt).getTime() > new Date(job.firstPublishedAt).getTime() + 60000 && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          (First live on {formatDate(job.firstPublishedAt)})
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                        Unpublished
+                      </p>
+                      {job.unpublishedAt || job.publishedAt ? (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Last live on {formatDate(job.unpublishedAt || job.publishedAt!)}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Never published (Internal / Draft)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Target Joining Date</p>
                   <p className="text-sm font-medium text-slate-800">{formatDate(job.targetJoiningDate)}</p>
@@ -1584,7 +1625,9 @@ export default function JobDetail() {
                   <Globe className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Publish Job Opening</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {job.publishedAt ? 'Republish Job Opening' : 'Publish Job Opening'}
+                  </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {job.code || job.id} &bull; {job.title}
                   </p>
@@ -1603,13 +1646,23 @@ export default function JobDetail() {
             <div className="p-6 space-y-4">
               <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl text-emerald-900 text-xs sm:text-sm space-y-1.5">
                 <div className="flex items-center gap-2 font-semibold text-emerald-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Public Careers Portal Visibility</span>
                 </div>
                 <p className="text-emerald-700 leading-relaxed pl-6">
-                  Publishing this opening makes it immediately visible on the public Careers portal. Candidates will be able to search, view full role requirements, and submit job applications online.
+                  {job.publishedAt
+                    ? `Republishing will make this opening visible again on the public Careers portal. The published date will be refreshed to today (${formatDate(new Date().toISOString())}) so candidates see it as a fresh opening.`
+                    : 'Publishing this opening makes it immediately visible on the public Careers portal. Candidates will be able to search, view full role requirements, and submit job applications online.'}
                 </p>
               </div>
+
+              {job.firstPublishedAt && (
+                <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-xs text-slate-600 space-y-1">
+                  <div className="font-semibold text-slate-700">Publication History</div>
+                  <p>First published: {formatDate(job.firstPublishedAt)}</p>
+                  {job.unpublishedAt && <p>Last unpublished: {formatDate(job.unpublishedAt)}</p>}
+                </div>
+              )}
 
               {/* Job Summary Card */}
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
@@ -1622,7 +1675,7 @@ export default function JobDetail() {
                     </p>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Ready to Publish
+                    {job.publishedAt ? 'Ready to Republish' : 'Ready to Publish'}
                   </span>
                 </div>
 
@@ -1633,7 +1686,7 @@ export default function JobDetail() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{job.type || 'Full-time'} &bull; {job.openings} opening{job.openings > 1 ? 's' : ''}</span>
+                    <span>{job.employmentType || 'Full-time'} &bull; {job.openings} opening{job.openings > 1 ? 's' : ''}</span>
                   </div>
                 </div>
               </div>
@@ -1653,10 +1706,16 @@ export default function JobDetail() {
               </button>
               <button 
                 onClick={() => {
-                  updateJob(job.id, { isPublished: true, publishedAt: new Date().toISOString() });
+                  const now = new Date().toISOString();
+                  updateJob(job.id, { 
+                    isPublished: true, 
+                    publishedAt: now,
+                    firstPublishedAt: job.firstPublishedAt || job.publishedAt || now,
+                    unpublishedAt: undefined
+                  });
                   setShowPublishModal(false);
                   setToast({ 
-                    message: `"${job.title}" has been published to the Careers Portal.`, 
+                    message: `"${job.title}" has been ${job.publishedAt ? 'republished' : 'published'} to the Careers Portal.`, 
                     type: 'success' 
                   });
                   setTimeout(() => setToast(null), 3500);
@@ -1664,7 +1723,7 @@ export default function JobDetail() {
                 className="px-5 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2"
               >
                 <Globe className="w-4 h-4" />
-                Confirm & Publish
+                {job.publishedAt ? 'Confirm & Republish' : 'Confirm & Publish'}
               </button>
             </div>
           </div>
@@ -1735,7 +1794,10 @@ export default function JobDetail() {
               </button>
               <button 
                 onClick={() => {
-                  updateJob(job.id, { isPublished: false });
+                  updateJob(job.id, { 
+                    isPublished: false,
+                    unpublishedAt: new Date().toISOString()
+                  });
                   setShowUnpublishModal(false);
                   setToast({ 
                     message: `"${job.title}" has been unpublished from the Careers Portal.`, 

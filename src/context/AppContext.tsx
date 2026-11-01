@@ -233,10 +233,20 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       let healed = { ...j, title: j.title || j.projectName || '' };
       healed = normalizeJob(healed);
 
+      if (!healed.createdAt) {
+        healed.createdAt = healed.publishedAt 
+          ? new Date(new Date(healed.publishedAt).getTime() - 5 * 86400000).toISOString() 
+          : (healed.targetJoiningDate ? new Date(new Date(healed.targetJoiningDate).getTime() - 25 * 86400000).toISOString() : '2026-06-10T09:00:00Z');
+      }
+
       if (healed.isPublished && !healed.publishedAt) {
         healed.publishedAt = healed.targetJoiningDate 
           ? new Date(new Date(healed.targetJoiningDate).getTime() - 15 * 86400000).toISOString() 
           : '2026-06-20T10:00:00Z';
+      }
+
+      if (healed.isPublished && !healed.firstPublishedAt) {
+        healed.firstPublishedAt = healed.publishedAt;
       }
 
       // Legacy data rule:
@@ -256,7 +266,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
 
     // If any were healed, save back to storage so they persist
-    if (healedJobs.some((j, i) => j.title !== parsedJobs[i].title || j.status !== parsedJobs[i].status || j.hiringModel !== parsedJobs[i].hiringModel || j.publishedAt !== parsedJobs[i].publishedAt)) {
+    if (healedJobs.some((j, i) => 
+      j.title !== parsedJobs[i].title || 
+      j.status !== parsedJobs[i].status || 
+      j.hiringModel !== parsedJobs[i].hiringModel || 
+      j.publishedAt !== parsedJobs[i].publishedAt ||
+      j.createdAt !== parsedJobs[i].createdAt ||
+      j.firstPublishedAt !== parsedJobs[i].firstPublishedAt
+    )) {
       localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
     }
     return healedJobs;
@@ -745,7 +762,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     }
 
-    const isJobPublished = jobData.isPublished !== undefined ? jobData.isPublished : (jobData.status === 'Open');
+    const isJobPublished = jobData.isPublished !== undefined ? jobData.isPublished : (jobData.status === 'Open' || (jobData.status as any) === 'Published');
+    const nowIso = new Date().toISOString();
     const newJob: Job = {
       ...jobData,
       id: jobId,
@@ -755,9 +773,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       projectName,
       filled: 0,
       hiringModel: jobData.hiringModel || 'Client Hire',
-      status: jobData.status || 'Draft',
+      status: (jobData.status as any) === 'Published' ? 'Open' : (jobData.status || 'Draft'),
       isPublished: isJobPublished,
-      publishedAt: jobData.publishedAt || (isJobPublished ? new Date().toISOString() : undefined),
+      createdAt: jobData.createdAt || nowIso,
+      publishedAt: jobData.publishedAt || (isJobPublished ? nowIso : undefined),
+      firstPublishedAt: isJobPublished ? (jobData.publishedAt || nowIso) : undefined,
     };
 
     const newJobs: Job[] = [newJob, ...jobs];

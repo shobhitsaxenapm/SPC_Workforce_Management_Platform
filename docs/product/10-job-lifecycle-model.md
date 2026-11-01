@@ -52,7 +52,26 @@ We must prevent active recruitment actions (e.g., Add to Pipeline, schedule inte
 Reopening a job sets the lifecycle back to `Open` but keeps the state `Unpublished`.
 **Reasoning:** Automatically republishing a reopened job could inadvertently expose the job externally before the recruiter has reviewed the details. Re-publication requires an explicit user action.
 
+### Publication Timestamps Model
+To accurately model Job age vs. Careers portal exposure, four timestamps are maintained:
+1. `createdAt`: Immutable ISO timestamp recording when the job was created/drafted internally.
+2. `publishedAt`: Most recent ISO timestamp when the job was published or republished to the Careers portal. Refreshed on republishing to bubble the role to the top of job board feeds.
+3. `firstPublishedAt`: Original ISO timestamp when the job first went live, preserved across unpublish and republish cycles for reporting.
+4. `unpublishedAt`: Timestamp when the job was taken down from the Careers portal.
+
+**UI Presentation:**
+- **Job Desk Table (`/job-desk`):**
+  - Job Title column displays `Created <Date>` under the code and employment type.
+  - Published Date column dynamically reflects:
+    - `Live on Careers` (or `Republished`) with current `publishedAt` date.
+    - `Last Live: <Date> • Unpublished` when temporarily taken offline.
+    - `— • Not Published` when never published.
+- **Job Detail Page (`/job-desk/:id`):**
+  - Details card lists `Created Date`, `Careers Portal Publication` status with full history (first published / last unpublished).
+  - Unpublish / Republish action modals provide confirmation, audit history, and date refresh previews.
+
 ## Scope Restrictions Maintained
 1. **No Backend Abstractions Invented:** All persistence relies on the existing frontend context pattern (`localStorage`) to avoid diverging from prototype constraints.
 2. **Independence from Other Entities:** Client statuses (`Active`/`Inactive`) and applicant/pipeline stages were strictly untouched.
 3. **Canonical Truth:** `isPublished` is explicitly the ONLY source of truth for publication, preventing dual-state discrepancies.
+

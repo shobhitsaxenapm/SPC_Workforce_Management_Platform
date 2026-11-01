@@ -276,6 +276,9 @@ export interface Job {
   hiringModel?: HiringModel | 'Not Configured';
   isPublished?: boolean;
   publishedAt?: string;
+  createdAt?: string;
+  firstPublishedAt?: string;
+  unpublishedAt?: string;
   sourceMetadata?: JobSourceMetadata;
   holdReason?: JobHoldReason;
   closedAt?: string;

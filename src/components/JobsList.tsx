@@ -146,6 +146,7 @@ export default function JobsList() {
     const prefSkillsArray = formData.preferredSkills.split(',').map(s => s.trim()).filter(Boolean);
 
     // Call Mutator
+    const nowIso = new Date().toISOString();
     createJob({
       ...formData,
       hiringModel: formData.hiringModel,
@@ -157,7 +158,9 @@ export default function JobsList() {
       assignedRecruiterId: formData.assignedRecruiterId || 'u3', // Default to u3 if none selected
       status,
       isPublished: status === 'Open',
-      publishedAt: status === 'Open' ? new Date().toISOString() : undefined,
+      createdAt: nowIso,
+      publishedAt: status === 'Open' ? nowIso : undefined,
+      firstPublishedAt: status === 'Open' ? nowIso : undefined,
     }, selectedReqId);
 
     setIsSuccess(true);
@@ -231,7 +234,7 @@ export default function JobsList() {
         ? (!job.hiringModel || job.hiringModel === 'Not Configured')
         : job.hiringModel === jobFilters.hiringModel
     );
-    const matchDate = isDateInPreset(job.publishedAt || job.targetJoiningDate, datePreset, customStart, customEnd);
+    const matchDate = isDateInPreset(job.publishedAt || job.createdAt || job.targetJoiningDate, datePreset, customStart, customEnd);
     return matchSearch && matchStatus && matchPublished && matchClient && matchHiringModel && matchDate;
   });
 
@@ -351,6 +354,12 @@ export default function JobsList() {
                           <span className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200/60 font-medium">{job.code}</span>
                           <span>•</span>
                           <span>{job.employmentType}</span>
+                          {job.createdAt && (
+                            <>
+                              <span>•</span>
+                              <span className="text-slate-400">Created {formatDate(job.createdAt)}</span>
+                            </>
+                          )}
                         </div>
                       </Link>
                     </td>
@@ -424,16 +433,32 @@ export default function JobsList() {
                           </span>
                           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold mt-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Live on Careers
+                            {job.firstPublishedAt && job.publishedAt && new Date(job.publishedAt).getTime() > new Date(job.firstPublishedAt).getTime() + 60000 
+                              ? 'Republished' 
+                              : 'Live on Careers'}
                           </span>
                         </div>
                       ) : (
                         <div className="flex flex-col">
-                          <span className="text-slate-400 text-sm font-medium">—</span>
-                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                            Unpublished
-                          </span>
+                          {job.unpublishedAt || job.publishedAt ? (
+                            <>
+                              <span className="text-slate-700 text-xs font-medium">
+                                Last Live: {formatDate(job.unpublishedAt || job.publishedAt!)}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-medium mt-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                Unpublished
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-slate-400 text-sm font-medium">—</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium mt-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                Not Published
+                              </span>
+                            </>
+                          )}
                         </div>
                       )}
                     </td>
