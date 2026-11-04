@@ -53,7 +53,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
     if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) newErrors.email = 'Invalid email format';
     if (formData.currentLocation.trim() === '') newErrors.currentLocation = 'Current Location is required';
     if (formData.currentRole.trim() === '') newErrors.currentRole = 'Current Role is required';
-    if (!formData.noticePeriod) newErrors.noticePeriod = 'Notice Period is required';
+    // Notice Period is optional during initial resume parsing; recruiters update it during phone screening
     if (formData.noticePeriod === 'Custom' && !formData.customNoticePeriod) newErrors.customNoticePeriod = 'Custom Notice Period in Days is required';
     // Salaries are stored as free-form strings (e.g., '₹ 3.20 LPA')
     // so we don't enforce strict numeric validation.
@@ -108,6 +108,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
         availableFrom: formData.availableFrom,
         recruiterNotes: formData.recruiterNotes,
         resumeUrl: formData.resumeUrl,
+        experienceAnalysisSummary: (initialData as any)?.experienceAnalysisSummary,
       });
     } else {
       const createResult = createCandidate({
@@ -135,6 +136,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
         source: 'Manual Entry',
         education: formData.educationEntries[0]?.qualification || '',
         createdMethod: 'Resume Upload',
+        experienceAnalysisSummary: (initialData as any)?.experienceAnalysisSummary,
       });
       if (createResult && createResult.success && createResult.candidateId) {
         onSaveSuccess?.(createResult.candidateId);
@@ -373,7 +375,7 @@ export default function CandidateFormModal({ isOpen, onClose, initialData, isEdi
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notice Period *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Notice Period <span className="text-xs text-slate-500 font-normal">(Optional / Screening)</span></label>
                 <select value={formData.noticePeriod} onChange={e => setFormData({...formData, noticePeriod: e.target.value})} className={cn("w-full px-3 py-2 border rounded-lg text-sm outline-none bg-white", errors.noticePeriod ? "border-red-300" : "border-slate-300")}>
                   <option value="">Select...</option>
                   <option>Immediate</option>

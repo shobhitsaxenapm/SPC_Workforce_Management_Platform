@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, AlertTriangle, Plus, X, CheckCircle2 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { mockUsers } from '../data/mockData';
 import FilterPanel, { FilterField } from './FilterPanel';
@@ -10,6 +10,7 @@ import CandidateFormModal from './CandidateFormModal';
 import { FileText, UserPlus, FileCheck, Trash2 } from 'lucide-react';
 
 export default function CandidatesList() {
+  const navigate = useNavigate();
   const { candidates, applications, jobs, clients, createCandidate, deleteCandidate } = useApp();
   const [showUpload, setShowUpload] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -224,6 +225,10 @@ export default function CandidatesList() {
           onClose={() => setShowReviewForm(false)}
           initialData={extractedData}
           isEditMode={false}
+          onSaveSuccess={(candidateId) => {
+            setShowReviewForm(false);
+            navigate(`/candidates/${candidateId}`);
+          }}
         />
       )}
 

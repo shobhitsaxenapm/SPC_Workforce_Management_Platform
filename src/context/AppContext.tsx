@@ -297,10 +297,19 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Merge latest mock data fields if they are missing in cache, and normalize sources
     base = base.map(cached => {
       const mock = mockCandidates.find(m => m.id === cached.id);
-      const merged = mock && !cached.professionalSummary ? { ...cached, ...mock } : cached;
+      if (mock) {
+        return {
+          ...cached,
+          experienceAnalysisSummary: cached.experienceAnalysisSummary || mock.experienceAnalysisSummary,
+          employmentHistory: (cached.employmentHistory && cached.employmentHistory.length > 0 && cached.employmentHistory[0].aiAnalysis)
+            ? cached.employmentHistory
+            : (mock.employmentHistory || cached.employmentHistory),
+          source: normalizeSource(cached.source || mock.source)
+        };
+      }
       return {
-        ...merged,
-        source: normalizeSource(merged.source)
+        ...cached,
+        source: normalizeSource(cached.source)
       };
     });
     const pipelineSeeds: Candidate[] = [

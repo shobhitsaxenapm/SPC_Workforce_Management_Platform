@@ -266,8 +266,17 @@ export const mockCandidates: Candidate[] = [
     createdAt: '2023-11-15T10:30:00Z',
     resumeUrl: 'https://example.com/resume/riya_sharma.pdf',
     professionalSummary: 'Detail-oriented Data Executive with 2 years of experience in managing high-volume data entry and ensuring data integrity.',
+    experienceAnalysisSummary: 'Demonstrates consistent 2-year expertise in records digitization and document accuracy, directly meeting high-accuracy operational requirements.',
     employmentHistory: [
-      { company: 'DataPro Services', role: 'Data Executive', location: 'Delhi', startDate: '2022-01', endDate: 'Present' }
+      { 
+        company: 'DataPro Services', 
+        role: 'Data Executive', 
+        location: 'Delhi', 
+        startDate: '2022-01', 
+        endDate: 'Present',
+        relevanceTag: 'Direct Match',
+        aiAnalysis: '2+ years handling high-volume alphanumeric verification, typing speed > 40 WPM, and client healthcare records digitization.'
+      }
     ],
     languages: ['English', 'Hindi'],
     availableFrom: '2024-05-01T00:00:00Z',
@@ -293,8 +302,17 @@ export const mockCandidates: Candidate[] = [
     createdAt: '2023-12-01T14:15:00Z',
     resumeUrl: 'https://example.com/resume/aman_verma.pdf',
     professionalSummary: 'Efficient Store Keeper adept at maintaining accurate inventory records and coordinating dispatch operations.',
+    experienceAnalysisSummary: 'Focused 3-year track record in supply chain storekeeping and inventory control, progressing to primary storekeeper responsibility.',
     employmentHistory: [
-      { company: 'FastTrack Logistics', role: 'Store Keeper', location: 'Gurugram', startDate: '2020-05', endDate: 'Present' }
+      { 
+        company: 'FastTrack Logistics', 
+        role: 'Store Keeper', 
+        location: 'Gurugram', 
+        startDate: '2020-05', 
+        endDate: 'Present',
+        relevanceTag: 'Direct Match',
+        aiAnalysis: '3+ years managing warehouse inventory records, barcode verification, and high-turnover dispatch coordinating with zero discrepancy.'
+      }
     ],
     languages: ['Hindi'],
     availableFrom: '2024-04-10T00:00:00Z',

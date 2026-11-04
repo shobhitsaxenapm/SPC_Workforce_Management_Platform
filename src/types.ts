@@ -294,6 +294,8 @@ export interface EmploymentEntry {
   startDate?: string;
   endDate?: string;
   responsibilities?: string[];
+  relevanceTag?: 'Direct Match' | 'Relevant Domain' | 'Adjacent Experience' | 'General';
+  aiAnalysis?: string;
 }
 
 export interface EducationEntry {
@@ -323,6 +325,7 @@ export interface Candidate {
   duplicateStatus: 'None' | 'Possible Duplicate' | 'Confirmed Duplicate';
   createdAt?: string;
   professionalSummary?: string;
+  experienceAnalysisSummary?: string;
   employmentHistory?: EmploymentEntry[];
   educationEntries?: EducationEntry[];
   languages?: string[];

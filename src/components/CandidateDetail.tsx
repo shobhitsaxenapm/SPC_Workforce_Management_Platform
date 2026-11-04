@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import AIInsightCard from './AIInsightCard';
@@ -711,6 +711,35 @@ export default function CandidateDetail() {
     );
   };
 
+  const renderRelevanceBadge = (tag?: string) => {
+    switch (tag) {
+      case 'Direct Match':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Check className="w-3 h-3 text-emerald-600" /> Direct Match
+          </span>
+        );
+      case 'Relevant Domain':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <Sparkles className="w-3 h-3 text-blue-600" /> Relevant Domain
+          </span>
+        );
+      case 'Adjacent Experience':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            Adjacent Experience
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+            {tag || 'General'}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {toast && (
@@ -830,123 +859,248 @@ export default function CandidateDetail() {
       {/* Overview Tab */}
       {activeTab === 'Overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Recruiter Screening Baseline */}
           <div className="lg:col-span-1 space-y-6">
+            {/* Screening & Compensation Card */}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-4">Professional Details</h3>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-800">Screening & Compensation</h3>
+                  <p className="text-xs text-slate-500">Recruiter screening baseline</p>
+                </div>
+                <button 
+                  onClick={() => setIsEditModalOpen(true)} 
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 shadow-xs"
+                  title="Update screening & compensation details"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit Details
+                </button>
+              </div>
+
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Total Experience</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.totalExperience || 'Not provided'}</p>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+                  <p className="text-xs font-medium text-slate-500 mb-1">Total Experience</p>
+                  <p className="text-base font-bold text-slate-900">{candidate.totalExperience || '—'}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Current CTC</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentSalary || 'Not provided'}</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 mb-1">Current CTC</p>
+                    <p className={cn("text-sm font-semibold", candidate.currentSalary ? "text-slate-800" : "text-slate-400")}>
+                      {candidate.currentSalary || '—'}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Expected CTC</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.expectedSalary || 'Not provided'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Notice Period</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.noticePeriod || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Availability</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.availableFrom ? formatDate(candidate.availableFrom) : 'Not provided'}</p>
+                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 mb-1">Expected CTC</p>
+                    <p className={cn("text-sm font-semibold", candidate.expectedSalary ? "text-slate-800" : "text-slate-400")}>
+                      {candidate.expectedSalary || '—'}
+                    </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Current Company</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentCompany || 'Not provided'}</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 mb-1">Notice Period</p>
+                    <p className={cn("text-sm font-semibold", candidate.noticePeriod ? "text-slate-800" : "text-slate-400")}>
+                      {candidate.noticePeriod || '—'}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Current Role</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentRole || 'Not provided'}</p>
+                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 mb-1">Availability</p>
+                    <p className={cn("text-sm font-semibold", candidate.availableFrom ? "text-slate-800" : "text-slate-400")}>
+                      {candidate.availableFrom ? formatDate(candidate.availableFrom) : '—'}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Original Source</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <SourceBadge source={candidate.source} />
+
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Current Role</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.currentRole || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Current Company</p>
+                    <p className="text-sm font-medium text-slate-800">{candidate.currentCompany || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Original Source</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <SourceBadge source={candidate.source} />
+                    </div>
                   </div>
                 </div>
+
+                {(!candidate.currentSalary || !candidate.noticePeriod) && (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-lg flex items-start gap-2.5 text-xs text-amber-800">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>Compensation or notice period omitted in resume. Click <strong>Edit Details</strong> above to record from recruiter screening call.</span>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Skills & Education Card */}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
               <h3 className="font-semibold text-slate-800 mb-4">Skills & Education</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-slate-500 mb-2">Skills</p>
+                  <p className="text-xs text-slate-500 mb-2 font-medium">Core Skills</p>
                   {candidate.skills && candidate.skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {candidate.skills.map((skill, index) => (
-                        <span key={index} className="px-3 py-1 bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200">
+                        <span key={index} className="px-2.5 py-1 bg-slate-100/90 hover:bg-slate-200/80 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/80 transition-colors">
                           {skill}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm font-medium text-slate-800">Not provided</p>
+                    <p className="text-sm font-medium text-slate-400">—</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-2">Languages</p>
+                  <p className="text-xs text-slate-500 mb-2 font-medium">Languages</p>
                   {candidate.languages && candidate.languages.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {candidate.languages.map((lang, index) => (
-                        <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg border border-blue-200">
+                        <span key={index} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
                           {lang}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm font-medium text-slate-800">Not provided</p>
+                    <p className="text-sm font-medium text-slate-400">—</p>
                   )}
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">Education / Qualification</p>
-                  <p className="text-sm font-medium text-slate-800">{candidate.education || 'Not provided'}</p>
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1 font-medium">Highest Qualification</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {candidate.education || (candidate.educationEntries && candidate.educationEntries[0]?.qualification) || '—'}
+                  </p>
                 </div>
               </div>
             </div>
-
           </div>
 
+          {/* Right Column: AI Executive Summary & Experience Analysis */}
           <div className="lg:col-span-2 space-y-6">
-
+            {/* AI Executive Summary */}
             {candidate.professionalSummary && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-800 mb-3">Professional Summary</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{candidate.professionalSummary}</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">AI Executive Summary</h3>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed bg-slate-50/60 p-4 rounded-xl border border-slate-200/60">
+                  {candidate.professionalSummary}
+                </p>
               </div>
             )}
 
-            {candidate.employmentHistory && candidate.employmentHistory.length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-800 mb-6">Employment History</h3>
-                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
-                  {candidate.employmentHistory.map((exp, index) => (
-                    <div key={index} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-100 text-slate-500 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ml-[2px] md:ml-0">
-                        <Briefcase className="w-4 h-4" />
-                      </div>
-                      <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 bg-white shadow-sm ml-4 md:ml-0">
-                        <div className="flex items-start justify-between mb-1">
-                          <h4 className="font-semibold text-slate-800 text-sm">{exp.role}</h4>
-                          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{exp.startDate} - {exp.endDate}</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-3">{exp.company} {exp.location && `• ${exp.location}`}</p>
-                      </div>
-                    </div>
-                  ))}
+            {/* Experience Analysis (AI) - Option A & Capped at 3 Stints */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Experience Analysis (AI)</h3>
+                    <p className="text-xs text-slate-500">Domain strength & top employment stints (Capped at 3)</p>
+                  </div>
+                </div>
+                <span className="self-start sm:self-auto px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200/80 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                  AI Analysis Active
+                </span>
+              </div>
+
+              {/* Career Trajectory & Domain Strength Banner (Option A) */}
+              <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50/60 via-blue-50/40 to-white border border-indigo-100 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-1.5 bg-indigo-100/80 text-indigo-700 rounded-lg shrink-0 mt-0.5">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 mb-1">Career Trajectory & Domain Strength</h4>
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      {candidate.experienceAnalysisSummary || 
+                        `${candidate.fullName} demonstrates consistent career progression in ${candidate.currentRole || 'their domain'} with proven operational reliability across industry assignments.`}
+                    </p>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Recent Employment Stints (Capped at 3) */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Key Employment Stints ({Math.min(candidate.employmentHistory?.length || 0, 3)} of {candidate.employmentHistory?.length || 0})
+                  </h4>
+                  <span className="text-xs text-slate-400">Token-optimized extraction</span>
+                </div>
+
+                {candidate.employmentHistory && candidate.employmentHistory.length > 0 ? (
+                  <div className="space-y-4">
+                    {candidate.employmentHistory.slice(0, 3).map((exp, index) => (
+                      <div 
+                        key={index} 
+                        className="p-4 rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 transition-all shadow-xs"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h5 className="font-semibold text-slate-900 text-sm">{exp.role}</h5>
+                              {renderRelevanceBadge(exp.relevanceTag)}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-600 mt-1">
+                              <span className="font-medium text-slate-800 flex items-center gap-1">
+                                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                {exp.company}
+                              </span>
+                              {exp.location && (
+                                <span className="text-slate-400">• {exp.location}</span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="self-start sm:self-auto text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md shrink-0">
+                            {exp.startDate} - {exp.endDate}
+                          </span>
+                        </div>
+
+                        {/* AI Stint Analysis Callout */}
+                        {exp.aiAnalysis && (
+                          <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70 text-xs flex items-start gap-2.5">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="font-semibold text-slate-800">AI Evaluation: </span>
+                              <span className="text-slate-600 leading-relaxed">{exp.aiAnalysis}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stint Responsibilities */}
+                        {exp.responsibilities && exp.responsibilities.length > 0 && (
+                          <ul className="mt-3 space-y-1 text-xs text-slate-600 pl-4 list-disc marker:text-slate-400">
+                            {exp.responsibilities.slice(0, 3).map((resp, rIdx) => (
+                              <li key={rIdx}>{resp}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-slate-700">No Employment Records Extracted</p>
+                    <p className="text-xs text-slate-500 mt-1">You can add employment details manually via Edit Profile.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

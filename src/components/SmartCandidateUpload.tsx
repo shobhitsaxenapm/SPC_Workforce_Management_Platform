@@ -70,6 +70,7 @@ export default function SmartCandidateUpload({ onExtractionSuccess, onCancel }: 
         currentCompany: 'RapidKart Logistics',
         totalExperience: '2.2 years',
         professionalSummary: 'Warehouse Associate with experience in inventory handling, loading and unloading, order packing and stock verification. Comfortable working in fast-paced warehouse operations.',
+        experienceAnalysisSummary: 'Demonstrates strong warehouse floor discipline, high packing throughput, and physical stock accuracy in high-velocity fulfillment environments.',
         skills: ['Inventory Management', 'Loading and Unloading', 'Order Packing', 'Physical Fitness', 'Basic English', 'Stock Verification'],
         employmentHistory: [
           {
@@ -78,12 +79,27 @@ export default function SmartCandidateUpload({ onExtractionSuccess, onCancel }: 
             location: 'Gurugram',
             startDate: 'June 2024',
             endDate: 'Present',
+            relevanceTag: 'Direct Match',
+            aiAnalysis: 'Over 1 year of proven warehouse floor operations, order packing, and stock verification.',
             responsibilities: [
               'Managed incoming and outgoing inventory',
               'Performed loading and unloading activities',
               'Packed customer orders',
               'Verified stock quantities',
               'Maintained warehouse safety standards'
+            ]
+          },
+          {
+            company: 'Delhivery Hub',
+            role: 'Sorting Assistant',
+            location: 'Gurugram',
+            startDate: 'May 2023',
+            endDate: 'May 2024',
+            relevanceTag: 'Relevant Domain',
+            aiAnalysis: 'Handled inward parcel staging and rapid order sortation operations.',
+            responsibilities: [
+              'Sorted and scanned inbound courier parcels',
+              'Maintained dispatch staging lane order'
             ]
           }
         ],
@@ -95,6 +111,9 @@ export default function SmartCandidateUpload({ onExtractionSuccess, onCancel }: 
           }
         ],
         languages: ['Hindi', 'Basic English'],
+        currentSalary: '',
+        expectedSalary: '',
+        noticePeriod: '',
       };
 
       onExtractionSuccess(mockExtractedData, {
