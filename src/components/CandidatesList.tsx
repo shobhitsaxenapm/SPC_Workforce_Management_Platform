@@ -52,6 +52,8 @@ export default function CandidatesList() {
 
     const matchSearch = !searchTerm ||
       c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.currentRole && c.currentRole.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.currentCompany && c.currentCompany.toLowerCase().includes(searchTerm.toLowerCase())) ||
       c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
       c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
@@ -111,6 +113,7 @@ export default function CandidatesList() {
               <tr className="md:table-row">
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Contact Info</th>
+                <th className="px-6 py-4">Current Role</th>
                 <th className="px-6 py-4">Present Company</th>
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Total Experience</th>
@@ -122,7 +125,11 @@ export default function CandidatesList() {
             <tbody className="divide-y divide-slate-100 flex flex-col md:table-row-group">
               {paginatedCandidates.map(candidate => {
                 return (
-                  <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group cursor-pointer flex flex-col md:table-row p-4 md:p-0">
+                  <tr 
+                    key={candidate.id} 
+                    onClick={() => navigate(`/candidates/${candidate.id}`)}
+                    className="hover:bg-slate-50 transition-colors group cursor-pointer flex flex-col md:table-row p-4 md:p-0"
+                  >
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <Link to={`/candidates/${candidate.id}`} className="block">
                         <div className="flex items-center gap-2">
@@ -136,16 +143,20 @@ export default function CandidatesList() {
                       <p className="text-slate-500 text-xs mt-0.5">{candidate.phone}</p>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Current Role</div>
+                      <p className="text-slate-800 text-sm font-medium">{candidate.currentRole || '—'}</p>
+                    </td>
+                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Present Company</div>
-                      <p className="text-slate-800 text-sm">{candidate.currentCompany || 'N/A'}</p>
+                      <p className="text-slate-600 text-sm">{candidate.currentCompany || '—'}</p>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Location</div>
-                      <p className="text-slate-800 text-sm">{candidate.currentLocation}</p>
+                      <p className="text-slate-600 text-sm">{candidate.currentLocation || '—'}</p>
                     </td>
                     <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
                       <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Experience</div>
-                      <p className="text-slate-800 text-sm">{candidate.totalExperience}</p>
+                      <p className="text-slate-800 text-sm">{candidate.totalExperience || '—'}</p>
                     </td>
                     <td className="md:px-6 md:py-4 block md:table-cell text-right">
                       <button
@@ -164,7 +175,7 @@ export default function CandidatesList() {
                 );
               })}
               {filteredCandidates.length === 0 && (
-                <tr className="flex md:table-row"><td colSpan={6} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
+                <tr className="flex md:table-row"><td colSpan={7} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
               )}
             </tbody>
           </table>
