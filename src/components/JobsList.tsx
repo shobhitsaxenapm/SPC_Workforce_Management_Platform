@@ -16,6 +16,7 @@ import InlineClientForm from './InlineClientForm';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
 import { AlertTriangle, MoreVertical, AlertCircle } from 'lucide-react';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
+import Pagination from './Pagination';
 
 export default function JobsList() {
   const { jobs, projects, clients, applications, createJob, updateJob, currentUser } = useApp();
@@ -238,6 +239,16 @@ export default function JobsList() {
     return matchSearch && matchStatus && matchPublished && matchClient && matchHiringModel && matchDate;
   });
 
+  // Pagination state (10 jobs per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, jobFilters, datePreset, customStart, customEnd]);
+
+  const paginatedJobs = filteredJobs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -251,9 +262,10 @@ export default function JobsList() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+      {/* Search and Filters Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row justify-between gap-3">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
@@ -263,27 +275,29 @@ export default function JobsList() {
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
             />
           </div>
-          <DateRangeFilter
-            preset={datePreset}
-            customStart={customStart}
-            customEnd={customEnd}
-            onChange={(preset, start, end) => {
-              setDatePreset(preset);
-              setCustomStart(start);
-              setCustomEnd(end);
-            }}
-          />
-          <FilterPanel
-            fields={jobFilterFields}
-            values={jobFilters}
-            onChange={(k, v) => setJobFilters({ ...jobFilters, [k]: v })}
-            onClear={() => {
-              setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
-              setDatePreset('All Time');
-              setCustomStart('');
-              setCustomEnd('');
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeFilter
+              preset={datePreset}
+              customStart={customStart}
+              customEnd={customEnd}
+              onChange={(preset, start, end) => {
+                setDatePreset(preset);
+                setCustomStart(start);
+                setCustomEnd(end);
+              }}
+            />
+            <FilterPanel
+              fields={jobFilterFields}
+              values={jobFilters}
+              onChange={(k, v) => setJobFilters({ ...jobFilters, [k]: v })}
+              onClear={() => {
+                setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
+                setDatePreset('All Time');
+                setCustomStart('');
+                setCustomEnd('');
+              }}
+            />
+          </div>
         </div>
 
         {datePreset !== 'All Time' && (
@@ -303,23 +317,33 @@ export default function JobsList() {
             </span>
           </div>
         )}
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
+          <span>
+            {filteredJobs.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredJobs.length)}</span> of <span className="font-semibold text-slate-700">{filteredJobs.length}</span> jobs</>
+            ) : (
+              '0 jobs found'
+            )}
+          </span>
+        </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm table-fixed">
-            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-medium">
+            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Job & Details</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Client</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%]">Hiring Model</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%]">Fulfillment</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[13%]">Target Date</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[13%]">Status</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider w-[28%]">Job & Details</th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider w-[18%]">Client</th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider w-[14%]">Hiring Model</th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider w-[14%]">Fulfillment</th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider w-[13%]">Target Date</th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider w-[13%]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredJobs.map(job => {
+              {paginatedJobs.map(job => {
                 const client = clients.find(c => c.id === job.clientId);
                 const progress = (job.filled / job.openings) * 100;
                 
@@ -509,6 +533,15 @@ export default function JobsList() {
             </tbody>
           </table>
         </div>
+
+        {/* Unified Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredJobs.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="jobs"
+        />
       </div>
 
       {isModalOpen && (

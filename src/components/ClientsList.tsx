@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Plus, MoreVertical, ChevronRight, X, CheckCircle2, Search, Trash2, AlertTriangle, Edit3 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -10,6 +10,7 @@ import ClientFormModal from './ClientFormModal';
 import { Client, PrimaryIndustry } from '../types';
 import { INDUSTRY_OPTIONS } from '../lib/constants';
 import SearchableSelect from './SearchableSelect';
+import Pagination from './Pagination';
 
 export default function ClientsList() {
   const { clients, projects, applications, currentUser, createClient, deleteClient } = useApp();
@@ -38,6 +39,16 @@ export default function ClientsList() {
     return matchSearch && matchStatus && matchIndustry;
   });
 
+  // Pagination state (10 clients per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
+
+  const paginatedClients = filteredClients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -55,27 +66,40 @@ export default function ClientsList() {
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Search clients..." 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+      {/* Search and Filters Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row justify-between gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Search clients by name, industry..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+            />
+          </div>
+          <FilterPanel
+            fields={filterFields}
+            values={filters}
+            onChange={(k, v) => setFilters({ ...filters, [k]: v })}
+            onClear={() => setFilters({ status: '', industry: '' })}
           />
         </div>
-        <FilterPanel
-          fields={filterFields}
-          values={filters}
-          onChange={(k, v) => setFilters({ ...filters, [k]: v })}
-          onClear={() => setFilters({ status: '', industry: '' })}
-        />
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
+          <span>
+            {filteredClients.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredClients.length)}</span> of <span className="font-semibold text-slate-700">{filteredClients.length}</span> clients</>
+            ) : (
+              '0 clients found'
+            )}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredClients.map(client => {
+        {paginatedClients.map(client => {
           const isSelected = selectedClientId === client.id;
           const clientProjects = projects.filter(p => p.clientId === client.id);
           const openPositionsCount = clientProjects.reduce((acc, p) => {
@@ -245,6 +269,16 @@ export default function ClientsList() {
           </div>
         )}
       </div>
+
+      {/* Unified Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredClients.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        itemLabel="clients"
+        className="rounded-xl border border-slate-200"
+      />
 
       {isModalOpen && (
         <ClientFormModal 

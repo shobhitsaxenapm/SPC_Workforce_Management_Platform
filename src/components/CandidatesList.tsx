@@ -8,6 +8,7 @@ import FilterPanel, { FilterField } from './FilterPanel';
 import SmartCandidateUpload from './SmartCandidateUpload';
 import CandidateFormModal from './CandidateFormModal';
 import { FileText, UserPlus, FileCheck, Trash2 } from 'lucide-react';
+import Pagination from './Pagination';
 
 export default function CandidatesList() {
   const navigate = useNavigate();
@@ -83,13 +84,14 @@ export default function CandidatesList() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+      {/* Search and Filters Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row justify-between gap-3">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by name, skills, location..."
+              placeholder="Search by name, skills, role, location..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
@@ -104,68 +106,73 @@ export default function CandidatesList() {
             }}
           />
         </div>
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
+          <span>
+            {filteredCandidates.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredCandidates.length)}</span> of <span className="font-semibold text-slate-700">{filteredCandidates.length}</span> candidates</>
+            ) : (
+              '0 candidates found'
+            )}
+          </span>
+        </div>
       </div>
 
+      {/* Candidates Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="w-full">
-          <table className="w-full text-left text-sm block md:table">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium hidden md:table-header-group">
-              <tr className="md:table-row">
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Contact Info</th>
-                <th className="px-6 py-4">Current Role</th>
-                <th className="px-6 py-4">Present Company</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Total Experience</th>
-                <th className="px-6 py-4 w-12 relative">
-                  <span className="sr-only">Actions</span>
-                </th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
+              <tr>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Name</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Contact Info</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Current Role</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Present Company</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Location</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Total Experience</th>
+                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 flex flex-col md:table-row-group">
+            <tbody className="divide-y divide-slate-100">
               {paginatedCandidates.map(candidate => {
                 return (
                   <tr 
                     key={candidate.id} 
                     onClick={() => navigate(`/candidates/${candidate.id}`)}
-                    className="hover:bg-slate-50 transition-colors group cursor-pointer flex flex-col md:table-row p-4 md:p-0"
+                    className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
                   >
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
+                    <td className="px-5 py-3.5">
                       <Link to={`/candidates/${candidate.id}`} className="block">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{candidate.fullName}</p>
-                        </div>
+                        <span className="font-medium text-blue-600 hover:underline">{candidate.fullName}</span>
+                        {candidate.code && (
+                          <div className="text-[11px] font-mono text-slate-400 mt-0.5">{candidate.code}</div>
+                        )}
                       </Link>
                     </td>
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Contact Info</div>
-                      <p className="text-slate-800 text-sm">{candidate.email}</p>
+                    <td className="px-5 py-3.5">
+                      <p className="text-slate-800 text-sm font-medium">{candidate.email}</p>
                       <p className="text-slate-500 text-xs mt-0.5">{candidate.phone}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Current Role</div>
+                    <td className="px-5 py-3.5">
                       <p className="text-slate-800 text-sm font-medium">{candidate.currentRole || '—'}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Present Company</div>
+                    <td className="px-5 py-3.5">
                       <p className="text-slate-600 text-sm">{candidate.currentCompany || '—'}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Location</div>
+                    <td className="px-5 py-3.5">
                       <p className="text-slate-600 text-sm">{candidate.currentLocation || '—'}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 pb-3 md:pb-4 block md:table-cell">
-                      <div className="md:hidden text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Experience</div>
-                      <p className="text-slate-800 text-sm">{candidate.totalExperience || '—'}</p>
+                    <td className="px-5 py-3.5">
+                      <p className="text-slate-800 text-sm font-medium">{candidate.totalExperience || '—'}</p>
                     </td>
-                    <td className="md:px-6 md:py-4 block md:table-cell text-right">
+                    <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           setCandidateToDelete(candidate);
                         }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
                         title="Delete Candidate"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -175,34 +182,24 @@ export default function CandidatesList() {
                 );
               })}
               {filteredCandidates.length === 0 && (
-                <tr className="flex md:table-row"><td colSpan={7} className="px-6 py-10 text-center text-slate-500 block md:table-cell">No candidates match the current filters.</td></tr>
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
+                    No candidates match the current filters.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">
-              Showing <span className="font-medium text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-slate-700">{Math.min(currentPage * itemsPerPage, filteredCandidates.length)}</span> of <span className="font-medium text-slate-700">{filteredCandidates.length}</span> candidates
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border border-slate-300 rounded-md text-slate-600 font-medium hover:bg-slate-100 transition-colors disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+
+        {/* Unified Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredCandidates.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="candidates"
+        />
       </div>
 
       {/* Full-Screen Smart Upload Modal */}
@@ -218,7 +215,13 @@ export default function CandidatesList() {
             <div className="flex-1 overflow-y-auto flex items-center justify-center p-8">
               <SmartCandidateUpload
                 onExtractionSuccess={(data, meta) => {
-                  setExtractedData({ ...data, resumeUrl: meta.originalFilename });
+                  setExtractedData({
+                    ...data,
+                    resumeUrl: meta.originalFilename,
+                    resumeFileUrl: meta.fileUrl,
+                    rawResumeText: meta.rawResumeText,
+                    sourceMetadata: meta,
+                  });
                   setShowUpload(false);
                   setShowReviewForm(true);
                 }}
@@ -229,13 +232,16 @@ export default function CandidatesList() {
         </div>
       )}
 
-      {/* Full-Screen Review Form Modal */}
+      {/* Full-Screen Review Form Modal with Side-by-Side Resume View */}
       {showReviewForm && extractedData && (
         <CandidateFormModal
           isOpen={showReviewForm}
           onClose={() => setShowReviewForm(false)}
           initialData={extractedData}
           isEditMode={false}
+          uploadedFileUrl={extractedData.resumeFileUrl}
+          rawResumeText={extractedData.rawResumeText}
+          sourceMetadata={extractedData.sourceMetadata}
           onSaveSuccess={(candidateId) => {
             setShowReviewForm(false);
             navigate(`/candidates/${candidateId}`);

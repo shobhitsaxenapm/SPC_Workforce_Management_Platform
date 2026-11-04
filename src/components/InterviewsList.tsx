@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
@@ -14,6 +14,7 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 import { getInterviewFeedbackSummary, getInterviewEndTime, normalizeInterviewers } from '../lib/interviewUtils';
 import InterviewHistoryDrawer from './InterviewHistoryDrawer';
 import RecruiterOutcomeModal from './RecruiterOutcomeModal';
+import Pagination from './Pagination';
 
 type SummaryTab = 'Upcoming' | 'Today' | 'Feedback Pending' | 'Overdue' | 'No Show' | 'Completed' | 'Cancelled' | 'All Interviews';
 
@@ -190,6 +191,19 @@ export default function InterviewsList() {
 
     return matchSearch && matchClient && matchJob && matchInterviewer && matchType && matchRound && matchDate && matchStatus && matchRoundNumber && matchFeedbackStatus && matchNoShow && matchTab;
   }).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
+  // Pagination state (10 interviews per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, activeTab, interviewStatusFilter, roundFilter, feedbackStatusFilter, noShowFilter, datePreset, customStart, customEnd]);
+
+  const paginatedInterviews = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + 
     (datePreset !== 'All Time' ? 1 : 0) +
@@ -549,24 +563,34 @@ export default function InterviewsList() {
             </button>
           )}
         </div>
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-1 border-t border-slate-100">
+          <span>
+            {filtered.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-semibold text-slate-700">{filtered.length}</span> interviews</>
+            ) : (
+              '0 interviews found'
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-6 py-4">Candidate & Role</th>
-                <th className="px-6 py-4">Client</th>
-                <th className="px-6 py-4">Date & Time</th>
-                <th className="px-6 py-4">Interviewer</th>
-                <th className="px-6 py-4">Status & Feedback</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Candidate & Role</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Interviewer</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Status & Feedback</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(interview => {
+              {paginatedInterviews.map(interview => {
                 const candidate = candidates.find(c => c.id === interview.candidateId);
                 const job = jobs.find(j => j.id === interview.jobId);
                 const client = clients.find(c => c.id === interview.clientId);
@@ -758,6 +782,15 @@ export default function InterviewsList() {
             </tbody>
           </table>
         </div>
+
+        {/* Unified Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="interviews"
+        />
       </div>
 
       {/* FEEDBACK MODAL (SUBMIT / EDIT) */}

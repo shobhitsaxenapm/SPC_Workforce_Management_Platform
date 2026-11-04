@@ -320,6 +320,8 @@ export interface Candidate {
   expectedSalary: string;
   noticePeriod: string;
   resumeUrl?: string;
+  resumeFileUrl?: string;
+  rawResumeText?: string;
   source: string;
   linkedInUrl?: string;
   duplicateStatus: 'None' | 'Possible Duplicate' | 'Confirmed Duplicate';

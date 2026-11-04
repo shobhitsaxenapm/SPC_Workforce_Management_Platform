@@ -27,7 +27,13 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose, onSucce
             <div className="flex-1 overflow-y-auto flex items-center justify-center p-8">
               <SmartCandidateUpload
                 onExtractionSuccess={(data, meta) => {
-                  setExtractedData({ ...data, resumeUrl: meta.originalFilename });
+                  setExtractedData({
+                    ...data,
+                    resumeUrl: meta.originalFilename,
+                    resumeFileUrl: meta.fileUrl,
+                    rawResumeText: meta.rawResumeText,
+                    sourceMetadata: meta,
+                  });
                   setShowUpload(false);
                   setShowReviewForm(true);
                 }}
@@ -44,6 +50,9 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose, onSucce
           onClose={onClose}
           initialData={extractedData}
           isEditMode={false}
+          uploadedFileUrl={extractedData.resumeFileUrl}
+          rawResumeText={extractedData.rawResumeText}
+          sourceMetadata={extractedData.sourceMetadata}
           onSaveSuccess={(candidateId) => {
             const result = addMatchToPipeline(jobId, candidateId, 'Candidate uploaded directly against Job', 'Manual Upload');
             if (result.success && onSuccess) {

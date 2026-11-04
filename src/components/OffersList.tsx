@@ -11,6 +11,7 @@ import FilterPanel, { FilterField } from './FilterPanel';
 import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import { Offer, OfferStatus } from '../types';
+import Pagination from './Pagination';
 
 export default function OffersList() {
   const { 
@@ -181,6 +182,16 @@ export default function OffersList() {
 
     return matchSearch && matchStatus && matchClient && matchJob && matchDate;
   });
+
+  // Pagination state (10 offers per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, datePreset, customStart, customEnd]);
+
+  const paginatedOffers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length + (datePreset !== 'All Time' ? 1 : 0);
 
@@ -571,24 +582,34 @@ export default function OffersList() {
             </span>
           </div>
         )}
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
+          <span>
+            {filtered.length > 0 ? (
+              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-semibold text-slate-700">{filtered.length}</span> offers</>
+            ) : (
+              '0 offers found'
+            )}
+          </span>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-6 py-4">Candidate</th>
-                <th className="px-6 py-4">Job & Client</th>
-                <th className="px-6 py-4">Current Offer</th>
-                <th className="px-6 py-4 whitespace-nowrap">Joining Date</th>
-                <th className="px-6 py-4 whitespace-nowrap">Status</th>
-                <th className="px-6 py-4 whitespace-nowrap">Last Activity</th>
-                <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Candidate</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Job & Client</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Current Offer</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Joining Date</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Last Activity</th>
+                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(offer => {
+              {paginatedOffers.map(offer => {
                 const candidate = candidates.find(c => c.id === offer.candidateId);
                 const job = jobs.find(j => j.id === offer.jobId);
                 const client = clients.find(c => c.id === offer.clientId);
@@ -689,6 +710,15 @@ export default function OffersList() {
             </tbody>
           </table>
         </div>
+
+        {/* Unified Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="offers"
+        />
       </div>
 
       {/* VIEW OFFER MODAL */}

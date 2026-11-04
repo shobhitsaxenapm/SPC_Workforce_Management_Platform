@@ -131,10 +131,10 @@ This document specifies the end-to-end testing scenarios required to validate th
   4. Submit with valid details and verify immediate addition to the candidate list.
   5. Check duplicate candidate detection by attempting to add another candidate with the same email or phone number. Verify the duplicate check block.
   6. Open candidate details profile modal and check details page.
-- **Expected Result**: Candidates profiles are searched, filtered, manually added with validations, and checked for duplicates.
-- **Actual Result**: Verified candidate pool directory filters, search, manual candidate creation form with email validation, phone normalization, mandatory contact validation, and duplicate checking.
+- **Expected Result**: Candidates profiles are searched, filtered, resumes uploaded or pasted, parsed with AI into side-by-side verification modal with resume on left and editable fields on right, validated, and saved.
+- **Actual Result**: Verified candidate pool directory filters, search, resume file upload (PDF/DOCX) and raw text paste (CAN-003, CAN-004), AI parameter extraction (CAN-005), side-by-side split review with Resume on the left and form on the right, view toggles, inline field editing, and candidate creation.
 - **Status**: Verified
-- **Evidence**: Verified in build logs and context code verification.
+- **Evidence**: Verified via Vitest component suite `CandidateFormModal.test.tsx` (3/3 passing), production build test, and UI verification.
 
 ---
 

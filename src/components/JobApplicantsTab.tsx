@@ -7,6 +7,7 @@ import { cn, formatDate } from '../lib/utils';
 import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
 import { isDateInPreset } from '../lib/dateUtils';
 import SourceBadge from './SourceBadge';
+import Pagination from './Pagination';
 
 interface JobApplicantsTabProps {
   jobId: string;
@@ -312,48 +313,16 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
           </tbody>
         </table>
       </div>
-      </div>
 
-      {/* Pagination Toolbar */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 border border-slate-200 bg-slate-50/70 mt-3 rounded-xl">
-          <span className="text-xs sm:text-sm text-slate-500 font-medium">
-            Showing <span className="font-semibold text-slate-800">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-slate-800">{Math.min(currentPage * itemsPerPage, filteredApplications.length)}</span> of <span className="font-semibold text-slate-800">{filteredApplications.length}</span> applicants
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-1 px-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={cn(
-                    "w-8 h-8 text-xs font-semibold rounded-lg transition-colors",
-                    currentPage === page
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-200/60"
-                  )}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Unified Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredApplications.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        itemLabel="applicants"
+      />
+    </div>
 
       {viewResumeId && (
         <ResumeModal candidateId={viewResumeId} onClose={() => setViewResumeId(null)} />
