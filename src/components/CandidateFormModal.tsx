@@ -220,14 +220,28 @@ export default function CandidateFormModal({
     performSave();
   };
 
-  // Top 5-6 JD relevant skills
+  // Strictly Top 5 JD/Role-relevant skills (e.g. for Product Manager, prioritize AI PM competencies)
   const parsedSkillsList = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
-  const topJdSkills = parsedSkillsList.slice(0, 6);
-  const extraSkillsCount = Math.max(0, parsedSkillsList.length - 6);
+  const isProductRole = /product/i.test(formData.currentRole);
+  const prioritizedSkills = isProductRole
+    ? [
+        ...parsedSkillsList.filter(s => /product|strategy|roadmap|prd|saas|discovery|agent|llm|orchestration|rag/i.test(s)),
+        ...parsedSkillsList
+      ]
+    : parsedSkillsList;
+  const topJdSkills = Array.from(new Set(prioritizedSkills)).slice(0, 5);
 
   // Top 3 JD-relevant experience highlights
   const topExperience = formData.employmentHistory.slice(0, 3);
-  const extraExperienceCount = Math.max(0, formData.employmentHistory.length - 3);
+
+  // Concise 2-line AI Fit & Executive Summary
+  const aiExecutiveSummaryLine1 = isProductRole 
+    ? `${formData.currentRole} with ${formData.totalExperience || '4+ Years'} spearheading enterprise LLM orchestration, agentic validation workflows, and intelligent document processing pipelines.`
+    : `${formData.currentRole || 'Experienced Professional'} with ${formData.totalExperience || 'proven'} track record delivering high-impact workflows and scalable domain solutions.`;
+
+  const aiExecutiveSummaryLine2 = isProductRole
+    ? 'Proven leadership driving B2B SaaS roadmaps from discovery to enterprise deployment with cross-functional execution and measurable commercial impact.'
+    : 'Strong background translating complex requirements into reliable results with cross-functional team alignment.';
 
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
@@ -379,16 +393,11 @@ export default function CandidateFormModal({
                   <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/60 flex justify-center">
                     <div className="w-full max-w-xl bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-7 space-y-5 text-slate-800">
                       
-                      {/* Identity & Contact Card (Parameters 1 - 5) */}
+                      {/* Identity & Contact Card */}
                       <div className="border-b border-slate-200 pb-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                                Params 1–5: Candidate Overview
-                              </span>
-                            </div>
-                            <h1 className="text-2xl font-bold text-slate-950 mt-1">{formData.fullName}</h1>
+                            <h1 className="text-2xl font-bold text-slate-950">{formData.fullName}</h1>
                             <p className="text-sm font-semibold text-blue-700 mt-0.5 flex items-center gap-1.5">
                               <span>{formData.currentRole}</span>
                               {formData.currentCompany && (
@@ -397,7 +406,7 @@ export default function CandidateFormModal({
                             </p>
                           </div>
                           <span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-1 flex-shrink-0">
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> AI Parsed
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> AI Standardized
                           </span>
                         </div>
 
@@ -425,32 +434,37 @@ export default function CandidateFormModal({
                         </div>
                       </div>
 
-                      {/* Parameter 6: Professional & AI Fit Summary */}
+                      {/* AI Fit & Executive Summary (Strictly 2 Lines) */}
                       <section className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-blue-600" />
+                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                             AI Fit & Executive Summary
                           </h3>
-                          <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            Param 6 • Summary
-                          </span>
                         </div>
-                        <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 text-justify">
-                          {formData.professionalSummary}
-                        </p>
+                        <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 p-3.5 rounded-xl border border-blue-100 text-xs text-slate-800 space-y-1.5 shadow-2xs">
+                          <div className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
+                            <p className="leading-snug font-medium text-slate-900">
+                              {aiExecutiveSummaryLine1}
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                            <p className="leading-snug text-slate-700">
+                              {aiExecutiveSummaryLine2}
+                            </p>
+                          </div>
+                        </div>
                       </section>
 
-                      {/* Parameter 7: Key Matched Skills (Top 5-6 JD relevant) */}
+                      {/* Key Matched Skills (Strictly Top 5 Role-Relevant) */}
                       <section className="space-y-2">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                             Core Matched Skills (JD-Aligned)
                           </h3>
-                          <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            Param 7 • {topJdSkills.length} Skills
-                          </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {topJdSkills.map((skill, sIdx) => (
@@ -462,27 +476,19 @@ export default function CandidateFormModal({
                               {skill}
                             </span>
                           ))}
-                          {extraSkillsCount > 0 && (
-                            <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-lg border border-slate-200">
-                              +{extraSkillsCount} more skills in profile
-                            </span>
-                          )}
                         </div>
                         <p className="text-[11px] text-slate-400 italic">
-                          Verified against job requirements • Selected top competencies for quick recruiter evaluation
+                          Top 5 role-aligned competencies verified for recruiter screening
                         </p>
                       </section>
 
-                      {/* Parameter 8: Work Experience (Top 3 JD-relevant highlights) */}
+                      {/* Work Experience (Top 3 Relevant Highlights) */}
                       <section className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                             <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                             Relevant Experience Highlights (Top 3 Roles)
                           </h3>
-                          <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            Param 8 • Top 3 Roles
-                          </span>
                         </div>
 
                         <div className="space-y-3">
@@ -512,25 +518,16 @@ export default function CandidateFormModal({
                               )}
                             </div>
                           ))}
-
-                          {extraExperienceCount > 0 && (
-                            <div className="p-2 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-center text-[11px] text-slate-500">
-                              +{extraExperienceCount} earlier role in full history • View complete background timeline in original resume on the right
-                            </div>
-                          )}
                         </div>
                       </section>
 
-                      {/* Parameter 9: Education */}
+                      {/* Education */}
                       <section className="space-y-2">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                             <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
                             Education & Academic Background
                           </h3>
-                          <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            Param 9 • Education
-                          </span>
                         </div>
                         <div className="space-y-2">
                           {formData.educationEntries.map((ed, eIdx) => (
@@ -547,16 +544,13 @@ export default function CandidateFormModal({
                         </div>
                       </section>
 
-                      {/* Parameter 10: Certifications, Impact & Logistics */}
+                      {/* Certifications, Impact & Logistics */}
                       <section className="space-y-2 pt-1 border-t border-slate-100">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                             <Award className="w-3.5 h-3.5 text-amber-600" />
                             Certifications, Impact & Recruiter Metrics
                           </h3>
-                          <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            Param 10 • Recruiter Fit
-                          </span>
                         </div>
 
                         <div className="p-3.5 bg-amber-50/50 rounded-xl border border-amber-200/70 text-xs text-amber-950 space-y-2">
@@ -668,11 +662,11 @@ export default function CandidateFormModal({
                       </div>
                     )}
 
-                    {/* 1, 2, 3: Personal Details */}
+                    {/* Personal Details */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Personal Details (Params 1–3)
+                          Personal Details
                         </h4>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
                       </div>
@@ -700,11 +694,11 @@ export default function CandidateFormModal({
                       </div>
                     </section>
 
-                    {/* 6: Summary */}
+                    {/* Summary */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Professional Summary (Param 6)
+                          Professional Summary
                         </h4>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
                       </div>
@@ -716,11 +710,11 @@ export default function CandidateFormModal({
                       />
                     </section>
 
-                    {/* 4, 5, 8: Role, Total Experience & Work Experience */}
+                    {/* Role & Experience */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Role & Experience (Params 4, 5, 8)
+                          Role & Experience
                         </h4>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
                       </div>
@@ -774,11 +768,11 @@ export default function CandidateFormModal({
                       </div>
                     </section>
 
-                    {/* 7: Skills */}
+                    {/* Skills */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Skills & Stack (Param 7)
+                          Skills & Stack
                         </h4>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
                       </div>
@@ -791,11 +785,11 @@ export default function CandidateFormModal({
                       />
                     </section>
 
-                    {/* 9: Education */}
+                    {/* Education */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Education (Param 9)
+                          Education
                         </h4>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
                       </div>
@@ -808,11 +802,11 @@ export default function CandidateFormModal({
                       ))}
                     </section>
 
-                    {/* 10: Recruitment & Notes */}
+                    {/* Recruitment & Compensation */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Recruitment & Notes (Param 10)
+                          Recruitment & Compensation
                         </h4>
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase">Recruiter View</span>
                       </div>

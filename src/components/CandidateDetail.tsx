@@ -5,7 +5,6 @@ import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
 import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3 } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
-import AIInsightCard from './AIInsightCard';
 import { useApp } from '../context/AppContext';
 import CandidateFormModal from './CandidateFormModal';
 import MatchInsightModal from './MatchInsightModal';
@@ -770,12 +769,6 @@ export default function CandidateDetail() {
                 <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">
                   {candidate.code}
                 </span>
-                {candidate.duplicateStatus !== 'None' && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium rounded">
-                    <AlertTriangle className="w-3 h-3" />
-                    {candidate.duplicateStatus}
-                  </span>
-                )}
               </div>
               <p className="text-slate-600 mt-1">{candidate.currentRole || 'No Role'} at {candidate.currentCompany || 'No Company'}</p>
               
@@ -813,21 +806,6 @@ export default function CandidateDetail() {
           </div>
         </div>
       </div>
-
-      {candidate.duplicateStatus !== 'None' && (
-        <AIInsightCard 
-          title="Duplicate Candidate Warning"
-          severity="warning"
-          explanation="This profile has strong similarities with another candidate in the database."
-          evidence={[
-            "Same phone number: +91 9876543210",
-            "Highly similar resume text (92% overlap)",
-            "Previous profile: CAN-2023-088 (Applied 2 months ago)"
-          ]}
-          actionLabel="Merge Profiles"
-          onAction={() => {}}
-        />
-      )}
 
       {/* Tabs Navigation */}
       <div className="border-b border-slate-200 overflow-x-auto hide-scrollbar">

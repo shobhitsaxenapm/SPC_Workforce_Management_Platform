@@ -68,12 +68,17 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
 
     // Left pane: AI Standardized Template
     expect(screen.getByText('Standardized Candidate Profile')).toBeInTheDocument();
-    expect(screen.getByText(/Params 1–5: Candidate Overview/i)).toBeInTheDocument();
-    expect(screen.getByText(/Param 6 • Summary/i)).toBeInTheDocument();
-    expect(screen.getByText(/Param 7 • /i)).toBeInTheDocument();
-    expect(screen.getByText(/Param 8 • Top 3 Roles/i)).toBeInTheDocument();
-    expect(screen.getByText(/Param 9 • Education/i)).toBeInTheDocument();
-    expect(screen.getByText(/Param 10 • Recruiter Fit/i)).toBeInTheDocument();
+    expect(screen.getByText('AI Fit & Executive Summary')).toBeInTheDocument();
+    expect(screen.getByText('Core Matched Skills (JD-Aligned)')).toBeInTheDocument();
+    expect(screen.getByText(/Relevant Experience Highlights/i)).toBeInTheDocument();
+    expect(screen.getByText('Education & Academic Background')).toBeInTheDocument();
+    expect(screen.getByText('Certifications, Impact & Recruiter Metrics')).toBeInTheDocument();
+
+    // Verify all Param badges are removed
+    expect(screen.queryByText(/Params 1–5/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Param 6/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Param 7/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Param 8/i)).not.toBeInTheDocument();
 
     // Right pane: Original Resume As-Is
     expect(screen.getByText('ORIGINAL PDF')).toBeInTheDocument();
