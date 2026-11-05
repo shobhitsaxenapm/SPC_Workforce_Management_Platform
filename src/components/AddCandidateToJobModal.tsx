@@ -11,7 +11,8 @@ interface AddCandidateToJobModalProps {
 }
 
 export default function AddCandidateToJobModal({ jobId, isOpen, onClose, onSuccess }: AddCandidateToJobModalProps) {
-  const { addMatchToPipeline } = useApp();
+  const { addMatchToPipeline, jobs } = useApp();
+  const targetJob = jobs.find(j => j.id === jobId);
 
   const [showUpload, setShowUpload] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -50,6 +51,8 @@ export default function AddCandidateToJobModal({ jobId, isOpen, onClose, onSucce
           onClose={onClose}
           initialData={extractedData}
           isEditMode={false}
+          targetJobTitle={targetJob?.title}
+          isJobMatched={true}
           uploadedFileUrl={extractedData.resumeFileUrl}
           rawResumeText={extractedData.rawResumeText}
           sourceMetadata={extractedData.sourceMetadata}

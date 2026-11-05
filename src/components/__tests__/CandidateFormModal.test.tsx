@@ -69,7 +69,8 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
     // Left pane: AI Standardized Template
     expect(screen.getByText('Standardized Candidate Profile')).toBeInTheDocument();
     expect(screen.getByText('AI Fit & Executive Summary')).toBeInTheDocument();
-    expect(screen.getByText('Core Matched Skills (JD-Aligned)')).toBeInTheDocument();
+    expect(screen.getByText('Top Core Skills')).toBeInTheDocument();
+    expect(screen.getByText('Extracted from Resume')).toBeInTheDocument();
     expect(screen.getByText(/Relevant Experience Highlights/i)).toBeInTheDocument();
     expect(screen.getByText('Education & Academic Background')).toBeInTheDocument();
     expect(screen.getByText('Certifications, Impact & Recruiter Metrics')).toBeInTheDocument();
@@ -83,6 +84,22 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
     // Right pane: Original Resume As-Is
     expect(screen.getByText('ORIGINAL PDF')).toBeInTheDocument();
     expect(screen.getByText("Candidate's Uploaded Document")).toBeInTheDocument();
+  });
+
+  it('renders Core Matched Skills (JD-Aligned) with target job badge when candidate is matched against a JD', () => {
+    render(
+      <CandidateFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        initialData={mockShobhitData}
+        isEditMode={false}
+        targetJobTitle="Senior AI Product Manager"
+        isJobMatched={true}
+      />
+    );
+
+    expect(screen.getByText('Core Matched Skills (JD-Aligned)')).toBeInTheDocument();
+    expect(screen.getByText(/Aligned to Senior AI Product Manager/i)).toBeInTheDocument();
   });
 
   it('toggles edit profile mode on left pane to reveal editable form inputs and toggles back', async () => {

@@ -6,6 +6,7 @@ import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTri
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import { useApp } from '../context/AppContext';
+import { getEasyTwoLineSummary } from '../lib/summaryHelper';
 import CandidateFormModal from './CandidateFormModal';
 import MatchInsightModal from './MatchInsightModal';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
@@ -80,6 +81,9 @@ export default function CandidateDetail() {
 
   // Existing Applications (directly from context)
   const existingCandidateApps = applications.filter(a => a.candidateId === candidate.id);
+  const primaryActiveJobId = existingCandidateApps[0]?.jobId;
+  const primaryActiveJob = jobs.find(j => j.id === primaryActiveJobId);
+  const [aiSummaryLine1, aiSummaryLine2] = getEasyTwoLineSummary(candidate);
   
   // Combine for Jobs & Hiring Progress tab
   const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId)];
@@ -962,20 +966,34 @@ export default function CandidateDetail() {
 
           {/* Right Column: AI Executive Summary & Experience Analysis */}
           <div className="lg:col-span-2 space-y-6">
-            {/* AI Executive Summary */}
-            {candidate.professionalSummary && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
+            {/* AI Executive Summary - Easy Two-Liner */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <h3 className="font-semibold text-slate-800">AI Executive Summary</h3>
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed bg-slate-50/60 p-4 rounded-xl border border-slate-200/60">
-                  {candidate.professionalSummary}
-                </p>
+                <span className="px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-50 rounded-full border border-blue-100">
+                  2-Line Quick Overview
+                </span>
               </div>
-            )}
+              <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/30 to-slate-50 p-4 rounded-xl border border-blue-100 text-sm text-slate-800 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <p className="font-medium text-slate-900 leading-snug">
+                    {aiSummaryLine1}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
+                  <p className="text-slate-700 leading-snug">
+                    {aiSummaryLine2}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Experience Analysis (AI) - Option A & Capped at 3 Stints */}
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -1291,6 +1309,8 @@ export default function CandidateDetail() {
         onClose={() => setIsEditModalOpen(false)}
         initialData={candidate}
         isEditMode={true}
+        targetJobTitle={primaryActiveJob?.title}
+        isJobMatched={!!primaryActiveJob}
       />
       
       {selectedInsight && (

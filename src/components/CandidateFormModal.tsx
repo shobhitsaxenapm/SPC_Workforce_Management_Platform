@@ -8,6 +8,7 @@ import {
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import OriginalResumeViewer, { defaultShobhitResume } from './OriginalResumeViewer';
+import { getEasyTwoLineSummary } from '../lib/summaryHelper';
 
 interface CandidateFormModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface CandidateFormModalProps {
   uploadedFile?: File | null;
   uploadedFileUrl?: string | null;
   rawResumeText?: string;
+  targetJobTitle?: string;
+  isJobMatched?: boolean;
   sourceMetadata?: {
     originalFilename?: string;
     mimeType?: string;
@@ -34,6 +37,8 @@ export default function CandidateFormModal({
   uploadedFile,
   uploadedFileUrl,
   rawResumeText,
+  targetJobTitle,
+  isJobMatched: propIsJobMatched,
   sourceMetadata,
 }: CandidateFormModalProps) {
   const { createCandidate, updateCandidate, candidates } = useApp();
@@ -220,6 +225,10 @@ export default function CandidateFormModal({
     performSave();
   };
 
+  // Context-aware JD matching status
+  const isMatchedWithJd = Boolean(propIsJobMatched || targetJobTitle || (initialData as any)?.targetJobId || (initialData as any)?.matchedJobTitle);
+  const matchedJobName = targetJobTitle || (initialData as any)?.matchedJobTitle;
+
   // Strictly Top 5 JD/Role-relevant skills (e.g. for Product Manager, prioritize AI PM competencies)
   const parsedSkillsList = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
   const isProductRole = /product/i.test(formData.currentRole);
@@ -229,19 +238,18 @@ export default function CandidateFormModal({
         ...parsedSkillsList
       ]
     : parsedSkillsList;
-  const topJdSkills = Array.from(new Set(prioritizedSkills)).slice(0, 5);
+  const topJdSkills: string[] = (Array.from(new Set(prioritizedSkills)) as string[]).slice(0, 5);
 
   // Top 3 JD-relevant experience highlights
   const topExperience = formData.employmentHistory.slice(0, 3);
 
-  // Concise 2-line AI Fit & Executive Summary
-  const aiExecutiveSummaryLine1 = isProductRole 
-    ? `${formData.currentRole} with ${formData.totalExperience || '4+ Years'} spearheading enterprise LLM orchestration, agentic validation workflows, and intelligent document processing pipelines.`
-    : `${formData.currentRole || 'Experienced Professional'} with ${formData.totalExperience || 'proven'} track record delivering high-impact workflows and scalable domain solutions.`;
-
-  const aiExecutiveSummaryLine2 = isProductRole
-    ? 'Proven leadership driving B2B SaaS roadmaps from discovery to enterprise deployment with cross-functional execution and measurable commercial impact.'
-    : 'Strong background translating complex requirements into reliable results with cross-functional team alignment.';
+  // Easy-to-understand 2-line AI executive summary (Plain English, zero heavy buzzwords)
+  const [aiExecutiveSummaryLine1, aiExecutiveSummaryLine2] = getEasyTwoLineSummary({
+    currentRole: formData.currentRole,
+    totalExperience: formData.totalExperience,
+    professionalSummary: formData.professionalSummary,
+    skills: topJdSkills,
+  });
 
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
@@ -458,27 +466,43 @@ export default function CandidateFormModal({
                         </div>
                       </section>
 
-                      {/* Key Matched Skills (Strictly Top 5 Role-Relevant) */}
+                      {/* Skills Section: Context-Aware (Unmatched vs Matched with JD) */}
                       <section className="space-y-2">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                            Core Matched Skills (JD-Aligned)
+                            {isMatchedWithJd ? 'Core Matched Skills (JD-Aligned)' : 'Top Core Skills'}
                           </h3>
+                          {isMatchedWithJd ? (
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full flex items-center gap-1">
+                              🎯 Aligned to {matchedJobName || 'Target Job'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">
+                              Extracted from Resume
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {topJdSkills.map((skill, sIdx) => (
                             <span 
                               key={sIdx} 
-                              className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded-lg border border-blue-200 flex items-center gap-1.5 shadow-xs"
+                              className={cn(
+                                "px-2.5 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1.5 shadow-xs transition-colors",
+                                isMatchedWithJd 
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                              )}
                             >
-                              <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                              <CheckCircle2 className={cn("w-3 h-3", isMatchedWithJd ? "text-emerald-600" : "text-blue-600")} />
                               {skill}
                             </span>
                           ))}
                         </div>
                         <p className="text-[11px] text-slate-400 italic">
-                          Top 5 role-aligned competencies verified for recruiter screening
+                          {isMatchedWithJd
+                            ? `Top 5 skills directly matched against ${matchedJobName ? `"${matchedJobName}"` : 'job'} requirements`
+                            : 'Top 5 functional competencies identified from profile • Evaluated for JD match once linked to a Job'}
                         </p>
                       </section>
 
