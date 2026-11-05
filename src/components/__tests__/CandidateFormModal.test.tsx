@@ -71,11 +71,13 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
     expect(screen.getByText('AI Fit & Executive Summary')).toBeInTheDocument();
     expect(screen.getByText('Top Core Skills')).toBeInTheDocument();
     expect(screen.getByText('Extracted from Resume')).toBeInTheDocument();
-    expect(screen.getByText(/Relevant Experience Highlights/i)).toBeInTheDocument();
-    expect(screen.getByText('Education & Academic Background')).toBeInTheDocument();
-    expect(screen.getByText('Certifications, Impact & Recruiter Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Experience Analysis (AI)')).toBeInTheDocument();
+    expect(screen.getByText('Career Trajectory & Domain Strength')).toBeInTheDocument();
+    expect(screen.getByText('Highest Qualification')).toBeInTheDocument();
+    expect(screen.queryByText('Certifications, Impact & Recruiter Metrics')).not.toBeInTheDocument();
 
-    // Verify all Param badges are removed
+    // Verify Relocate chip and Param badges are removed
+    expect(screen.queryByText(/Relocate:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Params 1–5/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Param 6/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Param 7/i)).not.toBeInTheDocument();

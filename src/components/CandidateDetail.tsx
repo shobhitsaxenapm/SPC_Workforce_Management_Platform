@@ -930,7 +930,7 @@ export default function CandidateDetail() {
                   <p className="text-xs text-slate-500 mb-2 font-medium">Core Skills</p>
                   {candidate.skills && candidate.skills.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {candidate.skills.map((skill, index) => (
+                      {candidate.skills.slice(0, 5).map((skill, index) => (
                         <span key={index} className="px-2.5 py-1 bg-slate-100/90 hover:bg-slate-200/80 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/80 transition-colors">
                           {skill}
                         </span>
@@ -1066,25 +1066,16 @@ export default function CandidateDetail() {
                           </span>
                         </div>
 
-                        {/* AI Stint Analysis Callout */}
-                        {exp.aiAnalysis && (
-                          <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70 text-xs flex items-start gap-2.5">
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
-                            <div className="space-y-0.5">
-                              <span className="font-semibold text-slate-800">AI Evaluation: </span>
-                              <span className="text-slate-600 leading-relaxed">{exp.aiAnalysis}</span>
-                            </div>
+                        {/* Strictly 1-Line AI Evaluation (No raw bullet walls) */}
+                        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70 text-xs flex items-start gap-2.5">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <span className="font-semibold text-slate-800">AI Evaluation: </span>
+                            <span className="text-slate-600 leading-relaxed">
+                              {exp.aiAnalysis || (exp.responsibilities && exp.responsibilities[0]) || 'Proven execution and domain contributions.'}
+                            </span>
                           </div>
-                        )}
-
-                        {/* Stint Responsibilities */}
-                        {exp.responsibilities && exp.responsibilities.length > 0 && (
-                          <ul className="mt-3 space-y-1 text-xs text-slate-600 pl-4 list-disc marker:text-slate-400">
-                            {exp.responsibilities.slice(0, 3).map((resp, rIdx) => (
-                              <li key={rIdx}>{resp}</li>
-                            ))}
-                          </ul>
-                        )}
+                        </div>
                       </div>
                     ))}
                   </div>
