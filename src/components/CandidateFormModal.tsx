@@ -3,7 +3,7 @@ import { Candidate, EmploymentEntry, EducationEntry } from '../types';
 import { 
   X, CheckCircle, CheckCircle2, AlertTriangle, Plus, Trash2, Columns, FileText, 
   Edit3, Sparkles, Check, Info, FileCode, ExternalLink,
-  Award, Briefcase, GraduationCap, MapPin, Mail, Phone, Globe, Eye, Building2
+  Award, Briefcase, GraduationCap, MapPin, Mail, Phone, Globe, Eye, Building2, User, DollarSign
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
@@ -62,7 +62,8 @@ export default function CandidateFormModal({
     currentRole: initialData.currentRole || defaultShobhitResume.experience[0].role,
     currentCompany: initialData.currentCompany || defaultShobhitResume.experience[0].company,
     totalExperience: initialData.totalExperience || '4+ Years',
-    professionalSummary: initialData.professionalSummary || defaultShobhitResume.summary,
+    professionalSummary: initialData.professionalSummary || 
+      `${initialData.currentRole || defaultShobhitResume.experience[0].role} with ${initialData.totalExperience || '4+ Years'} building AI automation tools, LLM workflows, and B2B SaaS platforms.\nProven track record taking features from concept to launch with strong user adoption and business impact.`,
     skills: initialData.skills?.join(', ') || [
       'AI Agents & Workflow Design',
       'Prompt Engineering & RAG',
@@ -79,13 +80,19 @@ export default function CandidateFormModal({
     languages: initialData.languages?.join(', ') || 'English, Hindi',
     employmentHistory: initialData.employmentHistory && initialData.employmentHistory.length > 0 
       ? initialData.employmentHistory 
-      : defaultShobhitResume.experience.map(e => ({
+      : defaultShobhitResume.experience.map((e, idx) => ({
           company: e.company,
           role: e.role,
           location: e.location,
           startDate: e.duration.split('–')[0]?.trim() || e.duration.split('-')[0]?.trim(),
           endDate: e.duration.split('–')[1]?.trim() || e.duration.split('-')[1]?.trim() || 'Present',
-          responsibilities: e.bullets
+          responsibilities: e.bullets,
+          relevanceTag: (idx === 0 ? 'Direct Match' : idx === 1 ? 'Direct Match' : 'Relevant Domain') as any,
+          aiAnalysis: idx === 0 
+            ? 'Multi-agent orchestration and intelligent document processing pipelines.'
+            : idx === 1 
+            ? 'Creator risk screening, brand safety, and embedding-based identity resolution.'
+            : 'High-scale SaaS data workflows and backend Python services.'
         })),
     educationEntries: initialData.educationEntries && initialData.educationEntries.length > 0
       ? initialData.educationEntries
@@ -703,18 +710,33 @@ export default function CandidateFormModal({
                       </div>
                     )}
 
-                    {/* Personal Details */}
+                    {/* 1. Candidate Header & Personal Details */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Personal Details
-                        </h4>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-blue-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            Candidate Header Details
+                          </h4>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Header Info</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
                           <input type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className={cn("w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100", errors.fullName ? "border-red-300" : "border-slate-300")} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Current Role *</label>
+                          <input type="text" value={formData.currentRole} onChange={e => setFormData({...formData, currentRole: e.target.value})} className={cn("w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100", errors.currentRole ? "border-red-300" : "border-slate-300")} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Current Company</label>
+                          <input type="text" value={formData.currentCompany} onChange={e => setFormData({...formData, currentCompany: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Total Experience</label>
+                          <input type="text" value={formData.totalExperience} onChange={e => setFormData({...formData, totalExperience: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">Email Address</label>
@@ -728,127 +750,317 @@ export default function CandidateFormModal({
                           <label className="block text-xs font-medium text-slate-700 mb-1">Current Location *</label>
                           <input type="text" value={formData.currentLocation} onChange={e => setFormData({...formData, currentLocation: e.target.value})} className={cn("w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100", errors.currentLocation ? "border-red-300" : "border-slate-300")} />
                         </div>
-                        <div className="sm:col-span-2">
+                        <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">LinkedIn URL</label>
                           <input type="url" value={formData.linkedInUrl} onChange={e => setFormData({...formData, linkedInUrl: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100" />
                         </div>
                       </div>
                     </section>
 
-                    {/* Summary */}
-                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Professional Summary
-                        </h4>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={formData.professionalSummary}
-                        onChange={e => setFormData({...formData, professionalSummary: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100 leading-relaxed"
-                      />
-                    </section>
-
-                    {/* Role & Experience */}
+                    {/* 2. AI Fit & Executive Summary (2 Lines) */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Role & Experience
-                        </h4>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-blue-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            AI Fit & Executive Summary (2 Lines)
+                          </h4>
+                        </div>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full uppercase">Executive Summary</span>
                       </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-2.5">
                         <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Current Role *</label>
-                          <input type="text" value={formData.currentRole} onChange={e => setFormData({...formData, currentRole: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none" />
+                          <label className="block text-[11px] font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                            Line 1: High-Level Role & Experience
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.professionalSummary.includes('\n') ? formData.professionalSummary.split('\n')[0] : aiExecutiveSummaryLine1}
+                            onChange={e => {
+                              const line2 = formData.professionalSummary.includes('\n') ? formData.professionalSummary.split('\n')[1] : aiExecutiveSummaryLine2;
+                              setFormData({
+                                ...formData,
+                                professionalSummary: `${e.target.value}\n${line2}`
+                              });
+                            }}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100 font-medium text-slate-900"
+                          />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Current Company</label>
-                          <input type="text" value={formData.currentCompany} onChange={e => setFormData({...formData, currentCompany: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Total Experience</label>
-                          <input type="text" value={formData.totalExperience} onChange={e => setFormData({...formData, totalExperience: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none" />
+                          <label className="block text-[11px] font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                            Line 2: Domain Execution & Key Impact
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.professionalSummary.includes('\n') ? formData.professionalSummary.split('\n')[1] : aiExecutiveSummaryLine2}
+                            onChange={e => {
+                              const line1 = formData.professionalSummary.includes('\n') ? formData.professionalSummary.split('\n')[0] : aiExecutiveSummaryLine1;
+                              setFormData({
+                                ...formData,
+                                professionalSummary: `${line1}\n${e.target.value}`
+                              });
+                            }}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100 text-slate-800"
+                          />
                         </div>
                       </div>
+                    </section>
 
-                      <h5 className="font-semibold text-slate-700 text-xs pt-1">Employment History Entries</h5>
-                      <div className="space-y-3">
-                        {formData.employmentHistory.map((entry, index) => (
-                          <div key={index} className="p-3 border border-slate-200 rounded-lg relative bg-slate-50 space-y-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newHist = [...formData.employmentHistory];
-                                newHist.splice(index, 1);
-                                setFormData({...formData, employmentHistory: newHist});
+                    {/* 3. Top Core Skills (Top 5) - Replaces legacy Skills & Stack */}
+                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            {isMatchedWithJd ? 'Core Matched Skills (JD-Aligned)' : 'Top Core Skills'}
+                          </h4>
+                        </div>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full uppercase">Top 5 Extracted</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Top 5 primary competencies shown on the standardized profile.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {[0, 1, 2, 3, 4].map(idx => (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-400 w-4">{idx + 1}.</span>
+                            <input
+                              type="text"
+                              value={topJdSkills[idx] || ''}
+                              placeholder={`Skill ${idx + 1}`}
+                              onChange={e => {
+                                const newSkills = [...topJdSkills];
+                                newSkills[idx] = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  skills: newSkills.filter(Boolean).join(', ')
+                                });
                               }}
-                              className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
-                              title="Delete entry"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                            <div className="grid grid-cols-2 gap-2 pr-6">
-                              <div><label className="block text-[11px] text-slate-500">Company</label><input type="text" value={entry.company} onChange={e => { const h = [...formData.employmentHistory]; h[index].company = e.target.value; setFormData({...formData, employmentHistory: h}); }} className="w-full px-2 py-1 text-xs border rounded bg-white" /></div>
-                              <div><label className="block text-[11px] text-slate-500">Role</label><input type="text" value={entry.role} onChange={e => { const h = [...formData.employmentHistory]; h[index].role = e.target.value; setFormData({...formData, employmentHistory: h}); }} className="w-full px-2 py-1 text-xs border rounded bg-white" /></div>
-                              <div><label className="block text-[11px] text-slate-500">Start Date</label><input type="text" value={entry.startDate} onChange={e => { const h = [...formData.employmentHistory]; h[index].startDate = e.target.value; setFormData({...formData, employmentHistory: h}); }} className="w-full px-2 py-1 text-xs border rounded bg-white" /></div>
-                              <div><label className="block text-[11px] text-slate-500">End Date</label><input type="text" value={entry.endDate} onChange={e => { const h = [...formData.employmentHistory]; h[index].endDate = e.target.value; setFormData({...formData, employmentHistory: h}); }} className="w-full px-2 py-1 text-xs border rounded bg-white" /></div>
-                            </div>
+                              className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100 font-medium text-slate-800"
+                            />
                           </div>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, employmentHistory: [...formData.employmentHistory, { company: '', role: '', startDate: '', endDate: 'Present' }]})}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Add Another Role
-                        </button>
                       </div>
                     </section>
 
-                    {/* Skills */}
-                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    {/* 4. Experience Analysis (AI) - Top 3 Stints */}
+                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Skills & Stack
-                        </h4>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={formData.skills}
-                        onChange={e => setFormData({...formData, skills: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100"
-                        placeholder="Comma-separated skills..."
-                      />
-                    </section>
-
-                    {/* Education */}
-                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Education
-                        </h4>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Extracted</span>
-                      </div>
-                      {formData.educationEntries.map((ed, idx) => (
-                        <div key={idx} className="flex gap-2 items-center">
-                          <input type="text" value={ed.qualification} onChange={e => { const list = [...formData.educationEntries]; list[idx].qualification = e.target.value; setFormData({...formData, educationEntries: list}); }} className="flex-1 px-2.5 py-1 text-xs border rounded bg-white" placeholder="Degree / Qualification" />
-                          <input type="text" value={ed.institution} onChange={e => { const list = [...formData.educationEntries]; list[idx].institution = e.target.value; setFormData({...formData, educationEntries: list}); }} className="flex-1 px-2.5 py-1 text-xs border rounded bg-white" placeholder="Institution" />
-                          <input type="text" value={ed.completionYear} onChange={e => { const list = [...formData.educationEntries]; list[idx].completionYear = e.target.value; setFormData({...formData, educationEntries: list}); }} className="w-20 px-2.5 py-1 text-xs border rounded bg-white" placeholder="Year" />
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-blue-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            Experience Analysis (AI) — Top 3 Stints
+                          </h4>
                         </div>
-                      ))}
+                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full uppercase">Top 3 Roles</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {formData.employmentHistory.slice(0, 3).map((entry, index) => {
+                          const relevanceTag = getExperienceRelevanceTag(entry, index);
+                          const stintAiAnalysis = getExperienceAiAnalysis(entry, index);
+
+                          return (
+                            <div key={index} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 space-y-3">
+                              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-blue-600" />
+                                  Stint {index + 1}: {entry.role || 'Role'} {entry.company ? `at ${entry.company}` : ''}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <label className="text-[10px] font-semibold text-slate-500 uppercase">Match Tag:</label>
+                                  <select
+                                    value={relevanceTag}
+                                    onChange={e => {
+                                      const h = [...formData.employmentHistory];
+                                      h[index] = { ...h[index], relevanceTag: e.target.value as any };
+                                      setFormData({ ...formData, employmentHistory: h });
+                                    }}
+                                    className="px-2 py-0.5 text-xs font-semibold rounded-md border border-slate-300 bg-white text-slate-700 outline-none"
+                                  >
+                                    <option value="Direct Match">Direct Match</option>
+                                    <option value="Relevant Domain">Relevant Domain</option>
+                                    <option value="Adjacent Experience">Adjacent Experience</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                <div>
+                                  <label className="block text-[11px] font-medium text-slate-600 mb-1">Role Title *</label>
+                                  <input
+                                    type="text"
+                                    value={entry.role}
+                                    onChange={e => {
+                                      const h = [...formData.employmentHistory];
+                                      h[index] = { ...h[index], role: e.target.value };
+                                      setFormData({ ...formData, employmentHistory: h });
+                                    }}
+                                    className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-white border-slate-300 font-medium"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-medium text-slate-600 mb-1">Company *</label>
+                                  <input
+                                    type="text"
+                                    value={entry.company}
+                                    onChange={e => {
+                                      const h = [...formData.employmentHistory];
+                                      h[index] = { ...h[index], company: e.target.value };
+                                      setFormData({ ...formData, employmentHistory: h });
+                                    }}
+                                    className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-white border-slate-300"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-medium text-slate-600 mb-1">Location</label>
+                                  <input
+                                    type="text"
+                                    value={entry.location || ''}
+                                    placeholder="e.g. Bangalore"
+                                    onChange={e => {
+                                      const h = [...formData.employmentHistory];
+                                      h[index] = { ...h[index], location: e.target.value };
+                                      setFormData({ ...formData, employmentHistory: h });
+                                    }}
+                                    className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-white border-slate-300"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <div>
+                                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Start Date</label>
+                                    <input
+                                      type="text"
+                                      value={entry.startDate || ''}
+                                      placeholder="MMM YYYY"
+                                      onChange={e => {
+                                        const h = [...formData.employmentHistory];
+                                        h[index] = { ...h[index], startDate: e.target.value };
+                                        setFormData({ ...formData, employmentHistory: h });
+                                      }}
+                                      className="w-full px-2 py-1.5 text-xs border rounded-lg bg-white border-slate-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-medium text-slate-600 mb-1">End Date</label>
+                                    <input
+                                      type="text"
+                                      value={entry.endDate || ''}
+                                      placeholder="Present"
+                                      onChange={e => {
+                                        const h = [...formData.employmentHistory];
+                                        h[index] = { ...h[index], endDate: e.target.value };
+                                        setFormData({ ...formData, employmentHistory: h });
+                                      }}
+                                      className="w-full px-2 py-1.5 text-xs border rounded-lg bg-white border-slate-300"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                                  1-Line AI Evaluation:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={entry.aiAnalysis ?? stintAiAnalysis}
+                                  onChange={e => {
+                                    const h = [...formData.employmentHistory];
+                                    h[index] = { ...h[index], aiAnalysis: e.target.value };
+                                    setFormData({ ...formData, employmentHistory: h });
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white font-medium text-slate-800 outline-none focus:ring-2 focus:ring-indigo-100"
+                                  placeholder="One-line AI evaluation..."
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </section>
 
-                    {/* Recruitment & Compensation */}
+                    {/* 5. Highest Qualification */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Recruitment & Compensation
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="w-4 h-4 text-blue-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            Highest Qualification
+                          </h4>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">Education</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-1">
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Degree / Qualification *</label>
+                          <input
+                            type="text"
+                            value={formData.educationEntries[0]?.qualification || ''}
+                            placeholder="e.g. B.Tech Computer Science"
+                            onChange={e => {
+                              const list = [...formData.educationEntries];
+                              if (list.length === 0) {
+                                list.push({ qualification: e.target.value, institution: '', completionYear: '' });
+                              } else {
+                                list[0] = { ...list[0], qualification: e.target.value };
+                              }
+                              setFormData({ ...formData, educationEntries: list });
+                            }}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Institution</label>
+                          <input
+                            type="text"
+                            value={formData.educationEntries[0]?.institution || ''}
+                            placeholder="e.g. IIT Delhi"
+                            onChange={e => {
+                              const list = [...formData.educationEntries];
+                              if (list.length === 0) {
+                                list.push({ qualification: '', institution: e.target.value, completionYear: '' });
+                              } else {
+                                list[0] = { ...list[0], institution: e.target.value };
+                              }
+                              setFormData({ ...formData, educationEntries: list });
+                            }}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Completion Year</label>
+                          <input
+                            type="text"
+                            value={formData.educationEntries[0]?.completionYear || ''}
+                            placeholder="e.g. 2022"
+                            onChange={e => {
+                              const list = [...formData.educationEntries];
+                              if (list.length === 0) {
+                                list.push({ qualification: '', institution: '', completionYear: e.target.value });
+                              } else {
+                                list[0] = { ...list[0], completionYear: e.target.value };
+                              }
+                              setFormData({ ...formData, educationEntries: list });
+                            }}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* 6. Recruitment & Compensation (Certifications & Notes Removed) */}
+                    <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-emerald-600" />
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                            Recruitment & Compensation
+                          </h4>
+                        </div>
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase">Recruiter View</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -871,10 +1083,6 @@ export default function CandidateFormModal({
                             <option>90 Days</option>
                           </select>
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Certifications & Notes</label>
-                        <textarea rows={2} value={formData.recruiterNotes} onChange={e => setFormData({...formData, recruiterNotes: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs" />
                       </div>
                     </section>
 

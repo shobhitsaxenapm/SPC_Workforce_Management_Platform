@@ -8,6 +8,14 @@ export function getEasyTwoLineSummary(candidate: {
   professionalSummary?: string;
   skills?: string[] | string;
 }): [string, string] {
+  // If custom 2-line summary was provided by user in edit mode, respect their custom lines!
+  if (candidate.professionalSummary && candidate.professionalSummary.includes('\n')) {
+    const lines = candidate.professionalSummary.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length >= 2) {
+      return [lines[0], lines[1]];
+    }
+  }
+
   const role = candidate.currentRole?.trim() || 'Product Professional';
   const exp = candidate.totalExperience?.trim() || '4+ Years';
   const roleLower = role.toLowerCase();

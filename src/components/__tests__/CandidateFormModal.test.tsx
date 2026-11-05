@@ -68,12 +68,12 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
 
     // Left pane: AI Standardized Template
     expect(screen.getByText('Standardized Candidate Profile')).toBeInTheDocument();
-    expect(screen.getByText('AI Fit & Executive Summary')).toBeInTheDocument();
-    expect(screen.getByText('Top Core Skills')).toBeInTheDocument();
+    expect(screen.getAllByText(/AI Fit & Executive Summary/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Top Core Skills').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Extracted from Resume')).toBeInTheDocument();
-    expect(screen.getByText('Experience Analysis (AI)')).toBeInTheDocument();
+    expect(screen.getAllByText(/Experience Analysis \(AI\)/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Career Trajectory & Domain Strength')).toBeInTheDocument();
-    expect(screen.getByText('Highest Qualification')).toBeInTheDocument();
+    expect(screen.getAllByText('Highest Qualification').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Certifications, Impact & Recruiter Metrics')).not.toBeInTheDocument();
 
     // Verify Relocate chip and Param badges are removed
@@ -100,7 +100,7 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
       />
     );
 
-    expect(screen.getByText('Core Matched Skills (JD-Aligned)')).toBeInTheDocument();
+    expect(screen.getAllByText('Core Matched Skills (JD-Aligned)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Aligned to Senior AI Product Manager/i)).toBeInTheDocument();
   });
 
