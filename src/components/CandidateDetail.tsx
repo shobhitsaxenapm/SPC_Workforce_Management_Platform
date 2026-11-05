@@ -992,7 +992,6 @@ export default function CandidateDetail() {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Key Employment Stints ({Math.min(candidate.employmentHistory?.length || 0, 3)} of {candidate.employmentHistory?.length || 0})
                   </h4>
-                  <span className="text-xs text-slate-400">Token-optimized extraction</span>
                 </div>
 
                 {candidate.employmentHistory && candidate.employmentHistory.length > 0 ? (
