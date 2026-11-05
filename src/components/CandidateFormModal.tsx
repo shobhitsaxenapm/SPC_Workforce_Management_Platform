@@ -260,12 +260,6 @@ export default function CandidateFormModal({
     return 'High-scale SaaS data workflows and backend services.';
   };
 
-  const getExperienceRelevanceTag = (exp: any, index: number) => {
-    if (exp.relevanceTag) return exp.relevanceTag;
-    if (index === 0) return 'Direct Match';
-    if (index === 1) return 'Direct Match';
-    return 'Relevant Domain';
-  };
 
   // Easy-to-understand 2-line AI executive summary (Plain English, zero heavy buzzwords)
   const [aiExecutiveSummaryLine1, aiExecutiveSummaryLine2] = getEasyTwoLineSummary({
@@ -463,12 +457,12 @@ export default function CandidateFormModal({
                         </div>
                       </div>
 
-                      {/* AI Fit & Executive Summary (Strictly 2 Lines) */}
+                      {/* AI Executive Summary (Strictly 2 Lines) */}
                       <section className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                            AI Fit & Executive Summary
+                            AI Executive Summary
                           </h3>
                         </div>
                         <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 p-3.5 rounded-xl border border-blue-100 text-xs text-slate-800 space-y-1.5 shadow-2xs">
@@ -558,31 +552,17 @@ export default function CandidateFormModal({
                         {/* Top 3 Key Employment Stints with 1-Line AI Evaluation */}
                         <div className="space-y-2.5">
                           {topExperience.map((exp, idx) => {
-                            const relevanceTag = getExperienceRelevanceTag(exp, idx);
                             const stintAiAnalysis = getExperienceAiAnalysis(exp, idx);
 
                             return (
                               <div key={idx} className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 text-xs space-y-1.5">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <div className="flex flex-wrap items-center gap-1.5">
+                                    <div>
                                       <h4 className="font-bold text-slate-950 flex items-center gap-1.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                                         {exp.role}
                                       </h4>
-                                      {relevanceTag === 'Direct Match' ? (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                          <Check className="w-2.5 h-2.5 text-emerald-600" /> Direct Match
-                                        </span>
-                                      ) : relevanceTag === 'Relevant Domain' ? (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                                          <Sparkles className="w-2.5 h-2.5 text-blue-600" /> Relevant Domain
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                          {relevanceTag}
-                                        </span>
-                                      )}
                                     </div>
                                     <p className="text-[11px] font-medium text-slate-600 mt-0.5 flex items-center gap-1">
                                       <Building2 className="w-3 h-3 text-slate-400" />
@@ -757,13 +737,13 @@ export default function CandidateFormModal({
                       </div>
                     </section>
 
-                    {/* 2. AI Fit & Executive Summary (2 Lines) */}
+                    {/* 2. AI Executive Summary (2 Lines) */}
                     <section className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-blue-600" />
                           <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                            AI Fit & Executive Summary (2 Lines)
+                            AI Executive Summary (2 Lines)
                           </h4>
                         </div>
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full uppercase">Executive Summary</span>
@@ -859,32 +839,15 @@ export default function CandidateFormModal({
 
                       <div className="space-y-3">
                         {formData.employmentHistory.slice(0, 3).map((entry, index) => {
-                          const relevanceTag = getExperienceRelevanceTag(entry, index);
                           const stintAiAnalysis = getExperienceAiAnalysis(entry, index);
 
                           return (
                             <div key={index} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 space-y-3">
-                              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                              <div className="pb-2 border-b border-slate-200/60">
                                 <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
                                   <span className="w-2 h-2 rounded-full bg-blue-600" />
                                   Stint {index + 1}: {entry.role || 'Role'} {entry.company ? `at ${entry.company}` : ''}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <label className="text-[10px] font-semibold text-slate-500 uppercase">Match Tag:</label>
-                                  <select
-                                    value={relevanceTag}
-                                    onChange={e => {
-                                      const h = [...formData.employmentHistory];
-                                      h[index] = { ...h[index], relevanceTag: e.target.value as any };
-                                      setFormData({ ...formData, employmentHistory: h });
-                                    }}
-                                    className="px-2 py-0.5 text-xs font-semibold rounded-md border border-slate-300 bg-white text-slate-700 outline-none"
-                                  >
-                                    <option value="Direct Match">Direct Match</option>
-                                    <option value="Relevant Domain">Relevant Domain</option>
-                                    <option value="Adjacent Experience">Adjacent Experience</option>
-                                  </select>
-                                </div>
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">

@@ -68,7 +68,7 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
 
     // Left pane: AI Standardized Template
     expect(screen.getByText('Standardized Candidate Profile')).toBeInTheDocument();
-    expect(screen.getAllByText(/AI Fit & Executive Summary/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/AI Executive Summary/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Top Core Skills').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Extracted from Resume')).toBeInTheDocument();
     expect(screen.getAllByText(/Experience Analysis \(AI\)/i).length).toBeGreaterThanOrEqual(1);

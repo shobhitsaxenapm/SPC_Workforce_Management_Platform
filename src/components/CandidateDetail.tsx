@@ -714,35 +714,6 @@ export default function CandidateDetail() {
     );
   };
 
-  const renderRelevanceBadge = (tag?: string) => {
-    switch (tag) {
-      case 'Direct Match':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <Check className="w-3 h-3 text-emerald-600" /> Direct Match
-          </span>
-        );
-      case 'Relevant Domain':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <Sparkles className="w-3 h-3 text-blue-600" /> Relevant Domain
-          </span>
-        );
-      case 'Adjacent Experience':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            Adjacent Experience
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-            {tag || 'General'}
-          </span>
-        );
-    }
-  };
-
   return (
     <div className="space-y-6">
       {toast && (
@@ -940,20 +911,6 @@ export default function CandidateDetail() {
                     <p className="text-sm font-medium text-slate-400">—</p>
                   )}
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-2 font-medium">Languages</p>
-                  {candidate.languages && candidate.languages.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {candidate.languages.map((lang, index) => (
-                        <span key={index} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
-                          {lang}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm font-medium text-slate-400">—</p>
-                  )}
-                </div>
                 <div className="pt-2 border-t border-slate-100">
                   <p className="text-xs text-slate-500 mb-1 font-medium">Highest Qualification</p>
                   <p className="text-sm font-medium text-slate-800">
@@ -1047,9 +1004,8 @@ export default function CandidateDetail() {
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
                           <div>
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div>
                               <h5 className="font-semibold text-slate-900 text-sm">{exp.role}</h5>
-                              {renderRelevanceBadge(exp.relevanceTag)}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-slate-600 mt-1">
                               <span className="font-medium text-slate-800 flex items-center gap-1">
