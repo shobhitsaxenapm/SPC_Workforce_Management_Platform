@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3 } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3, ChevronDown, Download, Copy, Eye } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import { useApp } from '../context/AppContext';
@@ -64,6 +64,22 @@ export default function CandidateDetail() {
   const [hasRunCandidateMatch, setHasRunCandidateMatch] = useState(false);
   const [isRefreshingMatches, setIsRefreshingMatches] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [isResumeMenuOpen, setIsResumeMenuOpen] = useState(false);
+  const resumeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (resumeMenuRef.current && !resumeMenuRef.current.contains(event.target as Node)) {
+        setIsResumeMenuOpen(false);
+      }
+    }
+    if (isResumeMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isResumeMenuOpen]);
 
   const handleRunCandidateMatches = () => {
     setIsRefreshingMatches(true);
@@ -84,6 +100,42 @@ export default function CandidateDetail() {
   const primaryActiveJobId = existingCandidateApps[0]?.jobId;
   const primaryActiveJob = jobs.find(j => j.id === primaryActiveJobId);
   const [aiSummaryLine1, aiSummaryLine2] = getEasyTwoLineSummary(candidate);
+
+  const handleDownloadResume = () => {
+    if (!candidate?.resumeUrl) return;
+    try {
+      const link = document.createElement('a');
+      const href = candidate.resumeUrl.startsWith('http') || candidate.resumeUrl.startsWith('blob:')
+        ? candidate.resumeUrl
+        : `/${candidate.resumeUrl}`;
+      link.href = href;
+      link.download = candidate.resumeUrl.split('/').pop() || `${candidate.fullName.replace(/\s+/g, '_')}_Resume.pdf`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setToast({ message: 'Resume download started.', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    } catch {
+      setToast({ message: 'Failed to download resume file.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleCopyResumeLink = () => {
+    if (!candidate?.resumeUrl) return;
+    const fullUrl = candidate.resumeUrl.startsWith('http')
+      ? candidate.resumeUrl
+      : `${window.location.origin}/${candidate.resumeUrl}`;
+    navigator.clipboard.writeText(fullUrl).then(() => {
+      setToast({ message: 'Resume link copied to clipboard.', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    }).catch(() => {
+      setToast({ message: 'Failed to copy link.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    });
+  };
   
   // Combine for Jobs & Hiring Progress tab
   const allAssociatedJobIds = [...existingCandidateApps.map(a => a.jobId)];
@@ -755,25 +807,97 @@ export default function CandidateDetail() {
             </div>
           </div>
           
-          <div className="flex gap-2">
-            <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-              Edit Profile
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => setIsEditModalOpen(true)} 
+              className="px-3.5 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all shadow-xs flex items-center gap-2"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Edit Profile</span>
             </button>
+
             {candidate.resumeUrl ? (
-              <>
-                <button className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
-                  Download Resume
-                </button>
+              <div className="relative inline-flex items-center rounded-lg shadow-xs" ref={resumeMenuRef}>
+                {/* Main View Resume Button */}
                 <button 
                   onClick={() => setShowResumeModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                  className="px-3.5 py-2 bg-blue-600 text-white text-sm font-medium rounded-l-lg hover:bg-blue-700 transition-colors flex items-center gap-2 border-r border-blue-500/70"
                 >
                   <FileText className="w-4 h-4" />
-                  View Resume
+                  <span>View Resume</span>
                 </button>
-              </>
+
+                {/* Dropdown Toggle Caret */}
+                <button
+                  type="button"
+                  onClick={() => setIsResumeMenuOpen(prev => !prev)}
+                  className="px-2.5 py-2 bg-blue-600 text-white text-sm font-medium rounded-r-lg hover:bg-blue-700 transition-colors flex items-center justify-center border-l border-blue-700/40"
+                  title="More resume actions"
+                  aria-expanded={isResumeMenuOpen}
+                >
+                  <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isResumeMenuOpen && "rotate-180")} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isResumeMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResumeMenuOpen(false);
+                        setShowResumeModal(true);
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <Eye className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">View Standardized Profile</div>
+                        <div className="text-[10px] text-slate-500">Side-by-side verification</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResumeMenuOpen(false);
+                        handleDownloadResume();
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <Download className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">Download Original PDF</div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                          {candidate.resumeUrl.split('/').pop() || 'Original document'}
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResumeMenuOpen(false);
+                        handleCopyResumeLink();
+                      }}
+                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copy Document Link</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+              >
                 <FileText className="w-4 h-4" />
                 Upload Resume
               </button>
