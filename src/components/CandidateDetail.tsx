@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockJobs, mockClients, mockUsers } from '../data/mockData';
 import { getMatchingJobsForCandidate } from '../data/mockCandidateJobInsights';
-import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3, ChevronDown, Download, Copy, Eye } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Briefcase, FileText, Sparkles, AlertTriangle, MoreHorizontal, Check, X, Clock, Play, AlertCircle, Users, Calendar, Edit3, Download, ExternalLink } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Application } from '../types';
 import { useApp } from '../context/AppContext';
@@ -64,22 +64,6 @@ export default function CandidateDetail() {
   const [hasRunCandidateMatch, setHasRunCandidateMatch] = useState(false);
   const [isRefreshingMatches, setIsRefreshingMatches] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [isResumeMenuOpen, setIsResumeMenuOpen] = useState(false);
-  const resumeMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (resumeMenuRef.current && !resumeMenuRef.current.contains(event.target as Node)) {
-        setIsResumeMenuOpen(false);
-      }
-    }
-    if (isResumeMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isResumeMenuOpen]);
 
   const handleRunCandidateMatches = () => {
     setIsRefreshingMatches(true);
@@ -799,109 +783,54 @@ export default function CandidateDetail() {
               </div>
               <p className="text-slate-600 mt-1">{candidate.currentRole || 'No Role'} at {candidate.currentCompany || 'No Company'}</p>
               
-              <div className="flex flex-wrap gap-4 mt-3 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5"><Mail className="w-4 h-4" /> {candidate.email}</span>
-                <span className="flex items-center gap-1.5"><Phone className="w-4 h-4" /> {candidate.phone}</span>
-                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {candidate.currentLocation}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2.5">
-            <button 
-              onClick={() => setIsEditModalOpen(true)} 
-              className="px-3.5 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all shadow-xs flex items-center gap-2"
-            >
-              <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Edit Profile</span>
-            </button>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-slate-500">
+                <span className="flex items-center gap-1.5"><Mail className="w-4 h-4 text-slate-400" /> {candidate.email}</span>
+                <span className="flex items-center gap-1.5"><Phone className="w-4 h-4 text-slate-400" /> {candidate.phone}</span>
+                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" /> {candidate.currentLocation}</span>
 
-            {candidate.resumeUrl ? (
-              <div className="relative inline-flex items-center rounded-lg shadow-xs" ref={resumeMenuRef}>
-                {/* Main View Resume Button */}
-                <button 
-                  onClick={() => setShowResumeModal(true)}
-                  className="px-3.5 py-2 bg-blue-600 text-white text-sm font-medium rounded-l-lg hover:bg-blue-700 transition-colors flex items-center gap-2 border-r border-blue-500/70"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>View Resume</span>
-                </button>
-
-                {/* Dropdown Toggle Caret */}
-                <button
-                  type="button"
-                  onClick={() => setIsResumeMenuOpen(prev => !prev)}
-                  className="px-2.5 py-2 bg-blue-600 text-white text-sm font-medium rounded-r-lg hover:bg-blue-700 transition-colors flex items-center justify-center border-l border-blue-700/40"
-                  title="More resume actions"
-                  aria-expanded={isResumeMenuOpen}
-                >
-                  <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isResumeMenuOpen && "rotate-180")} />
-                </button>
-
-                {/* Dropdown Menu */}
-                {isResumeMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                {candidate.resumeUrl && (
+                  <div className="inline-flex items-center rounded-lg border border-slate-200/90 bg-slate-50 text-xs text-slate-700 overflow-hidden shadow-2xs hover:border-slate-300 transition-colors">
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsResumeMenuOpen(false);
-                        setShowResumeModal(true);
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      onClick={() => setShowResumeModal(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      title="View original uploaded resume"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <Eye className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-900">View Standardized Profile</div>
-                        <div className="text-[10px] text-slate-500">Side-by-side verification</div>
-                      </div>
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-semibold text-slate-800">{candidate.resumeUrl.split('/').pop() || 'Resume.pdf'}</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400 ml-0.5" />
                     </button>
-
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsResumeMenuOpen(false);
-                        handleDownloadResume();
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                      onClick={handleDownloadResume}
+                      className="px-2 py-1 text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 border-l border-slate-200 transition-colors"
+                      title="Download Original PDF"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <Download className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-900">Download Original PDF</div>
-                        <div className="text-[10px] text-slate-500 truncate max-w-[150px]">
-                          {candidate.resumeUrl.split('/').pop() || 'Original document'}
-                        </div>
-                      </div>
-                    </button>
-
-                    <div className="my-1 border-t border-slate-100" />
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsResumeMenuOpen(false);
-                        handleCopyResumeLink();
-                      }}
-                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Copy Document Link</span>
+                      <Download className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
               </div>
-            ) : (
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {!candidate.resumeUrl && (
               <button 
                 onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 text-xs font-semibold rounded-lg transition-all shadow-2xs flex items-center gap-1.5"
               >
-                <FileText className="w-4 h-4" />
-                Upload Resume
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                <span>Upload Resume</span>
               </button>
             )}
+            <button 
+              onClick={() => setIsEditModalOpen(true)} 
+              className="px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg transition-all shadow-2xs flex items-center gap-1.5"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+              <span>Edit Profile</span>
+            </button>
           </div>
         </div>
       </div>
