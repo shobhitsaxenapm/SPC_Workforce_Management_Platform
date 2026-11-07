@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Copy, Check, ExternalLink, Download, Sparkles, Building, Briefcase, GraduationCap, Award, Trophy, MapPin, Mail, Phone, Globe } from 'lucide-react';
+import { FileText, Copy, Check, ExternalLink, Download, Sparkles, Building, Briefcase, GraduationCap, Award, Trophy, MapPin, Mail, Phone, Globe, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export interface OriginalResumeData {
@@ -159,11 +159,15 @@ export const defaultShobhitResume: OriginalResumeData = {
 interface OriginalResumeViewerProps {
   data?: OriginalResumeData;
   filename?: string;
+  onClose?: () => void;
+  onDownload?: () => void;
 }
 
 export default function OriginalResumeViewer({
   data = defaultShobhitResume,
-  filename = 'Shobhit_Saxena_Resume.pdf'
+  filename = 'Shobhit_Saxena_Resume.pdf',
+  onClose,
+  onDownload,
 }: OriginalResumeViewerProps) {
   const [copied, setCopied] = useState(false);
 
@@ -206,6 +210,27 @@ export default function OriginalResumeViewer({
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
             <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy Text'}</span>
           </button>
+          {onDownload && (
+            <button
+              type="button"
+              onClick={onDownload}
+              className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors flex items-center gap-1.5"
+              title="Download Original PDF"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden sm:inline">Download</span>
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors ml-1 cursor-pointer"
+              title="Close viewer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
