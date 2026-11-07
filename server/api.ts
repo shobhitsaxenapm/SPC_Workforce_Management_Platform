@@ -118,21 +118,25 @@ router.post('/extract-job', upload.single('document'), async (req, res) => {
       console.warn('AI generation failed, returning mock data. Error:', e.message);
       // Return a mock parsed data object for local testing if API key is invalid
       parsedData = {
-        title: "Mock Job Title",
-        summary: "This is a mock summary because the Gemini API key was invalid.",
-        responsibilities: ["Mock Responsibility 1"],
-        requiredSkills: ["React", "TypeScript"],
-        preferredSkills: ["Node.js"],
+        title: "Operations Coordinator",
+        summary: "Supervise daily facility fulfillment, team scheduling, and client SLA compliance across operational sites.",
+        responsibilities: [
+          "Supervise ground operations and maintain daily fulfillment quotas",
+          "Conduct quality audits and resolve dispatch exceptions",
+          "Coordinate shift schedules and lead weekly operational reviews"
+        ],
+        requiredSkills: ["Operations Management", "SLA Tracking", "Team Leadership", "Process Optimization"],
+        preferredSkills: ["Lean Practices", "Vendor Management", "ERP Systems"],
         experienceRange: "3-5 Years",
-        qualifications: ["Bachelor's Degree"],
-        location: "Remote",
-        workArrangement: "Remote",
+        qualifications: ["Bachelor's Degree in Business, Operations or equivalent"],
+        location: "Delhi NCR",
+        workArrangement: "On-site",
         employmentType: "Full-time",
-        openings: 1,
-        salaryInformation: "$100k - $120k",
+        openings: 2,
+        salaryInformation: "₹6,00,000 - ₹8,50,000 PA",
         contractDuration: "Permanent",
         applicationDeadline: "2026-12-31",
-        targetJoiningDate: "2026-09-01",
+        targetJoiningDate: "2026-10-01",
         linkedClientRequirement: "None"
       };
     }
