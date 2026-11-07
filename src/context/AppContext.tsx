@@ -567,9 +567,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     localStorage.setItem('spc_candidates', JSON.stringify(newCandidates));
   };
 
-  const persistApplications = (newApplications: Application[]) => {
-    setApplications(newApplications);
-    localStorage.setItem('spc_applications', JSON.stringify(newApplications));
+  const persistApplications = (newApplications: Application[] | ((prev: Application[]) => Application[])) => {
+    setApplications(prev => {
+      const updated = typeof newApplications === 'function' ? newApplications(prev) : newApplications;
+      localStorage.setItem('spc_applications', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const persistInterviews = (newInterviews: Interview[]) => {
@@ -2019,16 +2022,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     associationOrigin?: string,
     source?: CandidateJobSource | string
   ) => {
-    // Check if already applied
-    const existingApp = applications.find(a => a.jobId === jobId && a.candidateId === candidateId);
-    if (existingApp) {
-      return { success: false, error: 'Candidate is already in the pipeline for this job.' };
-    }
-
     const job = jobs.find(j => j.id === jobId);
     if (!job) return { success: false, error: 'Job not found.' };
-    
-    const candidate = candidates.find(c => c.id === candidateId);
 
     const run = matchRuns.find(r => r.jobId === jobId);
     const match = run?.matches.find(m => m.candidateId === candidateId);
@@ -2040,24 +2035,49 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ? normalizeSource(source)
       : 'AI Match';
 
-    const newApp: Application = {
-      id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      candidateId,
-      jobId,
-      projectId: job.projectId,
-      currentStage: 'Sourced',
-      appliedDate: new Date().toISOString(),
-      source: canonicalSource,
-      associationOrigin,
-      assignedRecruiterId: currentUser?.id || job.assignedRecruiterId,
-      matchScore: match?.score,
-      matchStrengths: match?.matchStrengths,
-      matchGaps: match?.missingRequirements,
-      lastActivity: new Date().toISOString()
-    };
+    let targetAppId = '';
 
-    persistApplications([newApp, ...applications]);
-    return { success: true, applicationId: newApp.id };
+    persistApplications(prev => {
+      const existingApp = prev.find(a => a.jobId === jobId && a.candidateId === candidateId);
+      if (existingApp) {
+        // If candidate already has an application record for this job (e.g. from Applicants pool,
+        // direct application, initial job seed, etc.), ensure they are moved/set to 'Sourced' stage
+        targetAppId = existingApp.id;
+        return prev.map(a => {
+          if (a.id === existingApp.id) {
+            return {
+              ...a,
+              currentStage: 'Sourced' as ApplicationStage,
+              currentSubstate: undefined,
+              source: canonicalSource,
+              associationOrigin: associationOrigin || a.associationOrigin || 'Added to Pipeline',
+              lastActivity: new Date().toISOString()
+            };
+          }
+          return a;
+        });
+      }
+
+      const newApp: Application = {
+        id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        candidateId,
+        jobId,
+        projectId: job.projectId,
+        currentStage: 'Sourced',
+        appliedDate: new Date().toISOString(),
+        source: canonicalSource,
+        associationOrigin,
+        assignedRecruiterId: currentUser?.id || job.assignedRecruiterId,
+        matchScore: match?.score,
+        matchStrengths: match?.matchStrengths,
+        matchGaps: match?.missingRequirements,
+        lastActivity: new Date().toISOString()
+      };
+      targetAppId = newApp.id;
+      return [newApp, ...prev];
+    });
+
+    return { success: true, applicationId: targetAppId };
   };
 
 

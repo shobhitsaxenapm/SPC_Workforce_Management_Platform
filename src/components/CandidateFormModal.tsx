@@ -185,36 +185,79 @@ export default function CandidateFormModal({
         resumeUrl: formData.resumeUrl,
         rawResumeText: rawResumeText || (initialData as any)?.rawResumeText,
       });
+      onSaveSuccess?.(initialData.id);
     } else {
-      const createResult = createCandidate({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        currentLocation: formData.currentLocation,
-        linkedInUrl: formData.linkedInUrl,
-        currentRole: formData.currentRole,
-        currentCompany: formData.currentCompany,
-        totalExperience: formData.totalExperience,
-        professionalSummary: formData.professionalSummary,
-        skills: parsedSkills,
-        languages: parsedLanguages,
-        employmentHistory: formData.employmentHistory,
-        educationEntries: formData.educationEntries,
-        currentSalary: formData.currentSalary,
-        expectedSalary: formData.expectedSalary,
-        noticePeriod: finalNoticePeriod,
-        preferredLocation: formData.preferredLocation,
-        willingToRelocate: formData.willingToRelocate as any,
-        availableFrom: formData.availableFrom,
-        recruiterNotes: formData.recruiterNotes,
-        resumeUrl: formData.resumeUrl,
-        rawResumeText: rawResumeText || (initialData as any)?.rawResumeText,
-        source: 'Manual Entry',
-        education: formData.educationEntries[0]?.qualification || '',
-        createdMethod: 'Resume Upload',
-      });
-      if (createResult && createResult.success && createResult.candidateId) {
-        onSaveSuccess?.(createResult.candidateId);
+      const normEmail = formData.email?.trim().toLowerCase() || '';
+      const normPhone = formData.phone?.replace(/[^0-9]/g, '') || '';
+      const existingCandidate = candidates.find(c => 
+        (normEmail && c.email.trim().toLowerCase() === normEmail) ||
+        (normPhone && c.phone.replace(/[^0-9]/g, '') === normPhone)
+      );
+
+      let targetCandidateId = '';
+
+      if (existingCandidate) {
+        // Candidate already exists in the system: update details & resume if uploaded, and attach to job
+        updateCandidate(existingCandidate.id, {
+          fullName: formData.fullName || existingCandidate.fullName,
+          email: formData.email || existingCandidate.email,
+          phone: formData.phone || existingCandidate.phone,
+          currentLocation: formData.currentLocation || existingCandidate.currentLocation,
+          linkedInUrl: formData.linkedInUrl || existingCandidate.linkedInUrl,
+          currentRole: formData.currentRole || existingCandidate.currentRole,
+          currentCompany: formData.currentCompany || existingCandidate.currentCompany,
+          totalExperience: formData.totalExperience || existingCandidate.totalExperience,
+          professionalSummary: formData.professionalSummary || existingCandidate.professionalSummary,
+          skills: parsedSkills.length > 0 ? parsedSkills : existingCandidate.skills,
+          languages: parsedLanguages.length > 0 ? parsedLanguages : existingCandidate.languages,
+          employmentHistory: formData.employmentHistory.length > 0 ? formData.employmentHistory : existingCandidate.employmentHistory,
+          educationEntries: formData.educationEntries.length > 0 ? formData.educationEntries : existingCandidate.educationEntries,
+          currentSalary: formData.currentSalary || existingCandidate.currentSalary,
+          expectedSalary: formData.expectedSalary || existingCandidate.expectedSalary,
+          noticePeriod: finalNoticePeriod || existingCandidate.noticePeriod,
+          preferredLocation: formData.preferredLocation || existingCandidate.preferredLocation,
+          willingToRelocate: formData.willingToRelocate as any,
+          availableFrom: formData.availableFrom || existingCandidate.availableFrom,
+          recruiterNotes: formData.recruiterNotes || existingCandidate.recruiterNotes,
+          resumeUrl: formData.resumeUrl || existingCandidate.resumeUrl,
+          rawResumeText: rawResumeText || (initialData as any)?.rawResumeText || existingCandidate.rawResumeText,
+        });
+        targetCandidateId = existingCandidate.id;
+      } else {
+        const createResult = createCandidate({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          currentLocation: formData.currentLocation,
+          linkedInUrl: formData.linkedInUrl,
+          currentRole: formData.currentRole,
+          currentCompany: formData.currentCompany,
+          totalExperience: formData.totalExperience,
+          professionalSummary: formData.professionalSummary,
+          skills: parsedSkills,
+          languages: parsedLanguages,
+          employmentHistory: formData.employmentHistory,
+          educationEntries: formData.educationEntries,
+          currentSalary: formData.currentSalary,
+          expectedSalary: formData.expectedSalary,
+          noticePeriod: finalNoticePeriod,
+          preferredLocation: formData.preferredLocation,
+          willingToRelocate: formData.willingToRelocate as any,
+          availableFrom: formData.availableFrom,
+          recruiterNotes: formData.recruiterNotes,
+          resumeUrl: formData.resumeUrl,
+          rawResumeText: rawResumeText || (initialData as any)?.rawResumeText,
+          source: 'Manual Entry',
+          education: formData.educationEntries[0]?.qualification || '',
+          createdMethod: 'Resume Upload',
+        });
+        if (createResult && createResult.success && createResult.candidateId) {
+          targetCandidateId = createResult.candidateId;
+        }
+      }
+
+      if (targetCandidateId) {
+        onSaveSuccess?.(targetCandidateId);
       }
     }
     onClose();
@@ -228,7 +271,7 @@ export default function CandidateFormModal({
       }
       return;
     }
-    if (!showDuplicateWarning && checkForDuplicates()) return;
+    if (!targetJobTitle && !showDuplicateWarning && checkForDuplicates()) return;
     performSave();
   };
 
