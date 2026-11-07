@@ -544,27 +544,16 @@ export default function Layout() {
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* Desktop toggle button if sidebar is on left */}
-            {sidebarPosition === 'left' && (
+            {/* Desktop expand button if sidebar is on left - only visible when collapsed */}
+            {sidebarPosition === 'left' && isCollapsed && (
               <button
                 onClick={toggleCollapse}
-                className={cn(
-                  "hidden md:inline-flex items-center gap-2 p-2 -ml-2 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-                  isCollapsed 
-                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs px-2.5 py-1.5" 
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                )}
-                title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 -ml-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                title="Expand sidebar (Ctrl+B)"
+                aria-label="Expand sidebar"
               >
-                {isCollapsed ? (
-                  <>
-                    <PanelLeftOpen className="w-4.5 h-4.5 text-blue-600" />
-                    <span className="text-xs font-semibold text-blue-700">Sidebar</span>
-                  </>
-                ) : (
-                  <PanelLeftClose className="w-5 h-5" />
-                )}
+                <PanelLeftOpen className="w-4.5 h-4.5 text-blue-600" />
+                <span className="text-xs font-semibold text-blue-700">Sidebar</span>
               </button>
             )}
 
@@ -574,27 +563,16 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
-            {/* Desktop toggle button if sidebar is on right */}
-            {sidebarPosition === 'right' && (
+            {/* Desktop expand button if sidebar is on right - only visible when collapsed */}
+            {sidebarPosition === 'right' && isCollapsed && (
               <button
                 onClick={toggleCollapse}
-                className={cn(
-                  "hidden md:inline-flex items-center gap-2 p-2 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-                  isCollapsed 
-                    ? "text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs px-2.5 py-1.5" 
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                )}
-                title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                title="Expand sidebar (Ctrl+B)"
+                aria-label="Expand sidebar"
               >
-                {isCollapsed ? (
-                  <>
-                    <span className="text-xs font-semibold text-blue-700">Sidebar</span>
-                    <PanelRightOpen className="w-4.5 h-4.5 text-blue-600" />
-                  </>
-                ) : (
-                  <PanelRightClose className="w-5 h-5" />
-                )}
+                <span className="text-xs font-semibold text-blue-700">Sidebar</span>
+                <PanelRightOpen className="w-4.5 h-4.5 text-blue-600" />
               </button>
             )}
 
