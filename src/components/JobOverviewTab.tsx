@@ -395,23 +395,36 @@ export default function JobOverviewTab({
             )}
           </div>
 
-          {/* Target Joining Date */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Target Joining Date</p>
-            <p className="text-xs font-semibold text-slate-800 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              {formatDate(job.targetJoiningDate)}
-            </p>
-          </div>
+          {/* Application Deadline & Target Joining Date */}
+          {(() => {
+            let deadline = job.applicationDeadline;
+            if (job.targetJoiningDate && job.applicationDeadline) {
+              const jTime = new Date(job.targetJoiningDate).getTime();
+              const dTime = new Date(job.applicationDeadline).getTime();
+              if (!isNaN(jTime) && !isNaN(dTime) && jTime < dTime) {
+                deadline = new Date(jTime - 14 * 86400000).toISOString();
+              }
+            }
+            return (
+              <>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Application Deadline</p>
+                  <p className="text-xs font-semibold text-slate-800 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    {formatDate(deadline)}
+                  </p>
+                </div>
 
-          {/* Application Deadline */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Application Deadline</p>
-            <p className="text-xs font-semibold text-slate-800 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              {formatDate(job.applicationDeadline)}
-            </p>
-          </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Target Joining Date</p>
+                  <p className="text-xs font-semibold text-slate-800 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    {formatDate(job.targetJoiningDate)}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
 
           {/* Hiring Model */}
           <div className="pt-2 border-t border-slate-100">

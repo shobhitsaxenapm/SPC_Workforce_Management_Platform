@@ -45,6 +45,18 @@ export function normalizeJob(job: any): Job {
     normalized.closeReason = 'Client Cancelled';
   }
 
+  // 5. Chronological Date Consistency
+  // Target joining date can NEVER be prior to application deadline.
+  if (normalized.targetJoiningDate && normalized.applicationDeadline) {
+    const joiningTime = new Date(normalized.targetJoiningDate).getTime();
+    const deadlineTime = new Date(normalized.applicationDeadline).getTime();
+    if (!isNaN(joiningTime) && !isNaN(deadlineTime) && joiningTime < deadlineTime) {
+      // Reconcile: set application deadline 14 days prior to target joining date
+      const adjustedDeadline = new Date(joiningTime - 14 * 86400000);
+      normalized.applicationDeadline = adjustedDeadline.toISOString();
+    }
+  }
+
   return normalized;
 }
 

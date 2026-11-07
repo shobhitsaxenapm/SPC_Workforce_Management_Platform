@@ -99,7 +99,7 @@ export default function SmartJobUpload({ onExtractionSuccess, onCancel }: SmartJ
           openings: 2,
           salaryInformation: "$120k - $150k",
           contractDuration: "Permanent",
-          applicationDeadline: "2026-12-31",
+          applicationDeadline: "2026-09-15",
           targetJoiningDate: "2026-10-01",
           clientName: "Acme Corp",
           linkedClientRequirement: "None"

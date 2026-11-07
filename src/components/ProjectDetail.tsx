@@ -138,6 +138,13 @@ export default function ProjectDetail() {
       return;
     }
 
+    if (jobFormData.applicationDeadline && proj.targetJoiningDate) {
+      if (new Date(proj.targetJoiningDate).getTime() < new Date(jobFormData.applicationDeadline).getTime()) {
+        alert('Application deadline cannot be later than the project target joining date.');
+        return;
+      }
+    }
+
     createJob({
       clientId: proj.clientId,
       projectName: proj.projectName,
@@ -152,7 +159,16 @@ export default function ProjectDetail() {
       responsibilities: [],
       qualifications: [],
       targetJoiningDate: proj.targetJoiningDate,
-      applicationDeadline: jobFormData.applicationDeadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      applicationDeadline: (() => {
+        if (jobFormData.applicationDeadline) {
+          return jobFormData.applicationDeadline;
+        }
+        const joiningTime = new Date(proj.targetJoiningDate).getTime();
+        if (!isNaN(joiningTime)) {
+          return new Date(joiningTime - 14 * 86400000).toISOString();
+        }
+        return new Date(Date.now() + 15 * 86400000).toISOString();
+      })(),
       assignedRecruiterId: jobFormData.assignedRecruiterId,
       visibility: jobFormData.visibility,
       status: 'Published',

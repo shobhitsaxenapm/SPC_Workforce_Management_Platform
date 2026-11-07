@@ -272,7 +272,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       j.hiringModel !== parsedJobs[i].hiringModel || 
       j.publishedAt !== parsedJobs[i].publishedAt ||
       j.createdAt !== parsedJobs[i].createdAt ||
-      j.firstPublishedAt !== parsedJobs[i].firstPublishedAt
+      j.firstPublishedAt !== parsedJobs[i].firstPublishedAt ||
+      j.applicationDeadline !== parsedJobs[i].applicationDeadline ||
+      j.targetJoiningDate !== parsedJobs[i].targetJoiningDate
     )) {
       localStorage.setItem('spc_jobs', JSON.stringify(healedJobs));
     }
@@ -776,7 +778,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const isJobPublished = jobData.isPublished !== undefined ? jobData.isPublished : (jobData.status === 'Open' || (jobData.status as any) === 'Published');
     const nowIso = new Date().toISOString();
-    const newJob: Job = {
+    const rawJob: Job = {
       ...jobData,
       id: jobId,
       code: jobCode,
@@ -791,6 +793,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       publishedAt: jobData.publishedAt || (isJobPublished ? nowIso : undefined),
       firstPublishedAt: isJobPublished ? (jobData.publishedAt || nowIso) : undefined,
     };
+    const newJob = normalizeJob(rawJob);
 
     const newJobs: Job[] = [newJob, ...jobs];
     persistJobs(newJobs);
@@ -853,7 +856,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateJob = (jobId: string, updates: Partial<Job>) => {
     const updatedJobs = jobs.map(j => {
       if (j.id === jobId) {
-        return { ...j, ...updates };
+        return normalizeJob({ ...j, ...updates });
       }
       return j;
     });

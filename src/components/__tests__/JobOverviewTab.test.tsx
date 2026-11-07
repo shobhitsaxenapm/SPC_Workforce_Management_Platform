@@ -28,9 +28,10 @@ describe('Job Intelligence Engine & JobOverviewTab', () => {
     qualifications: ['Any Graduate'],
     targetJoiningDate: '2026-08-01T00:00:00Z',
     applicationDeadline: '2026-07-25T00:00:00Z',
-    visibility: 'Internal',
+    visibility: 'Public',
     status: 'Open',
     isPublished: false,
+    assignedRecruiterId: 'u1',
     createdAt: '2026-06-01T00:00:00Z'
   };
 
@@ -39,10 +40,11 @@ describe('Job Intelligence Engine & JobOverviewTab', () => {
       id: 'app1',
       candidateId: 'c1',
       jobId: 'j1',
-      appliedAt: '2026-06-02T00:00:00Z',
+      projectId: 'p1',
+      assignedRecruiterId: 'u1',
+      appliedDate: '2026-06-02T00:00:00Z',
       source: 'SPC Careers Website',
       currentStage: 'Sourced',
-      stageHistory: [],
       lastActivity: '2026-06-02T00:00:00Z'
     }
   ];
@@ -100,5 +102,35 @@ describe('Job Intelligence Engine & JobOverviewTab', () => {
     // After collapsing, clicking again expands
     fireEvent.click(accordionBtn);
     expect(screen.getByText(/Q1/i)).toBeInTheDocument();
+  });
+
+  it('guarantees applicationDeadline is never after targetJoiningDate', () => {
+    // Inverted dates: joining date in Sept 2026, deadline in Dec 2026
+    const invalidJob: Job = {
+      ...sampleJob,
+      targetJoiningDate: '2026-09-01T00:00:00Z',
+      applicationDeadline: '2026-12-31T00:00:00Z'
+    };
+
+    render(
+      <JobOverviewTab
+        job={invalidJob}
+        applications={sampleApps}
+        applicants={sampleApps}
+        pipelineApps={sampleApps}
+        activeMatches={[]}
+        canRunMatching={true}
+        isRefreshing={false}
+        onRefreshMatches={vi.fn()}
+        onConfigureHiringModel={vi.fn()}
+      />
+    );
+
+    // Target joining date rendered
+    expect(screen.getByText(/1 Sept 2026/i)).toBeInTheDocument();
+    // 31 Dec 2026 must NOT be rendered as the deadline because deadline cannot be after joining date
+    expect(screen.queryByText(/31 Dec 2026/i)).not.toBeInTheDocument();
+    // Reconciled to 18 Aug 2026 (14 days before 1 Sept)
+    expect(screen.getByText(/18 Aug 2026/i)).toBeInTheDocument();
   });
 });

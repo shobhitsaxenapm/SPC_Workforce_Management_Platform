@@ -134,6 +134,11 @@ export default function JobsList() {
       return;
     }
 
+    if (new Date(targetJoiningDate).getTime() < new Date(applicationDeadline).getTime()) {
+      setValidationError('Target Joining Date cannot be earlier than Application Deadline.');
+      return;
+    }
+
     // Validation against selected project slots
     if (selectedReqId !== 'none') {
       if (openings > availableToAllocate) {

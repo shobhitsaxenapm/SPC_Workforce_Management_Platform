@@ -61,6 +61,15 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
       }
     }
 
+    if (formData.targetJoiningDate && formData.applicationDeadline) {
+      const joiningTime = new Date(formData.targetJoiningDate).getTime();
+      const deadlineTime = new Date(formData.applicationDeadline).getTime();
+      if (!isNaN(joiningTime) && !isNaN(deadlineTime) && joiningTime < deadlineTime) {
+        newErrors.targetJoiningDate = 'Target Joining Date cannot be earlier than Application Deadline.';
+        newErrors.applicationDeadline = 'Application Deadline cannot be later than Target Joining Date.';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -301,8 +310,9 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
                   type="date" 
                   value={formData.targetJoiningDate} 
                   onChange={e => setFormData({...formData, targetJoiningDate: e.target.value})}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                  className={cn("w-full rounded-lg border p-2.5 text-sm", errors.targetJoiningDate ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                 />
+                {errors.targetJoiningDate && <p className="text-red-500 text-xs mt-1">{errors.targetJoiningDate}</p>}
               </div>
 
               <div>
@@ -311,8 +321,9 @@ export default function JobFormModal({ isOpen, onClose, job }: JobFormModalProps
                   type="date" 
                   value={formData.applicationDeadline} 
                   onChange={e => setFormData({...formData, applicationDeadline: e.target.value})}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm"
+                  className={cn("w-full rounded-lg border p-2.5 text-sm", errors.applicationDeadline ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                 />
+                {errors.applicationDeadline && <p className="text-red-500 text-xs mt-1">{errors.applicationDeadline}</p>}
               </div>
             </div>
           </div>

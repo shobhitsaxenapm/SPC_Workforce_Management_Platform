@@ -16,6 +16,16 @@ interface SmartJobReviewProps {
 export default function SmartJobReview({ extractedData, sourceText, metadata, onSaveAsDraft, onDiscard }: SmartJobReviewProps) {
   const { clients, currentUser, createJob } = useApp();
 
+  const initialJoining = extractedData.targetJoiningDate || '';
+  let initialDeadline = extractedData.applicationDeadline || '';
+  if (initialJoining && initialDeadline) {
+    const jTime = new Date(initialJoining).getTime();
+    const dTime = new Date(initialDeadline).getTime();
+    if (!isNaN(jTime) && !isNaN(dTime) && jTime < dTime) {
+      initialDeadline = new Date(jTime - 14 * 86400000).toISOString().split('T')[0];
+    }
+  }
+
   const [formData, setFormData] = useState({
     title: extractedData.title || '',
     clientId: '',
@@ -29,8 +39,8 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
     summary: extractedData.summary || '',
     responsibilities: extractedData.responsibilities?.join('\n') || '',
     qualifications: extractedData.qualifications?.join(', ') || '',
-    targetJoiningDate: extractedData.targetJoiningDate || '',
-    applicationDeadline: extractedData.applicationDeadline || '',
+    targetJoiningDate: initialJoining,
+    applicationDeadline: initialDeadline,
     visibility: 'Public' as JobVisibility,
   });
 
@@ -58,6 +68,15 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       if (!formData.summary) newErrors.summary = 'Summary is required';
       if (!formData.targetJoiningDate) newErrors.targetJoiningDate = 'Target Joining Date is required';
     }
+
+    if (formData.targetJoiningDate && formData.applicationDeadline) {
+      const jTime = new Date(formData.targetJoiningDate).getTime();
+      const dTime = new Date(formData.applicationDeadline).getTime();
+      if (!isNaN(jTime) && !isNaN(dTime) && jTime < dTime) {
+        newErrors.targetJoiningDate = 'Target Joining Date cannot be earlier than Application Deadline.';
+        newErrors.applicationDeadline = 'Application Deadline cannot be later than Target Joining Date.';
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -80,7 +99,14 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
       responsibilities: formData.responsibilities.split('\n').map(s => s.trim()).filter(Boolean),
       qualifications: formData.qualifications.split(',').map(s => s.trim()).filter(Boolean),
       targetJoiningDate: formData.targetJoiningDate || new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-      applicationDeadline: formData.applicationDeadline || new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0],
+      applicationDeadline: (() => {
+        const jDate = formData.targetJoiningDate || new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+        const dDate = formData.applicationDeadline || new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0];
+        if (new Date(jDate).getTime() < new Date(dDate).getTime()) {
+          return new Date(new Date(jDate).getTime() - 14*24*60*60*1000).toISOString().split('T')[0];
+        }
+        return dDate;
+      })(),
       assignedRecruiterId: currentUser?.id || '',
       visibility: formData.visibility,
       status: status,
@@ -333,6 +359,17 @@ export default function SmartJobReview({ extractedData, sourceText, metadata, on
                     className={cn("w-full rounded-lg border p-2.5 text-sm", errors.targetJoiningDate ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
                   />
                   {errors.targetJoiningDate && <p className="text-red-500 text-xs mt-1">{errors.targetJoiningDate}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Application Deadline</label>
+                  <input 
+                    type="date" 
+                    value={formData.applicationDeadline} 
+                    onChange={e => setFormData({...formData, applicationDeadline: e.target.value})}
+                    className={cn("w-full rounded-lg border p-2.5 text-sm", errors.applicationDeadline ? "border-red-300 bg-red-50" : "border-slate-300 bg-slate-50")}
+                  />
+                  {errors.applicationDeadline && <p className="text-red-500 text-xs mt-1">{errors.applicationDeadline}</p>}
                 </div>
               </div>
             </div>
