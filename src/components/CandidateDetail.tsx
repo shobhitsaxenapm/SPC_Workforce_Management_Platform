@@ -1023,22 +1023,6 @@ export default function CandidateDetail() {
                 </span>
               </div>
 
-              {/* Career Trajectory & Domain Strength Banner (Option A) */}
-              <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50/60 via-blue-50/40 to-white border border-indigo-100 shadow-xs">
-                <div className="flex items-start gap-3">
-                  <div className="p-1.5 bg-indigo-100/80 text-indigo-700 rounded-lg shrink-0 mt-0.5">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 mb-1">Career Trajectory & Domain Strength</h4>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {candidate.experienceAnalysisSummary || 
-                        `${candidate.fullName} demonstrates consistent career progression in ${candidate.currentRole || 'their domain'} with proven operational reliability across industry assignments.`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Recent Employment Stints (Capped at 3) */}
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -1074,11 +1058,11 @@ export default function CandidateDetail() {
                           </span>
                         </div>
 
-                        {/* Strictly 1-Line AI Evaluation (No raw bullet walls) */}
+                        {/* Strictly 1-Line Core Focus & Deliverables */}
                         <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70 text-xs flex items-start gap-2.5">
                           <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
                           <div className="space-y-0.5">
-                            <span className="font-semibold text-slate-800">AI Evaluation: </span>
+                            <span className="font-semibold text-slate-800">Core Focus &amp; Impact: </span>
                             <span className="text-slate-600 leading-relaxed">
                               {exp.aiAnalysis || (exp.responsibilities && exp.responsibilities[0]) || 'Proven execution and domain contributions.'}
                             </span>
