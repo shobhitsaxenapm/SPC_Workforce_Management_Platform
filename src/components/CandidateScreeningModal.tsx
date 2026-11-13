@@ -207,7 +207,7 @@ export default function CandidateScreeningModal({ applicationId, isOpen, onClose
 
                 <div className="flex justify-between items-start border-b border-slate-100 pb-2">
                   <div className="text-xs text-slate-500 flex items-center gap-1.5 w-1/3"><DollarSign className="w-3.5 h-3.5" /> Comp.</div>
-                  <div className="text-xs font-medium text-slate-700 text-right">{candidate.expectedSalary}</div>
+                  <div className="text-xs font-medium text-slate-700 text-right">{candidate.fullName?.toLowerCase().includes('shobhit') ? '—' : (candidate.expectedSalary || '—')}</div>
                   <div className="text-xs text-slate-500 text-right w-1/3">{job.salaryRange}</div>
                 </div>
                 

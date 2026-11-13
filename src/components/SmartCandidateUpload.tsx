@@ -153,8 +153,8 @@ export default function SmartCandidateUpload({ onExtractionSuccess, onCancel }: 
           }
         ],
         languages: ['English', 'Hindi'],
-        currentSalary: '28.00',
-        expectedSalary: '35.00',
+        currentSalary: '',
+        expectedSalary: '',
         noticePeriod: '30 Days',
         recruiterNotes:
           'Certifications: Product Management Certification - IIBA, Internal Hackathon Winner, District-level Chess (2nd Position), Solo Paraglider.\nKey Achievement: Built an intelligent social profile discovery system that identified creators\' public profiles using PII signals when profile links were unavailable.',

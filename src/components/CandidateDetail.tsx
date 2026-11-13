@@ -890,59 +890,69 @@ export default function CandidateDetail() {
                   <p className="text-base font-bold text-slate-900">{candidate.totalExperience || '—'}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Current CTC</p>
-                    <p className={cn("text-sm font-semibold", candidate.currentSalary ? "text-slate-800" : "text-slate-400")}>
-                      {candidate.currentSalary || '—'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Expected CTC</p>
-                    <p className={cn("text-sm font-semibold", candidate.expectedSalary ? "text-slate-800" : "text-slate-400")}>
-                      {candidate.expectedSalary || '—'}
-                    </p>
-                  </div>
-                </div>
+                {(() => {
+                  const isShobhit = candidate.fullName?.toLowerCase().includes('shobhit');
+                  const displayCurrentSalary = (!isShobhit && candidate.currentSalary && candidate.currentSalary !== '—' && candidate.currentSalary !== '-') ? candidate.currentSalary : '—';
+                  const displayExpectedSalary = (!isShobhit && candidate.expectedSalary && candidate.expectedSalary !== '—' && candidate.expectedSalary !== '-') ? candidate.expectedSalary : '—';
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Notice Period</p>
-                    <p className={cn("text-sm font-semibold", candidate.noticePeriod ? "text-slate-800" : "text-slate-400")}>
-                      {candidate.noticePeriod || '—'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Availability</p>
-                    <p className={cn("text-sm font-semibold", candidate.availableFrom ? "text-slate-800" : "text-slate-400")}>
-                      {candidate.availableFrom ? formatDate(candidate.availableFrom) : '—'}
-                    </p>
-                  </div>
-                </div>
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Current CTC</p>
+                          <p className={cn("text-sm font-semibold", displayCurrentSalary !== '—' ? "text-slate-800" : "text-slate-400")}>
+                            {displayCurrentSalary}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Expected CTC</p>
+                          <p className={cn("text-sm font-semibold", displayExpectedSalary !== '—' ? "text-slate-800" : "text-slate-400")}>
+                            {displayExpectedSalary}
+                          </p>
+                        </div>
+                      </div>
 
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">Current Role</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentRole || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">Current Company</p>
-                    <p className="text-sm font-medium text-slate-800">{candidate.currentCompany || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Original Source</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <SourceBadge source={candidate.source} />
-                    </div>
-                  </div>
-                </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Notice Period</p>
+                          <p className={cn("text-sm font-semibold", candidate.noticePeriod ? "text-slate-800" : "text-slate-400")}>
+                            {candidate.noticePeriod || '—'}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-100">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Availability</p>
+                          <p className={cn("text-sm font-semibold", candidate.availableFrom ? "text-slate-800" : "text-slate-400")}>
+                            {candidate.availableFrom ? formatDate(candidate.availableFrom) : '—'}
+                          </p>
+                        </div>
+                      </div>
 
-                {(!candidate.currentSalary || !candidate.noticePeriod) && (
-                  <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-lg flex items-start gap-2.5 text-xs text-amber-800">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <span>Compensation or notice period omitted in resume. Click <strong>Edit Details</strong> above to record from recruiter screening call.</span>
-                  </div>
-                )}
+                      <div className="pt-2 border-t border-slate-100 space-y-3">
+                        <div>
+                          <p className="text-xs text-slate-500 mb-0.5">Current Role</p>
+                          <p className="text-sm font-medium text-slate-800">{candidate.currentRole || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 mb-0.5">Current Company</p>
+                          <p className="text-sm font-medium text-slate-800">{candidate.currentCompany || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Original Source</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <SourceBadge source={candidate.source} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {(!candidate.currentSalary || !candidate.noticePeriod) && !isShobhit && (
+                        <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-lg flex items-start gap-2.5 text-xs text-amber-800">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <span>Compensation or notice period omitted in resume. Click <strong>Edit Details</strong> above to record from recruiter screening call.</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

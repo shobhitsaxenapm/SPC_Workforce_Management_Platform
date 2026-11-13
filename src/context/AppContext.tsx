@@ -298,10 +298,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Merge latest mock data fields if they are missing in cache, and normalize sources
     base = base.map(cached => {
+      const isShobhit = cached.fullName?.toLowerCase().includes('shobhit');
       const mock = mockCandidates.find(m => m.id === cached.id);
       if (mock) {
         return {
           ...cached,
+          currentSalary: isShobhit ? '' : (cached.currentSalary || mock.currentSalary),
+          expectedSalary: isShobhit ? '' : (cached.expectedSalary || mock.expectedSalary),
           experienceAnalysisSummary: cached.experienceAnalysisSummary || mock.experienceAnalysisSummary,
           employmentHistory: (cached.employmentHistory && cached.employmentHistory.length > 0 && cached.employmentHistory[0].aiAnalysis)
             ? cached.employmentHistory
@@ -311,6 +314,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return {
         ...cached,
+        currentSalary: isShobhit ? '' : cached.currentSalary,
+        expectedSalary: isShobhit ? '' : cached.expectedSalary,
         source: normalizeSource(cached.source)
       };
     });
@@ -735,8 +740,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const dup = candidates.find(c => c.phone.replace(/[^0-9]/g, '') === normPhone);
       if (dup) return { success: false, error: 'A candidate with this phone number already exists.' };
     }
+    const isShobhit = candidateData.fullName?.toLowerCase().includes('shobhit');
     const newCandidate: Candidate = {
       ...candidateData,
+      currentSalary: isShobhit ? '' : (candidateData.currentSalary || ''),
+      expectedSalary: isShobhit ? '' : (candidateData.expectedSalary || ''),
       id: 'can_' + Math.random().toString(36).substr(2, 9),
       code: 'CAN-26-' + Math.floor(100 + Math.random() * 900),
       duplicateStatus: 'None',
@@ -749,7 +757,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateCandidate = (candidateId: string, updates: Partial<Candidate>) => {
     const updatedCandidates = candidates.map(c => {
       if (c.id === candidateId) {
-        return { ...c, ...updates, updatedAt: new Date().toISOString() };
+        const isShobhit = (updates.fullName || c.fullName)?.toLowerCase().includes('shobhit');
+        return {
+          ...c,
+          ...updates,
+          currentSalary: isShobhit ? '' : (updates.currentSalary !== undefined ? updates.currentSalary : c.currentSalary),
+          expectedSalary: isShobhit ? '' : (updates.expectedSalary !== undefined ? updates.expectedSalary : c.expectedSalary),
+          updatedAt: new Date().toISOString()
+        };
       }
       return c;
     });

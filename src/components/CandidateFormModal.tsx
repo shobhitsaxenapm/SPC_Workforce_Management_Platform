@@ -101,8 +101,8 @@ export default function CandidateFormModal({
           institution: ed.institution,
           completionYear: ed.year.split('–')[1]?.trim() || ed.year
         })),
-    currentSalary: initialData.currentSalary || '28.00',
-    expectedSalary: initialData.expectedSalary || '35.00',
+    currentSalary: (initialData.fullName?.toLowerCase().includes('shobhit') ? '' : initialData.currentSalary) || '',
+    expectedSalary: (initialData.fullName?.toLowerCase().includes('shobhit') ? '' : initialData.expectedSalary) || '',
     noticePeriod: initialData.noticePeriod || '30 Days',
     customNoticePeriod: '',
     preferredLocation: initialData.preferredLocation || 'Bangalore, India',
@@ -160,6 +160,10 @@ export default function CandidateFormModal({
     const parsedLanguages = formData.languages.split(',').map(s => s.trim()).filter(Boolean);
     const finalNoticePeriod = formData.noticePeriod === 'Custom' ? `${formData.customNoticePeriod} Days` : formData.noticePeriod;
     
+    const isCandidateShobhit = formData.fullName?.toLowerCase().includes('shobhit');
+    const finalCurrentSalary = isCandidateShobhit ? '' : formData.currentSalary;
+    const finalExpectedSalary = isCandidateShobhit ? '' : formData.expectedSalary;
+
     if (isEditMode && initialData.id) {
       updateCandidate(initialData.id, {
         fullName: formData.fullName,
@@ -175,8 +179,8 @@ export default function CandidateFormModal({
         languages: parsedLanguages,
         employmentHistory: formData.employmentHistory,
         educationEntries: formData.educationEntries,
-        currentSalary: formData.currentSalary,
-        expectedSalary: formData.expectedSalary,
+        currentSalary: finalCurrentSalary,
+        expectedSalary: finalExpectedSalary,
         noticePeriod: finalNoticePeriod,
         preferredLocation: formData.preferredLocation,
         willingToRelocate: formData.willingToRelocate as any,
@@ -212,8 +216,8 @@ export default function CandidateFormModal({
           languages: parsedLanguages.length > 0 ? parsedLanguages : existingCandidate.languages,
           employmentHistory: formData.employmentHistory.length > 0 ? formData.employmentHistory : existingCandidate.employmentHistory,
           educationEntries: formData.educationEntries.length > 0 ? formData.educationEntries : existingCandidate.educationEntries,
-          currentSalary: formData.currentSalary || existingCandidate.currentSalary,
-          expectedSalary: formData.expectedSalary || existingCandidate.expectedSalary,
+          currentSalary: isCandidateShobhit ? '' : (formData.currentSalary || existingCandidate.currentSalary),
+          expectedSalary: isCandidateShobhit ? '' : (formData.expectedSalary || existingCandidate.expectedSalary),
           noticePeriod: finalNoticePeriod || existingCandidate.noticePeriod,
           preferredLocation: formData.preferredLocation || existingCandidate.preferredLocation,
           willingToRelocate: formData.willingToRelocate as any,
@@ -238,8 +242,8 @@ export default function CandidateFormModal({
           languages: parsedLanguages,
           employmentHistory: formData.employmentHistory,
           educationEntries: formData.educationEntries,
-          currentSalary: formData.currentSalary,
-          expectedSalary: formData.expectedSalary,
+          currentSalary: finalCurrentSalary,
+          expectedSalary: finalExpectedSalary,
           noticePeriod: finalNoticePeriod,
           preferredLocation: formData.preferredLocation,
           willingToRelocate: formData.willingToRelocate as any,
@@ -1057,11 +1061,11 @@ export default function CandidateFormModal({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">Current CTC (LPA)</label>
-                          <input type="text" value={formData.currentSalary} onChange={e => setFormData({...formData, currentSalary: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs" />
+                          <input type="text" value={formData.currentSalary} onChange={e => setFormData({...formData, currentSalary: e.target.value})} placeholder="—" className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">Expected CTC (LPA)</label>
-                          <input type="text" value={formData.expectedSalary} onChange={e => setFormData({...formData, expectedSalary: e.target.value})} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs" />
+                          <input type="text" value={formData.expectedSalary} onChange={e => setFormData({...formData, expectedSalary: e.target.value})} placeholder="—" className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-slate-700 mb-1">Notice Period</label>

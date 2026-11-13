@@ -134,7 +134,7 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Expected Result**: Candidates profiles are searched, filtered, resumes uploaded or pasted, parsed with AI into side-by-side verification modal with resume on left and editable fields on right, validated, and saved.
 - **Actual Result**: Verified candidate pool directory filters, search, resume file upload (PDF/DOCX) and raw text paste (CAN-003, CAN-004), AI parameter extraction (CAN-005), side-by-side split review with Resume on the left and form on the right, view toggles, inline field editing, and candidate creation.
 - **Status**: Verified
-- **Evidence**: Verified via Vitest component suite `CandidateFormModal.test.tsx` (4/4 passing), production build test, and UI verification. Experience Analysis layout unified, 1-line stint evaluations verified, Relocate chip removed, and Top 5 skills enforced.
+- **Evidence**: Verified via Vitest component suite `CandidateFormModal.test.tsx` (4/4 passing), production build test, and UI verification. Experience Analysis layout unified, 1-line stint evaluations verified, Relocate chip removed, and Current/Expected CTC masked to dash ('—') for Shobhit Saxena across overview and modal workflows.
 
 ---
 
