@@ -37,6 +37,7 @@ import ProjectQuickViewModal from './ProjectQuickViewModal';
 import ClientQuickViewModal from './ClientQuickViewModal';
 import JobQuickViewModal from './JobQuickViewModal';
 import CandidateQuickViewModal from './CandidateQuickViewModal';
+import { FeedbackProvider, FeedbackButton } from '../feedback/FeedbackProvider';
 
 // --- Navigation Configuration ---
 type NavItem = {
@@ -213,6 +214,10 @@ const NavModule: React.FC<{
 }
 
 export default function Layout() {
+  return <FeedbackProvider><LayoutContent /></FeedbackProvider>;
+}
+
+function LayoutContent() {
   const { currentUser, logout } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -562,7 +567,7 @@ export default function Layout() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3 xl:gap-6">
             {/* Desktop expand button if sidebar is on right - only visible when collapsed */}
             {sidebarPosition === 'right' && isCollapsed && (
               <button
@@ -576,7 +581,7 @@ export default function Layout() {
               </button>
             )}
 
-            <div className="relative hidden md:block">
+            <div className="relative hidden xl:block">
               <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
                 type="text" 
@@ -594,11 +599,12 @@ export default function Layout() {
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             
+            <FeedbackButton />
             <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-slate-200">
               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
                 {initials}
               </div>
-              <div className="hidden md:flex flex-col">
+              <div className="hidden lg:flex flex-col">
                 <span className="text-sm font-medium text-slate-700">{currentUser?.name}</span>
                 <span className="text-xs text-slate-500">
                   {currentUser?.role === 'ADMIN' ? 'Admin' : currentUser?.role === 'MANAGER' ? 'Manager' : 'Recruiter'}

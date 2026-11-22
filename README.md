@@ -18,3 +18,12 @@ View your app in AI Studio: https://ai.studio/apps/d85c4590-e9f4-439d-a260-c95c0
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Feedback prototype
+
+Use **Feedback** in the SPC header. The standalone team dashboard is at `/feedback-admin`.
+Development credentials, replaceable service interfaces and local-only limitations are
+in [Feedback integration](docs/feedback-integration.md).
+
+Checks: `npm run lint`, `npm test`, `npm run build`. On Node 22.11, run tests with
+`$env:NODE_OPTIONS='--experimental-require-module'` in PowerShell.

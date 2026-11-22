@@ -2,8 +2,32 @@
 
 This document specifies the end-to-end testing scenarios required to validate the atomic requirement flows of the SPC Workforce Management Platform.
 
----
+## Feedback prototype — execution evidence, 2026-11-21
 
+### TEST-BETA-FB-01 — submit and review
+
+BETA-FB-001–006. React Testing Library integration opens the minimal form while preserving underlying SPC work, fills title/description, attaches an image, submits, recreates the service from localStorage, logs into the separate dashboard and opens report details with the persisted screenshot. PASS. Empty initial list, mock login rejection, session continuity, logout and storage-event refresh pass. No sample reports or advanced workflows.
+
+### TEST-BETA-FB-02 — failure and persistence
+
+BETA-FB-002, 004, 005. A failing injected storage write displays an error without losing title, description or screenshot. Retry succeeds once; loading disables duplicate submission. Malformed storage is not overwritten; blocked storage never reports success. Invalid MIME, empty, oversized and unreadable images reject; attachment removal passes. PASS.
+
+### TEST-BETA-FB-03 — privacy, accessibility and responsive layout
+
+BETA-FB-001, 002, 003, 006. Tests pass for 30-action cap, sanitized routes, exclusion of query/hash/IDs and operation error text, immutable open-time snapshot, session reset, whitespace validation/focus, dirty-draft cancel protection, and absence of demo/technical/activity UI.
+
+Responsive CSS reviewed: launcher visible in header at all widths; header title can shrink; modal width bounded by viewport with 16px margins and 90dvh scrollable height; stacked form; wrapping dashboard rows and long text; contained image. **Desktop/mobile visual verification and native focus trapping remain unverified.** Browser inventory host was unavailable; fallback Chrome launch succeeded, but Windows Computer Use then stopped because it could not confidently determine the current URL. No further browser input was attempted.
+
+### Checks
+
+- `npm run lint`: PASS.
+- `npm test` with `NODE_OPTIONS=--experimental-require-module`: PASS, 11 files / 60 tests (8 feedback tests).
+- `npm run build` with process-local placeholder Gemini key: PASS, 1,785 modules. Existing >500 kB chunk warning remains.
+- Tests/build initially encountered sandbox `spawn EPERM`; approved runs outside the sandbox passed.
+- jsdom shims native dialog opening and image decode. Automated integration evidence is not a real-browser end-to-end run.
+- No new dependencies or external feedback transport. No backend/database/deployment work.
+
+---
 ### TEST-AUTH-01 — Authentication Landing and Access Redirection
 - **Test ID**: TEST-AUTH-01
 - **Related Requirement IDs**: AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006
@@ -519,3 +543,20 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Status**: PASSED
 - **Evidence**: All unit and component tests passing.
 
+---
+
+## Feedback UX follow-up ? 2026-11-21
+
+Selected BETA-FB-002, 004, 005, 006. Restored the right-side drawer (full-width on mobile), conversational issue/suggestion prompts, visible radio choices, and bottom actions. Dashboard Login ID is Liam Parker, case-insensitive; placeholder password remains outside UI. Reports display distinct Issue / Bug or Suggestion badges and only Open / Closed status. Close/reopen persists; old v2 reports default to Open.
+
+TEST-BETA-FB-01/02: automated flow verifies closed/reopened status, persisted closed status, missing-status migration and unchanged status after a failed write. Existing attachment/submission/privacy/login tests remain passing. Full suite: 61 tests / 11 files PASS, including 9 feedback tests. TypeScript PASS. Real browser visual and native focus verification remain outstanding due to the previously recorded browser-tool blocker; responsive drawer CSS reviewed only.
+
+Follow-up production build: PASS (1,785 modules); existing large-chunk warning remains. `git diff --check`: PASS.
+
+## Admin-only feedback IDs ? 2026-11-21
+
+BETA-FB-004/005; TEST-BETA-FB-01/02. PASS: sequential FB-00001 IDs, persisted migration of existing feedback without changing UUIDs, reload stability, sequence continuation, display in admin detail, and absence from user confirmation. TypeScript and full suite pass: 62 tests / 11 files. UI change is text-only; browser visual verification was not rerun.
+
+## Admin ticket detail and filters ? 2026-11-22
+
+BETA-FB-003/004/005/006, TEST-BETA-FB-01/02/03: PASS for captured actions with outcomes, sanitized routes with no tokens/typed values, screenshot display and absent-image state, combined ID search/type/status/category filtering, clear/no-results behavior, persisted category changes, legacy Unclassified default and retained state after failed writes. Full suite: 64 tests / 11 files. TypeScript and production build PASS (existing chunk-size warning). Real-browser visual/native focus verification remains outstanding; responsive filter grid and wrapping timeline reviewed in code only.

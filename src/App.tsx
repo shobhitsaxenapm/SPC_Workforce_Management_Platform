@@ -18,6 +18,7 @@ import CareersPage from './components/CareersPage';
 import Login from './components/Login';
 import Unauthorized from './components/Unauthorized';
 import RouteGuard from './components/RouteGuard';
+import FeedbackAdmin from './feedback/FeedbackAdmin';
 
 // Operations
 import OnboardingList from './components/OnboardingList';
@@ -32,6 +33,7 @@ import OffboardingList from './components/OffboardingList';
 export default function App() {
   return (
     <Routes>
+      <Route path="/feedback-admin" element={<FeedbackAdmin />} />
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/jobs" element={<CareersPage />} />

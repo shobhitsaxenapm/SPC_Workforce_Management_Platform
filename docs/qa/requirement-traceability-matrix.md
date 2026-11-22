@@ -2,6 +2,20 @@
 
 This table maps functional requirement IDs to codebase locations, execution statuses, and test scenarios.
 
+## Feedback prototype — 2026-11-21
+
+Selected scope: [BETA-FB-001 through BETA-FB-006](../product/beta-feedback-phase-1.md).
+
+| Requirement | Code location | Verification status | Tests |
+| --- | --- | --- | --- |
+| BETA-FB-001 | Layout.tsx, FeedbackProvider.tsx | Header launcher without hint; underlying SPC draft retained in component test. Visual responsive verification blocked. | TEST-BETA-FB-01, 03 |
+| BETA-FB-002 | FeedbackPanel.tsx, ui.tsx, feedback.css, screenshot.ts | Required fields, screenshot validation/removal, loading, success and draft retention pass component tests. Native dialog/image rendering unverified. | TEST-BETA-FB-01, 02, 03 |
+| BETA-FB-003 | activity.ts, FeedbackProvider.tsx, AppContext.tsx | Bounded actions, route redaction, frozen snapshot, session reset and hidden metadata pass. | TEST-BETA-FB-03 |
+| BETA-FB-004 | model.ts, service.ts | Empty initial store; report/image reload, rejected writes and corrupt storage protection pass. | TEST-BETA-FB-01, 02 |
+| BETA-FB-005 | FeedbackAdmin.tsx, auth.ts, App.tsx | Isolated mock login, empty list, submitted detail, logout, session and storage-event refresh pass. | TEST-BETA-FB-01, 02 |
+| BETA-FB-006 | feedback.test.tsx, docs/feedback-integration.md | TypeScript/build pass; 60 tests pass across 11 files. Browser visual QA blocked, not marked complete. | TEST-BETA-FB-01–03 |
+## Existing requirements
+
 | Requirement ID | Module | Route | Requirement | Expected Role | Code Location | Current Status | Test ID | Demo Classification | Prototype Approach | Demo Priority | Expected User-Visible Behavior |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | **AUTH-001** | Authentication | `/login` | Display login landing page and credentials inputs (Email + Password). | All Roles / Guest | Missing | Missing | TEST-AUTH-01 | Demo Critical | Real Functionality (Local) | High | Renders a login screen with email/password input boxes and submit button when loading the app. |
@@ -120,3 +134,9 @@ This table maps functional requirement IDs to codebase locations, execution stat
 | **OFF-003** | Employee Management | `/employees/offboarding` | Exit clearance checklists approvals. | HR, Company Admin | Missing | Missing | TEST-OFF-01 | Demo Critical | Real Functionality (Local) | High | HR clicks clearances check off boxes, updating checklists states. |
 | **OFF-004** | Employee Management | `/employees/offboarding` | Mark exit completed. | HR, Company Admin | Missing | Missing | TEST-OFF-01 | Demo Critical | Real Functionality (Local) | High | Completes clearances, changing Employee status to Exited in directory. |
 | **OFF-005** | Employee Management | `/employees/offboarding` | Halt future contract calculations. | HR, Company Admin | Missing | Missing | TEST-OFF-01 | Demo Critical | Real Functionality (Local) | High | Exiting updates calculations references, halting subsequent billing draft generations. |
+
+Follow-up scope: BETA-FB-002 restores the right drawer and conversational prompts; BETA-FB-004/005 add persisted Open/Closed status and shared Login ID Liam Parker. Type badges distinguish Issue / Bug and Suggestion. Follow-up verification: 61 tests across 11 files and TypeScript pass, including migration, status persistence, failure retention and close/reopen flow. Visual browser verification remains outstanding.
+
+BETA-FB-004/005 admin-ID follow-up: service.ts allocates and migrates persisted readable IDs; FeedbackAdmin.tsx displays them only in list/detail. FeedbackPanel remains unchanged. Verified: TypeScript and all 62 tests across 11 files pass; tests cover stable IDs, legacy migration, sequence continuation and absence from user confirmation.
+
+2026-11-22 BETA-FB-003/004/005/006: admin action timeline and screenshot/empty states in FeedbackAdmin; search and type/status/category filters; category migration and persistent setCategory in service/model. Verified: TypeScript, production build and 64 tests / 11 files pass; browser visual verification remains outstanding.

@@ -1,5 +1,13 @@
 # Implementation Status
 
+## Feedback prototype — 2026-11-21
+
+- Selected BETA-FB-001 through BETA-FB-006 revised to match the latest request.
+- Simplified header/modal; optional persistent image; hidden safe activity; isolated submission/storage/auth interfaces; standalone shared Liam Parker mock login; empty feedback list and detail with Open / Closed actionss.
+- Removed hints, technical previews, demo controls/labels, fictional reports, counters, filters, triage, notes and resolution workflow from the feature.
+- Verification: TypeScript and production build pass; all 60 tests across 11 files pass, including 8 feedback tests.
+- Browser visual/responsive/native focus verification remains blocked: Windows tool could not confidently identify Chrome's current URL and stopped. CSS reviewed only; no visual completion claim.
+- No dependencies, backend, database or deployment added. Developer credentials and integration limits: `docs/feedback-integration.md`.
 ## Project Status
 
 - **Current Phase**: `Offers page interactions (View Offer details modal, Start Onboarding workflow folder generation, Mark Accepted/Rejected/Withdrawn transitions, Expiry Extension) and AppContext offers/onboardings synchronization`
@@ -104,3 +112,7 @@
 
 ### Runtime Browser Check
 - Verified compile and local static preview of built files.
+
+Feedback UX follow-up: right-side drawer and conversational prompts restored; Liam Parker Login ID; Issue / Bug versus Suggestion badges; only Open / Closed statuses with persisted close/reopen. TypeScript and 61 tests pass; browser visual verification remains outstanding.
+
+2026-11-22: Admin tickets show safe captured action details and screenshot/empty state. Dashboard has combined search, type, status and category filters. Product/Engineering/AI categories persist independently of Open/Closed. TypeScript, build and all 64 tests pass; browser visual verification remains outstanding.

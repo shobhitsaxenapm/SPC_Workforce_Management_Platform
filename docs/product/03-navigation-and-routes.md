@@ -38,6 +38,14 @@ This document details the route architecture specified in the **HRMS Application
 
 ## Codebase Extra Routes
 
+### Feedback prototype (2026-11-21)
+
+`/feedback-admin` remains a separate frontend layout outside SPC navigation and its
+account session. It has one shared mock account, an initially empty feedback list,
+and a detail with Open / Closed actions view. It is not real authentication. See
+[scope](beta-feedback-phase-1.md) and [integration](../feedback-integration.md).
+The shared authenticated Layout provides Feedback next to the profile at all widths.
+Existing SPC routes and role guards are unchanged.
 The current React codebase contains several active routes that are **not specified** in the target HRMS End-User Flow & Navigation Document:
 1. `/interviews`: Renders `InterviewsList.tsx` for scheduling list view.
 2. `/offers`: Renders `OffersList.tsx` for listing proposed offers.

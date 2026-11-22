@@ -2,6 +2,17 @@
 
 This document lists the confirmed limitations, unverified assumptions, and conflicts identified during the code audit of the SPC Workforce Management Platform.
 
+## Feedback prototype (2026-11-21)
+
+- Shared frontend mock login is not secure or production-ready. Development placeholders are documented outside the UI; Liam's real credentials remain unknown.
+- Reports/images are local to this browser/origin under `spc_feedback_v2`. No backend or cross-device/team synchronization. Concurrent cross-tab writes are not transactional.
+- Full/blocked/malformed storage rejects submission, preserving draft; no memory-only false success. Old sample data stays untouched under its old key and is not displayed.
+- Screenshot: one PNG/JPEG/WebP up to 2 MiB. Images are not automatically redacted. Local storage quotas limit total feedback volume.
+- Activity ring covers navigation and existing client/candidate creation and job create/update hooks only, with fixed action names and sanitized routes. No typed contents or credentials are captured. Ring resets on refresh/logout/user change.
+- Browser tool stopped because Chrome's URL could not be confidently identified. Real desktop/mobile visuals, native focus containment and image decoding remain unverified. Automated tests use jsdom shims.
+- Node 22.11 tests require `NODE_OPTIONS=--experimental-require-module`. Build retains the existing bundle-size warning.
+The legacy audit notes below predate this feature and may describe older application behavior.
+
 ---
 
 ## Confirmed Limitations
