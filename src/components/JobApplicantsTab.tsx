@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Application, Candidate, CANONICAL_SOURCES } from '../types';
 import { useApp } from '../context/AppContext';
-import { FileText, Eye, CheckCircle2, XCircle, ArrowRight, SearchX, RefreshCw, UserPlus, AlertTriangle, X } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, ArrowRight, SearchX, RefreshCw, UserPlus, AlertTriangle, X } from 'lucide-react';
 import ResumeModal from './ResumeModal';
 import { cn, formatDate } from '../lib/utils';
 import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './ApplicantFilterToolbar';
@@ -36,12 +36,14 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
     setCurrentPage(1);
   }, [jobId]);
 
-  // Compute available locations, statuses and sources based on current applicants
+  // Compute available locations, statuses and sources based on current applicants (excludes pipeline-only sources AI Match & Recruiter Added)
   const availableSources = useMemo(() => {
-    const s = new Set<string>();
-    CANONICAL_SOURCES.forEach(src => s.add(src));
+    const applicantSources = ['SPC Careers Website', 'LinkedIn', 'Naukri', 'Manual Upload', 'Bulk Upload'];
+    const s = new Set<string>(applicantSources);
     applications.forEach(app => {
-      if (app.source) s.add(app.source);
+      if (app.source && app.source !== 'AI Match' && app.source !== 'Recruiter Added') {
+        s.add(app.source);
+      }
     });
     return Array.from(s);
   }, [applications]);
@@ -255,13 +257,6 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                     </td>
                     <td className="px-4 py-4 align-top text-right pr-6">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setQuickViewCandidateId(candidate.id)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Profile"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                         <button
                           onClick={() => setViewResumeId(candidate.id)}
                           className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

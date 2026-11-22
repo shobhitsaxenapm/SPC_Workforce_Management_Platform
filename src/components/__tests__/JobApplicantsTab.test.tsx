@@ -211,6 +211,10 @@ describe('JobApplicantsTab Filtering', () => {
     // Open Source dropdown filter
     fireEvent.click(screen.getByRole('button', { name: /^Source/i }));
     
+    // Verify pipeline-only sources (AI Match, Recruiter Added) are excluded from the Applicants Source dropdown
+    expect(screen.queryByLabelText('AI Match')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Recruiter Added')).not.toBeInTheDocument();
+
     // Select LinkedIn
     fireEvent.click(screen.getByLabelText('LinkedIn'));
 
