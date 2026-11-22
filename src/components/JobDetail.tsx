@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUsers } from '../data/mockData';
-import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History, X, XCircle, AlertTriangle, Send, Globe, EyeOff } from 'lucide-react';
+import { Briefcase, Building2, MapPin, Calendar, CheckCircle2, ChevronRight, Share, Eye, LayoutGrid, List, Search, UserPlus, FileText, Activity, Users, MoreVertical, ClipboardCheck, AlertCircle, Clock, UserX, DollarSign, Settings, History, X, XCircle, AlertTriangle, Send, Globe, EyeOff, Plus, Sparkles } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { ApplicationStage, CANONICAL_SOURCES, Placement, HiringModel } from '../types';
 import { useApp } from '../context/AppContext';
@@ -135,7 +135,7 @@ export default function JobDetail() {
   const canRunMatching = (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER' || currentUser?.id === job.assignedRecruiterId) && isJobActive;
   const canAction = canRunMatching;
 
-  const canonicalStages = ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Rejected', 'Withdrawn'] as const;
+  const canonicalStages = ['Sourced', 'Screening', 'Client Review', 'Interviewing', 'Selected', 'Joined / Placed', 'Rejected', 'Withdrawn'] as const;
 
   const groupedApps: Record<string, typeof jobApplications> = {};
   canonicalStages.forEach(s => groupedApps[s] = []);
@@ -143,7 +143,9 @@ export default function JobDetail() {
   let groupedCount = 0;
   pipelineApps.forEach(app => {
     let canonical = app.currentStage as string;
-    if (['Offered', 'Offer', 'Joining Pending', 'Hired', 'Joined', 'Offer Accepted'].includes(canonical)) {
+    if (canonical === 'Hired' || canonical === 'Joined' || app.currentSubstate === 'Joined/Placed') {
+      canonical = 'Joined / Placed';
+    } else if (['Offered', 'Offer', 'Joining Pending', 'Offer Accepted'].includes(canonical)) {
       canonical = 'Selected';
     }
     
@@ -440,9 +442,28 @@ export default function JobDetail() {
             ) : (
               <button 
                 onClick={() => setShowAddCandidateModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                className="group flex items-center gap-2 pl-4 pr-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow"
               >
-                <UserPlus className="w-4 h-4" /> Add Candidate
+                <svg width="0" height="0" className="absolute">
+                  <defs>
+                    <linearGradient id="ai-pipeline-add-candidate-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#8b5cf6" />
+                      <stop offset="50%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#f59e0b" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Add Candidate</span>
+                <span className="ml-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 shadow-xs border border-white/40 group-hover:scale-105 transition-transform">
+                  <Sparkles
+                    className="w-3 h-3 shrink-0"
+                    style={{ fill: 'url(#ai-pipeline-add-candidate-gradient)', stroke: 'url(#ai-pipeline-add-candidate-gradient)' }}
+                  />
+                  <span className="bg-gradient-to-r from-violet-600 via-pink-500 to-amber-500 bg-clip-text text-transparent text-[10px] font-extrabold tracking-wider uppercase">
+                    AI
+                  </span>
+                </span>
               </button>
             )}
           </div>
@@ -663,8 +684,17 @@ export default function JobDetail() {
               <div key={stage} className="w-[320px] flex-shrink-0 flex flex-col">
                 <div className="flex items-center justify-between mb-4 px-2">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-slate-700 text-sm">{stage}</h4>
-                    <span className="bg-slate-200/70 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{appsInStage.length}</span>
+                    {stage === 'Joined / Placed' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                    <h4 className={cn(
+                      "font-semibold text-sm",
+                      stage === 'Joined / Placed' ? "text-emerald-800" : "text-slate-700"
+                    )}>{stage}</h4>
+                    <span className={cn(
+                      "text-xs font-semibold px-2.5 py-1 rounded-full",
+                      stage === 'Joined / Placed' && appsInStage.length > 0
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-200/70 text-slate-700"
+                    )}>{appsInStage.length}</span>
                   </div>
                   
                   {stage === 'Client Review' && (
@@ -712,6 +742,92 @@ export default function JobDetail() {
                     if (!candidate) return null;
                     const isSelected = selectedForClientReview.includes(app.id);
                     const canSelect = app.clientReviewStatus !== 'Submitted';
+                    const isJoinedStage = stage === 'Joined / Placed';
+
+                    if (isJoinedStage) {
+                      const plc = placements.find(p => p.applicationId === app.id);
+                      const isClientHire = job.hiringModel === 'Client Hire' || (plc && plc.hiringModel === 'Client Hire');
+                      const billingConfig = plc?.billingStatus ? getPlacementBillingStatusConfig(plc.billingStatus) : null;
+                      const BillingIcon = billingConfig?.icon;
+                      const latestIv = getLatestInterviewForApplication(app.id, interviews);
+                      const roundSummaryText = latestIv ? formatRoundSummaryForCard(latestIv) : null;
+
+                      return (
+                        <div key={app.id} className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between">
+                          <div>
+                            <div className="flex justify-between items-start mb-2">
+                              <button
+                                onClick={() => setQuickViewCandidateId(candidate.id)}
+                                className="font-semibold text-emerald-950 hover:text-emerald-700 truncate outline-none text-left mr-2"
+                              >
+                                {candidate.fullName}
+                              </button>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+                                Joined/Placed
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-800 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
+                            <div className="flex items-center justify-between gap-1.5 mt-1 mb-3">
+                              <p className="text-xs text-emerald-700/80 flex items-center gap-1 truncate">
+                                <MapPin className="w-3 h-3" />
+                                {candidate.currentLocation}
+                              </p>
+                              <SourceBadge source={app.source} compact />
+                            </div>
+
+                            {roundSummaryText && (
+                              <div className="mb-3 flex items-center justify-between gap-1.5 bg-white/80 px-2.5 py-1.5 rounded-lg border border-emerald-200/80">
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 truncate bg-emerald-100 text-emerald-800">
+                                  <Clock className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{roundSummaryText}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label="View interview history"
+                                  title="View interview history"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setHistoryDrawerAppId(app.id);
+                                  }}
+                                  className="p-1 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100/60 rounded transition-colors shrink-0 flex items-center gap-1 text-[11px] font-bold"
+                                >
+                                  <History className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">History</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {isClientHire && plc ? (
+                            <div className="pt-3 border-t border-emerald-200/70 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                {billingConfig && BillingIcon && (
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border",
+                                    billingConfig.badgeClass
+                                  )}>
+                                    <BillingIcon className="w-3 h-3" />
+                                    {billingConfig.label}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => setSelectedPlacementForBilling(plc)}
+                                className="px-2.5 py-1 text-xs font-semibold text-purple-700 bg-white hover:bg-purple-50 border border-purple-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                              >
+                                <DollarSign className="w-3.5 h-3.5 text-purple-600" />
+                                Placement &amp; Billing
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="pt-3 border-t border-emerald-200/70 flex items-center justify-between text-[10px] text-emerald-700 font-medium">
+                              <span>{formatDate(app.lastActivity || app.appliedDate)}</span>
+                              <span className="font-semibold">Onboarding / Placed</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
                     
                     return (
                       <div key={app.id} className={cn(
@@ -855,7 +971,14 @@ export default function JobDetail() {
                             }
                           }
 
-                          if (app.currentSubstate && app.currentSubstate !== 'Offer Issued (Delivery Pending)' && app.currentSubstate !== 'Application Received') {
+                          const hasInterviewHistory = Boolean(getLatestInterviewForApplication(app.id, interviews));
+                          if (
+                            app.currentSubstate &&
+                            app.currentStage !== 'Interviewing' &&
+                            !hasInterviewHistory &&
+                            app.currentSubstate !== 'Offer Issued (Delivery Pending)' &&
+                            app.currentSubstate !== 'Application Received'
+                          ) {
                             return (
                               <div className="mb-3">
                                 <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">{app.currentSubstate}</span>
@@ -1125,69 +1248,6 @@ export default function JobDetail() {
             );
           })}
           </div>
-
-          {jobApplications.filter(a => a.currentStage === 'Hired' || a.currentStage === 'Joined' || a.currentSubstate === 'Joined/Placed').length > 0 && (
-            <div className="mt-8 pt-8 border-t border-slate-200">
-              <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Completed Outcomes
-              </h3>
-              <div className="flex gap-4 overflow-x-auto pb-4">
-                {jobApplications.filter(a => a.currentStage === 'Hired' || a.currentStage === 'Joined' || a.currentSubstate === 'Joined/Placed').map(app => {
-                  const candidate = candidates.find(c => c.id === app.candidateId);
-                  if (!candidate) return null;
-                  const plc = placements.find(p => p.applicationId === app.id);
-                  const isClientHire = job.hiringModel === 'Client Hire' || (plc && plc.hiringModel === 'Client Hire');
-                  const billingConfig = plc?.billingStatus ? getPlacementBillingStatusConfig(plc.billingStatus) : null;
-                  const BillingIcon = billingConfig?.icon;
-
-                  return (
-                    <div key={app.id} className="w-[340px] flex-shrink-0 bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 shadow-sm relative flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <button onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-emerald-950 hover:text-emerald-700 truncate outline-none text-left mr-2">
-                            {candidate.fullName}
-                          </button>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
-                            Joined/Placed
-                          </span>
-                        </div>
-                        <p className="text-xs text-emerald-800 mb-1 truncate">{candidate.currentRole} • {candidate.totalExperience}</p>
-                        <div className="flex items-center justify-between gap-1.5 mt-1">
-                          <p className="text-xs text-emerald-700/80 flex items-center gap-1 truncate"><MapPin className="w-3 h-3"/>{candidate.currentLocation}</p>
-                          <SourceBadge source={app.source} compact />
-                        </div>
-                      </div>
-
-                      {/* Client Hire Placement & Billing section */}
-                      {isClientHire && plc && (
-                        <div className="mt-3 pt-3 border-t border-emerald-200/60 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            {billingConfig && BillingIcon && (
-                              <span className={cn(
-                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border",
-                                billingConfig.badgeClass
-                              )}>
-                                <BillingIcon className="w-3 h-3" />
-                                {billingConfig.label}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => setSelectedPlacementForBilling(plc)}
-                            className="px-2.5 py-1 text-xs font-semibold text-purple-700 bg-white hover:bg-purple-50 border border-purple-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
-                          >
-                            <DollarSign className="w-3.5 h-3.5 text-purple-600" />
-                            Placement &amp; Billing
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
