@@ -157,7 +157,7 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Expected Result**: Client is searched, filtered, successfully created, validated for duplicates, and persisted.
 - **Actual Result**: Verified clients listings, search + filter, modal addition form, duplicate checks, and localStorage persistence.
 - **Status**: Verified
-- **Evidence**: Verified in build logs.
+- **Evidence**: Verified in build logs and UI verification (unified search bar width `sm:w-[380px] md:w-[440px]` and single Filters toolbar across Clients, Jobs, Candidates, Interviews, Offers, and supporting lists).
 
 ---
 
@@ -178,7 +178,7 @@ This document specifies the end-to-end testing scenarios required to validate th
 - **Expected Result**: Requirements are created, filtered, and fully populated during job creation workflows.
 - **Actual Result**: Verified requirements modal creation form, validations, and mapping integration in Jobs list creator.
 - **Status**: Verified
-- **Evidence**: Verified in build logs.
+- **Evidence**: Verified in build logs and UI verification (unified search bar width `sm:w-[380px] md:w-[440px]` and single Filters toolbar across Clients, Jobs, Candidates, Interviews, Offers, and supporting lists).
 
 ---
 

@@ -1068,11 +1068,11 @@ export default function CandidateDetail() {
                           </span>
                         </div>
 
-                        {/* Strictly 1-Line Core Focus & Deliverables */}
+                        {/* Strictly 1-Line Experience Snapshot */}
                         <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70 text-xs flex items-start gap-2.5">
                           <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
                           <div className="space-y-0.5">
-                            <span className="font-semibold text-slate-800">Core Focus &amp; Impact: </span>
+                            <span className="font-semibold text-slate-800">Experience Snapshot: </span>
                             <span className="text-slate-600 leading-relaxed">
                               {exp.aiAnalysis || (exp.responsibilities && exp.responsibilities[0]) || 'Proven execution and domain contributions.'}
                             </span>

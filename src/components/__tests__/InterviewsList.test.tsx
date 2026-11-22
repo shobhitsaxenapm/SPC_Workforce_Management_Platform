@@ -51,7 +51,7 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     expect(screen.getByText('Pooja Saini')).toBeTruthy();
   });
 
-  it('houses all filters inside the Filters button, highlights active filter state, and cascades Client -> Job', () => {
+  it('houses all filters inside the Filters button, defers applying until Done is clicked, and cascades Client -> Job', () => {
     renderInterviewsList();
 
     // Open the unified Filters popover
@@ -62,21 +62,31 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     const clientSelect = getFilterSelectByLabel(/^Client$/i);
     fireEvent.change(clientSelect, { target: { value: 'c1' } });
 
-    expect(screen.getAllByText(/1–3/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Client: NorthStar Healthcare Services/i)).toBeTruthy();
+    // Before clicking Done, the underlying table list is NOT mutated yet (still showing 1–5)
+    expect(screen.getAllByText(/1–5/i).length).toBeGreaterThanOrEqual(1);
 
-    // Job / Role select inside Filters only shows c1 jobs (j1, j2), not c4 jobs (j4)
+    // Job / Role select inside Filters immediately scopes to c1 jobs (j1, j2), not c4 jobs (j4), in draft state
     const jobSelect = getFilterSelectByLabel(/Job \/ Role/i);
     const optionValues = Array.from(jobSelect.options).map(o => o.value).filter(Boolean);
     expect(optionValues).toContain('j1');
     expect(optionValues).toContain('j2');
     expect(optionValues).not.toContain('j4');
 
-    fireEvent.change(jobSelect, { target: { value: 'j1' } });
+    // Click Done to apply Client c1 filter
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
+    expect(screen.getAllByText(/1–3/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Client: NorthStar Healthcare Services/i)).toBeTruthy();
+
+    // Re-open Filters and select Job j1, then click Done
+    fireEvent.click(screen.getByRole('button', { name: /Filters/i }));
+    fireEvent.change(getFilterSelectByLabel(/Job \/ Role/i), { target: { value: 'j1' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
 
-    // Switching Client to c4 automatically clears incompatible Job j1 so flow does not dead-end
-    fireEvent.change(clientSelect, { target: { value: 'c4' } });
+    // Re-open Filters, switch Client to c4 (auto-clears incompatible Job j1 in draft), and click Done
+    fireEvent.click(screen.getByRole('button', { name: /Filters/i }));
+    fireEvent.change(getFilterSelectByLabel(/^Client$/i), { target: { value: 'c4' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.queryByText(/Job: Data Entry Operator/i)).toBeNull();
     expect(screen.getAllByText(/1–2/i).length).toBeGreaterThanOrEqual(1);
   });
@@ -89,16 +99,19 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     fireEvent.click(noShowTabBtn);
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
 
-    // Open Filters popover and select No-Show Party = Candidate
+    // Open Filters popover, select No-Show Party = Candidate, and click Done
     fireEvent.click(screen.getByRole('button', { name: /Filters/i }));
     const noShowPartySelect = getFilterSelectByLabel(/No-Show Party/i);
     fireEvent.change(noShowPartySelect, { target: { value: 'Candidate' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
 
-    // Selecting Feedback Status = Received while on No Show tab auto-switches to All Interviews
+    // Selecting Feedback Status = Received while on No Show tab and clicking Done auto-switches to All Interviews
     // and clears the incompatible No-Show Party filter instead of trapping user in 0 results!
+    fireEvent.click(screen.getByRole('button', { name: /Filters/i }));
     const feedbackSelect = getFilterSelectByLabel(/Feedback Status/i);
     fireEvent.change(feedbackSelect, { target: { value: 'Received' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Riya Sharma')).toBeTruthy();
   });
@@ -112,6 +125,7 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     // Pooja Varma is a secondary panelist on int1 (not primary interviewerName)
     const interviewerSelect = getFilterSelectByLabel(/Interviewer \/ Panelist/i);
     fireEvent.change(interviewerSelect, { target: { value: 'Pooja Varma' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
 
     // Remove the Interviewer chip via its X button
@@ -120,9 +134,28 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     expect(screen.getAllByText(/1–5/i).length).toBeGreaterThanOrEqual(1);
 
     // Filter by Recruiter Outcome = Pending Decision (int2 is Completed without recruiterOutcome)
+    fireEvent.click(screen.getByRole('button', { name: /Filters/i }));
     const outcomeSelect = getFilterSelectByLabel(/Recruiter Outcome/i);
     fireEvent.change(outcomeSelect, { target: { value: 'Pending Decision' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Done$/i }));
     expect(screen.getAllByText(/1–1/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pooja Saini')).toBeTruthy();
+  });
+
+  it('removes standalone View button, shows one primary action + View History, highlights selected round in drawer, and keeps feedback not due until completed', () => {
+    renderInterviewsList();
+
+    // Standalone "View" button is removed; "View History" is rendered per row
+    expect(screen.queryByRole('button', { name: /^View$/i })).toBeNull();
+    const viewHistoryButtons = screen.getAllByRole('button', { name: /View History/i });
+    expect(viewHistoryButtons.length).toBeGreaterThanOrEqual(5);
+
+    // Uncompleted overdue interview shows "Feedback: Not Due until completed"
+    expect(screen.getAllByText(/Feedback: Not Due until completed/i).length).toBeGreaterThanOrEqual(1);
+
+    // Click View History on the first row and verify the selected round is highlighted/expanded in InterviewHistoryDrawer
+    fireEvent.click(viewHistoryButtons[0]);
+    expect(screen.getByRole('dialog', { name: /Interview History Drawer/i })).toBeTruthy();
+    expect(screen.getByText('Selected Round')).toBeTruthy();
   });
 });

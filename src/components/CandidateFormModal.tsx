@@ -901,7 +901,7 @@ export default function CandidateFormModal({
                                 <div className="mt-1 p-2 bg-white rounded-lg border border-slate-200/80 text-[11px] flex items-start gap-1.5 text-slate-700">
                                   <Sparkles className="w-3 h-3 text-indigo-500 shrink-0 mt-0.5" />
                                   <div className="leading-snug">
-                                    <strong className="text-slate-900 font-semibold">Core Focus &amp; Impact: </strong>
+                                    <strong className="text-slate-900 font-semibold">Experience Snapshot: </strong>
                                     <span>{stintAiAnalysis}</span>
                                   </div>
                                 </div>
@@ -979,7 +979,7 @@ export default function CandidateFormModal({
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-semibold text-indigo-700 mb-0.5">Core Focus &amp; Impact</label>
+                                  <label className="block text-[10px] font-semibold text-indigo-700 mb-0.5">Experience Snapshot</label>
                                   <input
                                     type="text"
                                     value={exp.aiAnalysis ?? stintAiAnalysis}

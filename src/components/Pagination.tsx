@@ -57,7 +57,7 @@ export default function Pagination({
         <span className="font-semibold text-slate-800">{totalItems}</span> {itemLabel}
       </span>
 
-      {totalPages > 1 && (
+      {totalPages >= 1 && (
         <div className="flex items-center gap-1.5">
           <button
             type="button"

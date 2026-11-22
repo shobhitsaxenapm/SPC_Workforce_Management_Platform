@@ -159,16 +159,26 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
     <div className="space-y-4">
       {/* Search and Filters Toolbar */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row justify-between gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          <div className="relative w-full sm:w-[380px] md:w-[440px] shrink-0">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
               placeholder="Search matches by name, location, or skills..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

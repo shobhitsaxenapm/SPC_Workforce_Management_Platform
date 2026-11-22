@@ -73,7 +73,7 @@ describe('CandidateFormModal Dual-Resume & AI Profile Review', () => {
     expect(screen.getByText('Extracted from Resume')).toBeInTheDocument();
     expect(screen.getAllByText(/Experience Analysis \(AI\)/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Career Trajectory & Domain Strength')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Core Focus & Impact:/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Experience Snapshot:/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Highest Qualification').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Certifications, Impact & Recruiter Metrics')).not.toBeInTheDocument();
 

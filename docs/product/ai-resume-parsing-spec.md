@@ -37,7 +37,7 @@ The AI engine must parse any arbitrary resume and output a structured JSON paylo
 | **7** | **AI Executive Summary** | `[string, string]` (Strictly 2 lines) | **Line 1:** Role & primary domain specialty.<br>**Line 2:** Execution track record & business outcome. |
 | **8** | **Core Skills** | `string[]` (Strictly 5 items) | Top 5 primary competencies (aligned to JD if matched; otherwise top 5 core domain capabilities). |
 | **9** | **Career Trajectory & Domain Strength** | `string` (1–2 sentences) | Macro synthesis of candidate's career progression and domain depth. |
-| **10** | **Key Employment Stints** | `Array` (Capped at top 3) | Chronological recent 3 roles with dates, company, location, and a 1-line AI evaluation. |
+| **10** | **Key Employment Stints** | `Array` (Capped at top 3) | Chronological recent 3 roles with dates, company, location, and a 1-line Experience Snapshot. |
 | **11** | **Highest Qualification** | `qualification`, `institution`, `year` | Only the highest completed or active degree/diploma with institution and year. |
 | **12** | **Compensation & Logistics** | `currentSalary`, `expectedSalary`, `noticePeriod` | Extracted if present in text/header; otherwise left for recruiter edit. |
 
@@ -64,15 +64,15 @@ Recruiters do not read 40-skill tag clouds. The AI must extract **exactly 5 skil
 - **Scenario B (Unmatched / General Pool):** Extract the **Top 5 Core Competencies** that define the candidate’s primary capability tier.
 - **Guardrails:** Filter out basic tools (e.g., MS Word, Zoom) unless specifically required. Focus on high-value domain and technical skills.
 
-### C. Top 3 Employment Stints & 1-Line AI Evaluation
-Resumes often list 6–8 bullets per role detailing everyday tasks. The UI displays only the **top 3 most recent stints**, and summarizes each stint into a single, punchy AI line.
+### C. Top 3 Employment Stints & 1-Line Experience Snapshot
+Resumes often list 6–8 bullets per role detailing everyday tasks. The UI displays only the **top 3 most recent stints**, and summarizes each stint into a single, punchy Experience Snapshot line.
 
 - **Stint Fields:**
   1. `role`: Job title.
   2. `company`: Organization name.
   3. `location`: City / Remote status.
   4. `startDate` & `endDate`: Consistent format (e.g., `Nov 2025 – Present` or `Jul 2023 – Nov 2025`).
-  5. `aiAnalysis` (**1-Line AI Evaluation**):
+  5. `aiAnalysis` (**1-Line Experience Snapshot**):
      - **Definition:** A single sentence stating the candidate’s core deliverable, ownership scope, and business/technical outcome in that role.
      - **Directive:** Answer *"What did they build or solve here?"*
      - **Good Example:** `Multi-agent orchestration and intelligent document processing pipelines.`
