@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { X, Search, Briefcase, MapPin, AlertCircle, Building2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Job } from '../types';
+import Toast from './Toast';
 
 interface AddJobToCandidateModalProps {
   candidateId: string;
@@ -70,7 +71,12 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
   const isSelectedDisabled = selectedJob ? getDisabledReason(selectedJob) : null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
+      />
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
         
         {/* Header with Candidate Context */}
@@ -175,7 +181,7 @@ export default function AddJobToCandidateModal({ candidateId, isOpen, onClose }:
           {/* Right sidebar action area */}
           <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0">
             {toast && (
-              <div className={cn("p-4 rounded-xl border text-sm font-medium", toast.type === 'error' ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200")}>
+              <div className={cn("p-4 rounded-xl border text-sm font-medium", toast.type === 'error' ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200")}>
                 {toast.message}
               </div>
             )}

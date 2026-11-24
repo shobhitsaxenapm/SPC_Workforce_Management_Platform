@@ -8,6 +8,7 @@ import ApplicantFilterToolbar, { ApplicantFilters, createEmptyFilters } from './
 import { isDateInPreset } from '../lib/dateUtils';
 import SourceBadge from './SourceBadge';
 import Pagination from './Pagination';
+import Toast from './Toast';
 
 interface JobApplicantsTabProps {
   jobId: string;
@@ -171,7 +172,9 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
       />
       <div className="flex justify-between items-center mb-3">
         <span className="text-sm font-medium text-slate-500">
-          Showing {filteredApplications.length} of {applications.length} applicants
+          {(filters.searchQuery.trim() || (filters.sources && filters.sources.length > 0) || filters.locations.length > 0 || filters.statuses.length > 0 || (filters.appliedOn && filters.appliedOn !== 'All Time'))
+            ? `Showing ${filteredApplications.length} of ${applications.length} applicants`
+            : `Total: ${applications.length} applicants`}
         </span>
         <button 
           onClick={handleRefresh}
@@ -185,19 +188,19 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
       <div className="rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-xs">
+          <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-xs">
             <tr>
-              <th className="px-4 py-4 pl-6">Candidate Details</th>
-              <th className="px-4 py-4">Source</th>
-              <th className="px-4 py-4">Applied On</th>
-              <th className="px-4 py-4">Application Status</th>
-              <th className="px-4 py-4 text-right pr-6">Actions</th>
+              <th className="px-4 py-3 pl-6">Candidate Details</th>
+              <th className="px-4 py-3">Source</th>
+              <th className="px-4 py-3">Applied On</th>
+              <th className="px-4 py-3">Application Status</th>
+              <th className="px-4 py-3 text-right pr-6">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {paginatedApplications.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center">
+                <td colSpan={5} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-500">
                     <SearchX className="w-10 h-10 text-slate-300 mb-3" />
                     <p className="text-sm font-medium text-slate-900 mb-1">No applicants found</p>
@@ -221,8 +224,8 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                 const isMovedToPipeline = !['New', 'Under Review', 'Application Rejected'].includes(app.currentStage);
 
                 return (
-                  <tr key={app.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-4 pl-6 align-top">
+                  <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 py-3.5 pl-6 align-middle">
                       <div className="font-medium text-slate-900 mb-1">{candidate.fullName}</div>
                       <div className="text-xs text-slate-500 space-y-0.5">
                         <div className="flex gap-2">
@@ -233,13 +236,13 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                         <div>{candidate.currentLocation}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-3.5 align-middle">
                       <SourceBadge source={app.source} />
                     </td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-3.5 align-middle">
                       <span className="font-medium text-slate-700">{formatDate(app.appliedDate)}</span>
                     </td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-4 py-3.5 align-middle">
                       <span
                         className={cn(
                           'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
@@ -248,14 +251,14 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                             : app.currentStage === 'Under Review'
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : app.currentStage === 'Application Rejected'
-                            ? 'bg-red-50 text-red-700 border-red-200'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
                             : 'bg-purple-50 text-purple-700 border-purple-200'
                         )}
                       >
                         {isMovedToPipeline ? 'Moved to Pipeline' : app.currentStage}
                       </span>
                     </td>
-                    <td className="px-4 py-4 align-top text-right pr-6">
+                    <td className="px-4 py-3.5 align-middle text-right pr-6">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setViewResumeId(candidate.id)}
@@ -292,7 +295,7 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
                                 setRejectionReason('Skills Mismatch');
                                 setRejectionNotes('');
                               }}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                               title="Reject Application"
                             >
                               <XCircle className="w-4 h-4" />
@@ -323,31 +326,15 @@ export default function JobApplicantsTab({ jobId, applications, candidates }: Jo
         <ResumeModal candidateId={viewResumeId} onClose={() => setViewResumeId(null)} />
       )}
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-5 right-5 z-[70] animate-slide-in-right">
-          <div className={cn(
-            "flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium",
-            toast.type === 'success' 
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-              : "bg-red-50 border-red-200 text-red-800"
-          )}>
-            {toast.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-            )}
-            <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-slate-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
+      />
 
       {/* Move to Pipeline Confirmation Modal */}
       {applicantToMove && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <div className="flex items-center gap-2.5">

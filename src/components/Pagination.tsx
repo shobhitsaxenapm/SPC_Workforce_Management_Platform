@@ -52,8 +52,7 @@ export default function Pagination({
       )}
     >
       <span className="text-xs sm:text-sm text-slate-500 font-medium">
-        Showing <span className="font-semibold text-slate-800">{startItem}</span> to{' '}
-        <span className="font-semibold text-slate-800">{endItem}</span> of{' '}
+        Showing <span className="font-semibold text-slate-800">{startItem}–{endItem}</span> of{' '}
         <span className="font-semibold text-slate-800">{totalItems}</span> {itemLabel}
       </span>
 

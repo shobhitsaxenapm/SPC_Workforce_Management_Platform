@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { mockBillings, mockClients, mockDeployments } from '../data/mockData';
 import { Search, FileText, Download, X } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import AIInsightCard from './AIInsightCard';
 import FilterPanel, { FilterField } from './FilterPanel';
-import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
+import Pagination from './Pagination';
 
 export default function BillingList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({ status: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [datePreset, setDatePreset] = useState<DatePreset>('All Time');
   const [customStart, setCustomStart] = useState('');
@@ -17,6 +19,17 @@ export default function BillingList() {
 
   const filterFields: FilterField[] = [
     { key: 'status', label: 'Status', options: ['Draft', 'Pending', 'Sent', 'Paid', 'Disputed'].map(s => ({ value: s, label: s })) },
+    {
+      key: 'datePreset',
+      label: 'Generated On',
+      options: [
+        { value: 'Today', label: 'Today' },
+        { value: 'Last 7 Days', label: 'Last 7 Days' },
+        { value: 'Last 30 Days', label: 'Last 30 Days' },
+        { value: 'This Month', label: 'This Month' },
+        { value: 'Last Quarter', label: 'Last Quarter' },
+      ],
+    },
   ];
 
   const filtered = mockBillings.filter((bill: any) => {
@@ -26,6 +39,26 @@ export default function BillingList() {
     const matchDate = isDateInPreset(bill.generatedDate, datePreset, customStart, customEnd);
     return matchSearch && matchStatus && matchDate;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, datePreset, customStart, customEnd]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedBillings = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const hasAnyFilter = Boolean(searchTerm || filters.status || datePreset !== 'All Time');
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setFilters({ status: '' });
+    setDatePreset('All Time');
+    setCustomStart('');
+    setCustomEnd('');
+  };
 
   return (
     <div className="space-y-6">
@@ -72,20 +105,21 @@ export default function BillingList() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 justify-end">
-            <DateRangeFilter
-              preset={datePreset}
-              customStart={customStart}
-              customEnd={customEnd}
-              onChange={(preset, start, end) => {
-                setDatePreset(preset);
-                setCustomStart(start);
-                setCustomEnd(end);
-              }}
-            />
             <FilterPanel
               fields={filterFields}
-              values={filters}
-              onChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
+              values={{
+                ...filters,
+                datePreset: datePreset !== 'All Time' ? datePreset : '',
+              }}
+              onChange={(k, v) => {
+                if (k === 'datePreset') {
+                  setDatePreset((v as DatePreset) || 'All Time');
+                  setCustomStart('');
+                  setCustomEnd('');
+                } else {
+                  setFilters(prev => ({ ...prev, [k]: v }));
+                }
+              }}
               onClear={() => {
                 setFilters({ status: '' });
                 setDatePreset('All Time');
@@ -96,73 +130,124 @@ export default function BillingList() {
           </div>
         </div>
 
-        {datePreset !== 'All Time' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Generated On: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
-              <button 
-                onClick={() => {
-                  setDatePreset('All Time');
-                  setCustomStart('');
-                  setCustomEnd('');
-                }} 
-                className="hover:text-blue-900 focus:outline-none"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
+        {(filters.status || datePreset !== 'All Time') && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {filters.status && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                Status: {filters.status}
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, status: '' }))}
+                  className="hover:text-blue-900 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {datePreset !== 'All Time' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                Generated On: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
+                <button 
+                  onClick={() => {
+                    setDatePreset('All Time');
+                    setCustomStart('');
+                    setCustomEnd('');
+                  }} 
+                  className="hover:text-blue-900 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setFilters({ status: '' });
+                setDatePreset('All Time');
+                setCustomStart('');
+                setCustomEnd('');
+              }}
+              className="text-xs text-slate-500 hover:text-slate-700 underline ml-1"
+            >
+              Clear all
+            </button>
           </div>
         )}
+
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <span>
+            {hasAnyFilter ? (
+              <>
+                Showing <span className="font-semibold text-slate-700">{filtered.length}</span> of{' '}
+                <span className="font-semibold text-slate-700">{mockBillings.length}</span> invoices
+              </>
+            ) : (
+              <>
+                Total: <span className="font-semibold text-slate-700">{mockBillings.length}</span>{' '}
+                {mockBillings.length === 1 ? 'invoice' : 'invoices'}
+              </>
+            )}
+          </span>
+          {hasAnyFilter && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Reset View
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500">
               <tr>
-                <th className="px-6 py-4">Client</th>
-                <th className="px-6 py-4">Billing Period</th>
-                <th className="px-6 py-4">Deployments Billed</th>
-                <th className="px-6 py-4">Total Amount</th>
-                <th className="px-6 py-4">Generated On</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Action</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Client</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Billing Period</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Deployments Billed</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Total Amount</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Generated On</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((bill: any) => {
+              {paginatedBillings.map((bill: any) => {
                 const client = mockClients.find(c => c.id === bill.clientId);
                 const billedDeploymentsCount = bill.deploymentIds.length;
                 
                 return (
-                  <tr key={bill.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-6 py-4">
+                  <tr key={bill.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="font-medium text-slate-800">{client?.name}</div>
                       <div className="text-xs text-slate-500 font-mono mt-1">{bill.id.substring(0, 8).toUpperCase()}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <span className="text-slate-700">{bill.billingMonth} {bill.billingYear}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <span className="text-slate-700 font-medium">{billedDeploymentsCount} Employees</span>
                     </td>
-                    <td className="px-6 py-4 font-mono font-medium text-slate-800">
+                    <td className="px-4 py-3.5 align-middle font-mono font-medium text-slate-800">
                       ${bill.totalAmount.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-4 py-3.5 align-middle text-slate-600">
                       {formatDate(bill.generatedDate)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <span className={cn(
                         "px-2.5 py-1 rounded-full text-xs font-medium border",
-                        bill.status === 'Paid' ? "bg-green-50 text-green-700 border-green-200" :
+                        bill.status === 'Paid' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                         bill.status === 'Sent' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        bill.status === 'Disputed' ? "bg-rose-50 text-rose-700 border-rose-200" :
+                        bill.status === 'Draft' ? "bg-slate-50 text-slate-700 border-slate-200" :
                         "bg-amber-50 text-amber-700 border-amber-200"
                       )}>
                         {bill.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <button className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium">
                         <Download className="w-4 h-4" />
                         PDF
@@ -173,7 +258,7 @@ export default function BillingList() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
                     No bills generated yet.
                   </td>
                 </tr>
@@ -181,6 +266,13 @@ export default function BillingList() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="invoices"
+        />
       </div>
     </div>
   );

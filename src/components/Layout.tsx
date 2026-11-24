@@ -29,7 +29,9 @@ import {
   PanelRightOpen,
   ArrowLeftRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Hexagon,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
@@ -59,7 +61,7 @@ const navigationConfig: NavModuleConfig[] = [
   {
     id: 'recruitment',
     label: 'Recruitment',
-    icon: Briefcase,
+    icon: UserPlus,
     defaultOpen: true,
     items: [
       { title: 'Clients', path: '/clients', icon: Building2 },
@@ -372,6 +374,9 @@ export default function Layout() {
     ? currentUser.name.split(' ').map((n: string) => n[0]).join('')
     : '??';
 
+  const collapsedRailWidth = 68;
+  const effectiveDesktopWidth = isCollapsed ? collapsedRailWidth : sidebarWidth;
+
   return (
     <div className="min-h-screen bg-[#F6F8FB] flex relative">
       {/* Transparent drag protection overlay */}
@@ -382,25 +387,6 @@ export default function Layout() {
         />
       )}
 
-      {/* Edge Tab button when collapsed on desktop for instant 1-click reveal */}
-      {isCollapsed && isDesktop && (
-        <button
-          onClick={toggleCollapse}
-          className={cn(
-            "fixed top-20 z-40 bg-white border border-slate-200 shadow-md hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 text-slate-500 py-2.5 px-1.5 transition-all flex items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-            sidebarPosition === 'left' ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"
-          )}
-          title="Expand sidebar (Ctrl+B)"
-          aria-label="Expand sidebar"
-        >
-          {sidebarPosition === 'left' ? (
-            <ChevronsRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          ) : (
-            <ChevronsLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          )}
-        </button>
-      )}
-
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -409,10 +395,10 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar (Full Width when Expanded, 68px Icon Rail when Collapsed on Desktop) */}
       <aside 
         style={{
-          width: isDesktop ? `${sidebarWidth}px` : undefined,
+          width: isDesktop ? `${effectiveDesktopWidth}px` : undefined,
         }}
         className={cn(
           "bg-white flex flex-col fixed inset-y-0 z-30 shadow-[1px_0_4px_rgba(0,0,0,0.02)]",
@@ -420,18 +406,17 @@ export default function Layout() {
           sidebarPosition === 'left' 
             ? "left-0 border-r border-slate-200" 
             : "right-0 border-l border-slate-200",
-          isDragging ? "transition-none select-none" : "transition-transform duration-300 ease-in-out",
+          isDragging ? "transition-none select-none" : "transition-all duration-200 ease-in-out",
           // Mobile state
           isMobileMenuOpen 
             ? "translate-x-0" 
             : (sidebarPosition === 'left' ? "-translate-x-full" : "translate-x-full"),
-          // Desktop collapsed state
-          "md:translate-x-0",
-          isCollapsed && (sidebarPosition === 'left' ? "md:-translate-x-full" : "md:translate-x-full")
+          // Desktop always visible (either expanded or 68px icon rail)
+          "md:translate-x-0"
         )}
       >
-        {/* Resize handle (Stretchable / Resizable bar) */}
-        {isDesktop && (
+        {/* Resize handle (Stretchable / Resizable bar when expanded) */}
+        {isDesktop && !isCollapsed && (
           <div
             onMouseDown={startResizing}
             className={cn(
@@ -453,41 +438,56 @@ export default function Layout() {
           </div>
         )}
 
-        <div className="h-16 flex items-center justify-between px-4 md:px-5 border-b border-slate-200/60 bg-white">
-          <div className="flex items-center gap-2.5 text-blue-700 min-w-0">
-            <Briefcase className="w-6 h-6 shrink-0" />
-            <span className="font-bold text-lg leading-tight truncate">
-              SPC<br/><span className="text-sm font-medium text-slate-500">Workforce</span>
-            </span>
-          </div>
+        {/* Sidebar Header: Brand + Single Hide/Unhide Toggle Button */}
+        <div
+          className={cn(
+            "h-16 flex items-center border-b border-slate-200/60 bg-white shrink-0",
+            isDesktop && isCollapsed ? "justify-center px-2" : "justify-between px-4 md:px-5"
+          )}
+        >
+          {(!isDesktop || !isCollapsed) && (
+            <div className="flex items-center gap-2.5 text-blue-700 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Hexagon className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-lg leading-tight truncate">
+                SPC<br/><span className="text-sm font-medium text-slate-500">Workforce</span>
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* Move position toggle button (Dock Left vs Dock Right) */}
+            {/* Single Desktop Hide / Unhide Toggle Button */}
             <button
-              onClick={togglePosition}
-              className="hidden md:inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title={sidebarPosition === 'left' ? "Move sidebar to right" : "Move sidebar to left"}
-              aria-label="Move sidebar position"
-            >
-              <ArrowLeftRight className="w-4 h-4" />
-            </button>
-
-            {/* Collapse toggle button */}
-            <button
+              type="button"
               onClick={toggleCollapse}
-              className="hidden md:inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="Collapse sidebar (Ctrl+B)"
-              aria-label="Collapse sidebar"
+              className={cn(
+                "hidden md:inline-flex items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                isCollapsed
+                  ? "p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-2xs"
+                  : "p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+              )}
+              title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              {sidebarPosition === 'left' ? (
-                <PanelLeftClose className="w-4.5 h-4.5" />
+              {isCollapsed ? (
+                sidebarPosition === 'left' ? (
+                  <PanelLeftOpen className="w-5 h-5" />
+                ) : (
+                  <PanelRightOpen className="w-5 h-5" />
+                )
               ) : (
-                <PanelRightClose className="w-4.5 h-4.5" />
+                sidebarPosition === 'left' ? (
+                  <PanelLeftClose className="w-4.5 h-4.5" />
+                ) : (
+                  <PanelRightClose className="w-4.5 h-4.5" />
+                )
               )}
             </button>
 
             {/* Mobile close button */}
             <button 
+              type="button"
               onClick={() => setIsMobileMenuOpen(false)}
               className="md:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               aria-label="Close menu"
@@ -497,39 +497,124 @@ export default function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-5 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
-          {navigationConfig.map((module) => {
-            // Role-based filtering for entire module
-            if (module.requiredRole && currentUser?.role !== module.requiredRole) {
-              return null;
-            }
-            
-            // Check if this module should be expanded based on current route
-            const isRouteActive = module.items.some(item => 
-              item.path === location.pathname || (item.path !== '/' && location.pathname.startsWith(item.path + '/'))
-            );
+        {/* Navigation Body */}
+        {isDesktop && isCollapsed ? (
+          <nav
+            aria-label="Collapsed sidebar navigation"
+            className="flex-1 py-4 flex flex-col items-center gap-1.5 overflow-visible"
+          >
+            {navigationConfig.map((module, mIdx) => {
+              if (module.requiredRole && currentUser?.role !== module.requiredRole) {
+                return null;
+              }
 
-            return (
-              <NavModule 
-                key={module.id} 
-                module={module} 
-                currentPath={location.pathname} 
-                forceOpen={isRouteActive}
-              />
-            );
-          })}
-        </nav>
+              if (module.isComingSoon) {
+                return (
+                  <div key={module.id} className="relative group/navitem w-full flex justify-center">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 cursor-not-allowed"
+                      aria-label={`${module.label} (Coming Soon)`}
+                    >
+                      <module.icon className="w-5 h-5" />
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 invisible group-hover/navitem:opacity-100 group-hover/navitem:visible transition-all z-50 pointer-events-none flex items-center gap-1.5",
+                        sidebarPosition === 'left' ? "left-full ml-2.5" : "right-full mr-2.5"
+                      )}
+                    >
+                      <span>{module.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded">
+                        Coming Soon
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <React.Fragment key={module.id}>
+                  {mIdx > 0 && <div className="w-7 border-t border-slate-100 my-1" />}
+                  {module.items.map((item) => {
+                    const isActive =
+                      item.path === location.pathname ||
+                      (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
+
+                    return (
+                      <div key={item.path} className="relative group/navitem w-full flex justify-center">
+                        {isActive && (
+                          <span
+                            className={cn(
+                              "absolute top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600",
+                              sidebarPosition === 'left' ? "left-0 rounded-r-full" : "right-0 rounded-l-full"
+                            )}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <NavLink
+                          to={item.path}
+                          aria-label={item.title}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                            isActive
+                              ? "bg-blue-50 text-blue-600 shadow-2xs"
+                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                          )}
+                        >
+                          <item.icon className={cn("w-5 h-5", isActive ? "text-blue-600" : "text-slate-500")} />
+                        </NavLink>
+                        {/* Floating Tooltip on Hover */}
+                        <div
+                          className={cn(
+                            "absolute top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 invisible group-hover/navitem:opacity-100 group-hover/navitem:visible transition-all z-50 pointer-events-none",
+                            sidebarPosition === 'left' ? "left-full ml-2.5" : "right-full mr-2.5"
+                          )}
+                        >
+                          {item.title}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </nav>
+        ) : (
+          <nav className="flex-1 overflow-y-auto py-5 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
+            {navigationConfig.map((module) => {
+              // Role-based filtering for entire module
+              if (module.requiredRole && currentUser?.role !== module.requiredRole) {
+                return null;
+              }
+              
+              // Check if this module should be expanded based on current route
+              const isRouteActive = module.items.some(item => 
+                item.path === location.pathname || (item.path !== '/' && location.pathname.startsWith(item.path + '/'))
+              );
+
+              return (
+                <NavModule 
+                  key={module.id} 
+                  module={module} 
+                  currentPath={location.pathname} 
+                  forceOpen={isRouteActive}
+                />
+              );
+            })}
+          </nav>
+        )}
       </aside>
 
       {/* Main Content */}
       <div 
         className={cn(
           "flex-1 flex flex-col min-h-screen min-w-0",
-          isDragging ? "transition-none" : "transition-[margin] duration-300 ease-in-out"
+          isDragging ? "transition-none" : "transition-[margin] duration-200 ease-in-out"
         )}
         style={{
-          marginLeft: isDesktop && sidebarPosition === 'left' && !isCollapsed ? `${sidebarWidth}px` : '0px',
-          marginRight: isDesktop && sidebarPosition === 'right' && !isCollapsed ? `${sidebarWidth}px` : '0px',
+          marginLeft: isDesktop && sidebarPosition === 'left' ? `${effectiveDesktopWidth}px` : '0px',
+          marginRight: isDesktop && sidebarPosition === 'right' ? `${effectiveDesktopWidth}px` : '0px',
         }}
       >
         {/* Topbar */}
@@ -544,38 +629,12 @@ export default function Layout() {
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* Desktop expand button if sidebar is on left - only visible when collapsed */}
-            {sidebarPosition === 'left' && isCollapsed && (
-              <button
-                onClick={toggleCollapse}
-                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 -ml-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                title="Expand sidebar (Ctrl+B)"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeftOpen className="w-4.5 h-4.5 text-blue-600" />
-                <span className="text-xs font-semibold text-blue-700">Sidebar</span>
-              </button>
-            )}
-
             <h1 className="text-lg md:text-xl font-semibold text-slate-800 truncate">
               {getPageTitle()}
             </h1>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
-            {/* Desktop expand button if sidebar is on right - only visible when collapsed */}
-            {sidebarPosition === 'right' && isCollapsed && (
-              <button
-                onClick={toggleCollapse}
-                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                title="Expand sidebar (Ctrl+B)"
-                aria-label="Expand sidebar"
-              >
-                <span className="text-xs font-semibold text-blue-700">Sidebar</span>
-                <PanelRightOpen className="w-4.5 h-4.5 text-blue-600" />
-              </button>
-            )}
-
             <div className="relative hidden md:block">
               <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 

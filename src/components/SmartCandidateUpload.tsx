@@ -3,6 +3,7 @@ import { UploadCloud, File, AlertCircle, X, Loader2, FileText, Sparkles, Clipboa
 import { Candidate } from '../types';
 import { cn } from '../lib/utils';
 import { defaultShobhitResume } from './OriginalResumeViewer';
+import { AiGradientSparkles } from './AiSparkleBadge';
 
 export type ProcessingState = 'Idle' | 'Uploading' | 'Processing' | 'Failed';
 
@@ -307,20 +308,8 @@ ACHIEVEMENT
         </button>
       )}
       <div className="text-center mb-6">
-        <svg width="0" height="0" className="absolute">
-          <defs>
-            <linearGradient id="ai-parser-sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#8b5cf6" />
-              <stop offset="50%" stopColor="#ec4899" />
-              <stop offset="100%" stopColor="#f59e0b" />
-            </linearGradient>
-          </defs>
-        </svg>
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80 mb-3">
-          <Sparkles
-            className="w-3.5 h-3.5 shrink-0"
-            style={{ fill: 'url(#ai-parser-sparkle-gradient)', stroke: 'url(#ai-parser-sparkle-gradient)' }}
-          />
+          <AiGradientSparkles />
           AI Resume Parser
         </div>
         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upload Candidate Resume</h2>

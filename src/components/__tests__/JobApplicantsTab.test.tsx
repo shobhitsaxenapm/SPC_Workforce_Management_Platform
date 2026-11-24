@@ -91,7 +91,7 @@ describe('JobApplicantsTab Filtering', () => {
     render(<JobApplicantsTab jobId="j1" applications={mockApplications} candidates={mockCandidates} />);
     expect(screen.getByText('Alice Smith')).toBeInTheDocument();
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument();
-    expect(screen.getByText(/Showing 2 of 2 applicants/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total: 2 applicants/i)).toBeInTheDocument();
   });
 
   it('filters by search query (name)', async () => {

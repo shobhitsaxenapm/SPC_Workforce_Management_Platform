@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import CandidateMatchProfileDrawer from './CandidateMatchProfileDrawer';
 import SourceBadge from './SourceBadge';
 import Pagination from './Pagination';
+import Toast from './Toast';
 
 interface JobMatchesTabProps {
   job: Job;
@@ -134,9 +135,9 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
 
   if (!run) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Matching Data</h3>
-        <p className="text-gray-500 mb-4">Run the matching engine to find suitable candidates from the database.</p>
+      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+        <h3 className="text-lg font-medium text-slate-900 mb-2">No Matching Data</h3>
+        <p className="text-slate-500 mb-4">Run the matching engine to find suitable candidates from the database.</p>
         <button 
           onClick={handleRunMatches} 
           disabled={isRefreshing}
@@ -158,16 +159,16 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
   return (
     <div className="space-y-4">
       {/* Search and Filters Toolbar */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="relative w-full sm:w-[380px] md:w-[440px] shrink-0">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
               placeholder="Search matches by name, location, or skills..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
             />
             {searchTerm && (
               <button
@@ -186,7 +187,7 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
             <select
               value={scoreFilter}
               onChange={e => setScoreFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
+              className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
             >
               <option value="All">All Match Scores</option>
               <option value="85+">High Match (85%+)</option>
@@ -198,7 +199,7 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
             <select
               value={locationFilter}
               onChange={e => setLocationFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
+              className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-slate-700 hover:bg-slate-50"
             >
               <option value="All">All Locations</option>
               {availableLocations.map(loc => (
@@ -237,75 +238,79 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
           <span>
-            {filteredMatches.length > 0 ? (
-              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredMatches.length)}</span> of <span className="font-semibold text-slate-700">{filteredMatches.length}</span> candidate matches (All matched from AI Engine)</>
+            {hasActiveFilters ? (
+              filteredMatches.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filteredMatches.length}</span> of <span className="font-semibold text-slate-700">{activeMatches.length}</span> candidate matches (All matched from AI Engine)</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{activeMatches.length}</span> candidate matches</>
+              )
             ) : (
-              '0 candidate matches'
+              <>Total: <span className="font-semibold text-slate-700">{activeMatches.length}</span> candidate matches (All matched from AI Engine)</>
             )}
           </span>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500 font-medium">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider">Candidate</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider">Match Score</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider">Source</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider">Experience & Location</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider">Notice Period</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-right">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Candidate</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Match Score</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Source</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Experience & Location</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Notice Period</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {paginatedMatches.map(match => {
                 const candidate = candidates.find(c => c.id === match.candidateId);
                 if (!candidate) return null;
                 
                 return (
-                  <tr key={match.candidateId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
+                  <tr key={match.candidateId} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 py-3.5 align-middle">
                       <button onClick={() => setSelectedProfileId(candidate.id)} className="font-medium text-blue-600 hover:underline text-left">{candidate.fullName}</button>
-                      <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]">{candidate.currentRole}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{candidate.currentRole}</div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "flex items-center justify-center w-9 h-9 rounded-full font-bold text-sm",
-                          match.score >= 85 ? "bg-green-100 text-green-700" :
+                          match.score >= 85 ? "bg-emerald-100 text-emerald-700" :
                           match.score >= 70 ? "bg-blue-100 text-blue-700" :
                           "bg-amber-100 text-amber-700"
                         )}>
                           {match.score}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs text-gray-500">Skills: {match.breakdown.skills}/40</span>
-                          <span className="text-xs text-gray-500">Exp: {match.breakdown.experience}/20</span>
+                          <span className="text-xs text-slate-500">Skills: {match.breakdown.skills}/40</span>
+                          <span className="text-xs text-slate-500">Exp: {match.breakdown.experience}/20</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <SourceBadge source="AI Match" />
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900">{candidate.totalExperience}</div>
-                      <div className="text-xs text-gray-500">{candidate.currentLocation}</div>
+                    <td className="px-4 py-3.5 align-middle">
+                      <div className="text-sm text-slate-900">{candidate.totalExperience}</div>
+                      <div className="text-xs text-slate-500">{candidate.currentLocation}</div>
                     </td>
-                    <td className="px-4 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                    <td className="px-4 py-3.5 align-middle">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
                         {candidate.noticePeriod}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3.5 align-middle text-right">
                       {canAction && (() => {
                         const isInPipeline = applications.some(a => a.jobId === job.id && a.candidateId === match.candidateId);
                         return (
                           <div className="flex items-center justify-end gap-2">
                             <button 
                               onClick={() => setSelectedProfileId(candidate.id)}
-                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="View Match Profile"
                             >
                               <Eye className="w-4 h-4" />
@@ -333,7 +338,7 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
                             {!isInPipeline && (
                               <button 
                                 onClick={() => setCandidateToDismiss(candidate)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                 title="Dismiss Match"
                               >
                                 <X className="w-4 h-4" />
@@ -348,7 +353,7 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
               })}
               {filteredMatches.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     No active matches found. Try adjusting your filters.
                   </td>
                 </tr>
@@ -367,33 +372,17 @@ export default function JobMatchesTab({ job }: JobMatchesTabProps) {
         />
       </div>
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-5 right-5 z-[70] animate-slide-in-right">
-          <div className={cn(
-            "flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium",
-            toast.type === 'success' 
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-              : "bg-red-50 border-red-200 text-red-800"
-          )}>
-            {toast.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-            )}
-            <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-slate-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
+      />
 
       {/* Add to Pipeline Confirmation Modal */}
       {candidateToAddToPipeline && (() => {
         const matchData = run.matches.find(m => m.candidateId === candidateToAddToPipeline.id);
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
               <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                 <div className="flex items-center gap-2.5">

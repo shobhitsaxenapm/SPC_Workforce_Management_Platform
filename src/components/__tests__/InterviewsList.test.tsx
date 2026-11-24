@@ -41,10 +41,10 @@ describe('InterviewsList Unified Filter Button & Permutation Integrity', () => {
     return screen.getByLabelText(labelRegex) as HTMLSelectElement;
   };
 
-  it('defaults to All Interviews tab on load so all 5 interviews are immediately visible', () => {
+  it('defaults to All Interviews tab on load so all 5 interviews are immediately visible with Total count under search bar', () => {
     renderInterviewsList();
 
-    expect(screen.getAllByText(/Showing/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Total:/i)).toBeTruthy();
     expect(screen.getAllByText(/1–5/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Sana Khan').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Riya Sharma')).toBeTruthy();

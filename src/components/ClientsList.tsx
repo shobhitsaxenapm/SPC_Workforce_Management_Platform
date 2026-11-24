@@ -137,10 +137,14 @@ export default function ClientsList() {
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
           <span>
-            {filteredClients.length > 0 ? (
-              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredClients.length)}</span> of <span className="font-semibold text-slate-700">{filteredClients.length}</span> clients</>
+            {(filters.status || filters.industry || searchTerm.trim()) ? (
+              filteredClients.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filteredClients.length}</span> of <span className="font-semibold text-slate-700">{clients.length}</span> clients</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{clients.length}</span> clients found</>
+              )
             ) : (
-              '0 clients found'
+              <>Total: <span className="font-semibold text-slate-700">{clients.length}</span> clients</>
             )}
           </span>
           {(filters.status || filters.industry || searchTerm) && (
@@ -202,7 +206,7 @@ export default function ClientsList() {
                       <span className={cn(
                         "px-2.5 py-0.5 rounded-full text-xs font-medium border",
                         client.status === 'Active' 
-                          ? "bg-green-50 text-green-700 border-green-200" 
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                           : "bg-slate-50 text-slate-700 border-slate-200"
                       )}>
                         {client.status}
