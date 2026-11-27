@@ -21,37 +21,28 @@ export default function CandidatesList() {
   const [activePopoverId, setActivePopoverId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({
-    stage: '',
+    designation: '',
     location: '',
-    availability: '',
-    designation: ''
+    company: '',
+    experience: ''
   });
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-
-
-  const sources = [...new Set(candidates.map(c => c.source).filter(Boolean))] as string[];
-  const locations = [...new Set(candidates.map(c => c.currentLocation).filter(Boolean))] as string[];
-  const availabilities = [...new Set(candidates.map(c => c.noticePeriod).filter(Boolean))] as string[];
-
-
-
   const designations = [...new Set(candidates.map(c => c.currentRole).filter(Boolean))] as string[];
-
-  const canonicalStages = ['Sourced', 'Screening', 'Interviewing', 'Selected', 'Offered', 'Hired', 'Joined', 'Rejected', 'Withdrawn'];
+  const locations = [...new Set(candidates.map(c => c.currentLocation).filter(Boolean))] as string[];
+  const companies = [...new Set(candidates.map(c => c.currentCompany).filter(Boolean))] as string[];
+  const experiences = [...new Set(candidates.map(c => c.totalExperience).filter(Boolean))] as string[];
 
   const filterFields: FilterField[] = [
-    { key: 'stage', label: 'Stage', options: canonicalStages.map(s => ({ value: s, label: s })) },
-    { key: 'location', label: 'Location', options: locations.map(l => ({ value: l, label: l })) },
-    { key: 'availability', label: 'Availability', options: availabilities.map(a => ({ value: a, label: a })) },
     { key: 'designation', label: 'Designation', options: designations.map(d => ({ value: d, label: d })) },
+    { key: 'location', label: 'Location', options: locations.map(l => ({ value: l, label: l })) },
+    { key: 'company', label: 'Company', options: companies.map(c => ({ value: c, label: c })) },
+    { key: 'experience', label: 'Experience', options: experiences.map(e => ({ value: e, label: e })) },
   ];
 
   const filteredCandidates = candidates.filter(c => {
-    const candidateApps = applications.filter(a => a.candidateId === c.id);
-
     const matchSearch = !searchTerm ||
       c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.currentRole && c.currentRole.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -60,12 +51,12 @@ export default function CandidatesList() {
       c.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchLocation = !filters.location || c.currentLocation === filters.location;
-    const matchAvailability = !filters.availability || c.noticePeriod === filters.availability;
-    const matchStage = !filters.stage || candidateApps.some(a => a.currentStage === filters.stage);
     const matchDesignation = !filters.designation || c.currentRole === filters.designation;
+    const matchLocation = !filters.location || c.currentLocation === filters.location;
+    const matchCompany = !filters.company || c.currentCompany === filters.company;
+    const matchExperience = !filters.experience || c.totalExperience === filters.experience;
 
-    return matchSearch && matchLocation && matchAvailability && matchStage && matchDesignation;
+    return matchSearch && matchDesignation && matchLocation && matchCompany && matchExperience;
   });
 
   const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
@@ -118,7 +109,7 @@ export default function CandidatesList() {
               values={filters}
               onChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
               onClear={() => {
-                setFilters({ stage: '', location: '', availability: '', designation: '' });
+                setFilters({ designation: '', location: '', company: '', experience: '' });
               }}
             />
           </div>
@@ -147,7 +138,7 @@ export default function CandidatesList() {
             })}
             <button
               type="button"
-              onClick={() => setFilters({ stage: '', location: '', availability: '', designation: '' })}
+              onClick={() => setFilters({ designation: '', location: '', company: '', experience: '' })}
               className="text-xs text-slate-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-slate-100 transition-colors"
             >
               Clear all
@@ -172,7 +163,7 @@ export default function CandidatesList() {
               type="button"
               onClick={() => {
                 setSearchTerm('');
-                setFilters({ stage: '', location: '', availability: '', designation: '' });
+                setFilters({ designation: '', location: '', company: '', experience: '' });
               }}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >

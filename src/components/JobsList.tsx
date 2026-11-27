@@ -222,17 +222,6 @@ export default function JobsList() {
         { value: 'SPC Hire', label: 'SPC Hire' },
         { value: 'Not Configured', label: 'Not Configured' }
       ]
-    },
-    {
-      key: 'datePreset',
-      label: 'Published Date',
-      options: [
-        { value: 'Today', label: 'Today' },
-        { value: 'Last 7 Days', label: 'Last 7 Days' },
-        { value: 'Last 30 Days', label: 'Last 30 Days' },
-        { value: 'This Month', label: 'This Month' },
-        { value: 'Last Quarter', label: 'Last Quarter' },
-      ]
     }
   ];
 
@@ -252,8 +241,7 @@ export default function JobsList() {
         ? (!job.hiringModel || job.hiringModel === 'Not Configured')
         : job.hiringModel === jobFilters.hiringModel
     );
-    const matchDate = isDateInPreset(job.publishedAt || job.createdAt || job.targetJoiningDate, datePreset, customStart, customEnd);
-    return matchSearch && matchStatus && matchPublished && matchClient && matchHiringModel && matchDate;
+    return matchSearch && matchStatus && matchPublished && matchClient && matchHiringModel;
   });
 
   // Pagination state (10 jobs per page)
@@ -262,7 +250,7 @@ export default function JobsList() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, jobFilters, datePreset, customStart, customEnd]);
+  }, [searchTerm, jobFilters]);
 
   const paginatedJobs = filteredJobs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -306,30 +294,18 @@ export default function JobsList() {
           <div className="flex items-center justify-end">
             <FilterPanel
               fields={jobFilterFields}
-              values={{
-                ...jobFilters,
-                datePreset: datePreset !== 'All Time' ? datePreset : ''
-              }}
+              values={jobFilters}
               onChange={(k, v) => {
-                if (k === 'datePreset') {
-                  setDatePreset((v || 'All Time') as DatePreset);
-                  setCustomStart('');
-                  setCustomEnd('');
-                } else {
-                  setJobFilters(prev => ({ ...prev, [k]: v }));
-                }
+                setJobFilters(prev => ({ ...prev, [k]: v }));
               }}
               onClear={() => {
                 setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
-                setDatePreset('All Time');
-                setCustomStart('');
-                setCustomEnd('');
               }}
             />
           </div>
         </div>
 
-        {(Object.values(jobFilters).some(Boolean) || datePreset !== 'All Time') && (
+        {Object.values(jobFilters).some(Boolean) && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {jobFilters.status && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
@@ -379,29 +355,10 @@ export default function JobsList() {
                 </button>
               </span>
             )}
-            {datePreset !== 'All Time' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                Published Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setDatePreset('All Time');
-                    setCustomStart('');
-                    setCustomEnd('');
-                  }} 
-                  className="hover:text-blue-900 focus:outline-none"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
             <button
               type="button"
               onClick={() => {
                 setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
-                setDatePreset('All Time');
-                setCustomStart('');
-                setCustomEnd('');
               }}
               className="text-xs text-slate-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-slate-100 transition-colors"
             >
@@ -412,7 +369,7 @@ export default function JobsList() {
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
           <span>
-            {(Object.values(jobFilters).some(Boolean) || datePreset !== 'All Time' || searchTerm.trim()) ? (
+            {(Object.values(jobFilters).some(Boolean) || searchTerm.trim()) ? (
               filteredJobs.length > 0 ? (
                 <>Showing <span className="font-semibold text-slate-700">{filteredJobs.length}</span> of <span className="font-semibold text-slate-700">{jobs.length}</span> jobs</>
               ) : (
@@ -422,15 +379,12 @@ export default function JobsList() {
               <>Total: <span className="font-semibold text-slate-700">{jobs.length}</span> jobs</>
             )}
           </span>
-          {(Object.values(jobFilters).some(Boolean) || datePreset !== 'All Time' || searchTerm) && (
+          {(Object.values(jobFilters).some(Boolean) || searchTerm) && (
             <button
               type="button"
               onClick={() => {
                 setSearchTerm('');
                 setJobFilters({ status: '', isPublished: '', clientId: '', hiringModel: '' });
-                setDatePreset('All Time');
-                setCustomStart('');
-                setCustomEnd('');
               }}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
