@@ -334,7 +334,7 @@ export default function ClientDetailDrawer({ clientId, onClose }: ClientDetailDr
 
                               <span className={cn(
                                 "px-2.5 py-0.5 rounded-full text-xs font-medium border shrink-0",
-                                job.status === 'Open' ? "bg-green-50 text-green-700 border-green-200/60" :
+                                job.status === 'Open' ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" :
                                 job.status === 'Draft' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
                                 job.status === 'On Hold' ? "bg-amber-50 text-amber-700 border-amber-200/60" :
                                 "bg-slate-50 text-slate-700 border-slate-200/60"

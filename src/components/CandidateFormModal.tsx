@@ -9,6 +9,7 @@ import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import OriginalResumeViewer, { defaultShobhitResume } from './OriginalResumeViewer';
 import { getEasyTwoLineSummary } from '../lib/summaryHelper';
+import { AiGradientSparkles } from './AiSparkleBadge';
 
 interface CandidateFormModalProps {
   isOpen: boolean;
@@ -446,10 +447,7 @@ export default function CandidateFormModal({
                 )}
                 title="Full-width AI Standardized Template"
               >
-                <Sparkles
-                  className="w-3.5 h-3.5 shrink-0"
-                  style={{ fill: 'url(#ai-dual-modal-sparkle-gradient)', stroke: 'url(#ai-dual-modal-sparkle-gradient)' }}
-                />
+                <AiGradientSparkles />
                 <span className="hidden md:inline">AI Template Only</span>
               </button>
               <button
@@ -502,10 +500,7 @@ export default function CandidateFormModal({
               <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-2 flex-shrink-0 z-20">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-violet-50 via-pink-50 to-amber-50 border border-pink-200/80 shadow-2xs shrink-0">
-                    <Sparkles
-                      className="w-3.5 h-3.5 shrink-0"
-                      style={{ fill: 'url(#ai-dual-modal-sparkle-gradient)', stroke: 'url(#ai-dual-modal-sparkle-gradient)' }}
-                    />
+                    <AiGradientSparkles />
                     <span className="bg-gradient-to-r from-violet-600 via-pink-500 to-amber-500 bg-clip-text text-transparent text-[10px] font-extrabold tracking-wider uppercase">
                       AI
                     </span>

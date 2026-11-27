@@ -23,6 +23,7 @@ import {
   JobSourceMetadata,
 } from '../types';
 import { mockUsers } from '../data/mockData';
+import AiSparkleBadge from './AiSparkleBadge';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
 import { cn, formatDate } from '../lib/utils';
 import SmartJobUpload from './SmartJobUpload';
@@ -504,9 +505,7 @@ export default function ClientJobFormModal({
                 onClick={() => setCreationPath('smart')}
                 className="border-2 border-slate-200 rounded-xl p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group relative overflow-hidden"
               >
-                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-lg">
-                  NEW - AI
-                </div>
+                <AiSparkleBadge className="absolute top-3 right-3 ml-0" />
                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                   <Upload className="w-6 h-6" />
                 </div>

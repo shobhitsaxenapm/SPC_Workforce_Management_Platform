@@ -9,6 +9,7 @@ import SmartCandidateUpload from './SmartCandidateUpload';
 import CandidateFormModal from './CandidateFormModal';
 import { FileText, UserPlus, FileCheck, Trash2 } from 'lucide-react';
 import Pagination from './Pagination';
+import AiSparkleBadge from './AiSparkleBadge';
 
 export default function CandidatesList() {
   const navigate = useNavigate();
@@ -82,26 +83,9 @@ export default function CandidatesList() {
           onClick={() => setShowUpload(true)}
           className="group flex items-center gap-2 pl-4 pr-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow"
         >
-          <svg width="0" height="0" className="absolute">
-            <defs>
-              <linearGradient id="ai-cta-sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8b5cf6" />
-                <stop offset="50%" stopColor="#ec4899" />
-                <stop offset="100%" stopColor="#f59e0b" />
-              </linearGradient>
-            </defs>
-          </svg>
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Add Candidate</span>
-          <span className="ml-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 shadow-xs border border-white/40 group-hover:scale-105 transition-transform">
-            <Sparkles
-              className="w-3 h-3 shrink-0"
-              style={{ fill: 'url(#ai-cta-sparkle-gradient)', stroke: 'url(#ai-cta-sparkle-gradient)' }}
-            />
-            <span className="bg-gradient-to-r from-violet-600 via-pink-500 to-amber-500 bg-clip-text text-transparent text-[10px] font-extrabold tracking-wider uppercase">
-              AI
-            </span>
-          </span>
+          <AiSparkleBadge />
         </button>
       </div>
 
@@ -173,10 +157,14 @@ export default function CandidatesList() {
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
           <span>
-            {filteredCandidates.length > 0 ? (
-              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredCandidates.length)}</span> of <span className="font-semibold text-slate-700">{filteredCandidates.length}</span> candidates</>
+            {(Object.values(filters).some(Boolean) || searchTerm.trim()) ? (
+              filteredCandidates.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filteredCandidates.length}</span> of <span className="font-semibold text-slate-700">{candidates.length}</span> candidates</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{candidates.length}</span> candidates found</>
+              )
             ) : (
-              '0 candidates found'
+              <>Total: <span className="font-semibold text-slate-700">{candidates.length}</span> candidates</>
             )}
           </span>
           {(Object.values(filters).some(Boolean) || searchTerm) && (
@@ -198,15 +186,15 @@ export default function CandidatesList() {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Name</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Contact Info</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Current Role</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Present Company</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Location</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Total Experience</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider text-right">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Contact Info</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Current Role</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Present Company</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Location</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Total Experience</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -215,9 +203,9 @@ export default function CandidatesList() {
                   <tr 
                     key={candidate.id} 
                     onClick={() => navigate(`/candidates/${candidate.id}`)}
-                    className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <Link to={`/candidates/${candidate.id}`} className="block">
                         <span className="font-medium text-blue-600 hover:underline">{candidate.fullName}</span>
                         {candidate.code && (
@@ -225,23 +213,23 @@ export default function CandidatesList() {
                         )}
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <p className="text-slate-800 text-sm font-medium">{candidate.email}</p>
                       <p className="text-slate-500 text-xs mt-0.5">{candidate.phone}</p>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <p className="text-slate-800 text-sm font-medium">{candidate.currentRole || '—'}</p>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <p className="text-slate-600 text-sm">{candidate.currentCompany || '—'}</p>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <p className="text-slate-600 text-sm">{candidate.currentLocation || '—'}</p>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <p className="text-slate-800 text-sm font-medium">{candidate.totalExperience || '—'}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-4 py-3.5 align-middle text-right">
                       <button
                         onClick={(e) => {
                           e.preventDefault();

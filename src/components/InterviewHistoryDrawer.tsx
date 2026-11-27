@@ -7,7 +7,7 @@ import {
   ExternalLink, ChevronDown, ChevronUp, FileText, UserCheck, UserX, ShieldAlert, Plus
 } from 'lucide-react';
 import { cn, formatDateTime, formatDate } from '../lib/utils';
-import { getInterviewRoundsForApplication, getInterviewFeedbackSummary, normalizeInterviewers, getNextRoundNumber } from '../lib/interviewUtils';
+import { getInterviewRoundsForApplication, getInterviewFeedbackSummary, getInterviewEndTime, normalizeInterviewers, getNextRoundNumber } from '../lib/interviewUtils';
 import RecruiterOutcomeModal from './RecruiterOutcomeModal';
 
 interface InterviewHistoryDrawerProps {
@@ -154,13 +154,15 @@ export default function InterviewHistoryDrawer({
                 const roundNum = round.roundNumber ?? (idx + 1);
                 const rawFbSummary = getInterviewFeedbackSummary(round);
                 const isCompleted = round.status === 'Completed';
+                const isScheduledOrRescheduled = round.status === 'Scheduled' || round.status === 'Rescheduled';
+                const isOverdue = isScheduledOrRescheduled && getInterviewEndTime(round) < new Date();
                 const fbSummary = isCompleted || rawFbSummary.submittedCount > 0
                   ? rawFbSummary
                   : {
                       ...rawFbSummary,
                       status: 'Not Due' as const,
-                      displayCount: 'Not Due',
-                      badgeText: 'Not Due'
+                      displayCount: isOverdue ? 'Not Due until completed' : 'Not Due',
+                      badgeText: isOverdue ? 'Not Due until completed' : 'Not Due'
                     };
                 const interviewers = normalizeInterviewers(round);
                 const isSelectedRound = Boolean(selectedInterviewId && round.id === selectedInterviewId);
@@ -224,26 +226,33 @@ export default function InterviewHistoryDrawer({
                           {/* Status Badges & Expand Toggle */}
                           <div className="flex items-start gap-2">
                             <div className="flex flex-col items-end gap-1.5">
-                              <span className={cn(
-                                "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                                round.status === 'Completed' ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
-                                round.status === 'Scheduled' ? "bg-blue-50 text-blue-800 border-blue-200" :
-                                round.status === 'Rescheduled' ? "bg-purple-50 text-purple-800 border-purple-200" :
-                                round.status === 'No Show' ? "bg-amber-50 text-amber-900 border-amber-300" :
-                                "bg-slate-100 text-slate-700 border-slate-200"
-                              )}>
-                                {round.status === 'No Show' 
-                                  ? `No Show (${round.noShowWho || 'Candidate'})` 
-                                  : round.status}
-                              </span>
+                              {isOverdue ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-300 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                  Overdue
+                                </span>
+                              ) : (
+                                <span className={cn(
+                                  "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                                  round.status === 'Completed' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                  round.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  round.status === 'Rescheduled' ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                  round.status === 'No Show' ? "bg-rose-50 text-rose-800 border-rose-200" :
+                                  "bg-slate-100 text-slate-600 border-slate-200"
+                                )}>
+                                  {round.status === 'No Show' 
+                                    ? `No Show (${round.noShowWho || 'Candidate'})` 
+                                    : round.status}
+                                </span>
+                              )}
 
                               {round.status === 'Completed' && round.recruiterOutcome && (
                                 <span className={cn(
-                                  "text-[10px] font-bold px-2 py-0.5 rounded-md",
-                                  round.recruiterOutcome === 'Selected' ? "bg-emerald-100 text-emerald-900 border border-emerald-300" :
-                                  round.recruiterOutcome === 'Rejected' ? "bg-rose-100 text-rose-900 border border-rose-300" :
-                                  round.recruiterOutcome === 'Next Round' ? "bg-blue-100 text-blue-900 border border-blue-300" :
-                                  "bg-amber-100 text-amber-900 border border-amber-300"
+                                  "text-[10px] font-bold px-2 py-0.5 rounded-md border",
+                                  round.recruiterOutcome === 'Selected' ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                                  round.recruiterOutcome === 'Rejected' ? "bg-rose-50 text-rose-800 border-rose-200" :
+                                  round.recruiterOutcome === 'Next Round' ? "bg-blue-50 text-blue-800 border-blue-200" :
+                                  "bg-amber-50 text-amber-800 border-amber-300"
                                 )}>
                                   Outcome: {round.recruiterOutcome}
                                 </span>
@@ -270,11 +279,11 @@ export default function InterviewHistoryDrawer({
                               Feedback Status: <span className="font-bold text-slate-800">{fbSummary.displayCount}</span>
                             </span>
                             <span className={cn(
-                              "px-2 py-0.5 rounded text-[10px] font-bold",
-                              fbSummary.status === 'Received' ? "bg-emerald-100 text-emerald-800" :
-                              fbSummary.status === 'Partially Received' ? "bg-amber-100 text-amber-800" :
-                              fbSummary.status === 'Not Due' ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                              "bg-red-50 text-red-700 border border-red-200"
+                              "px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                              fbSummary.status === 'Received' ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                              fbSummary.status === 'Partially Received' ? "bg-amber-50 text-amber-800 border-amber-300" :
+                              fbSummary.status === 'Not Due' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                              "bg-rose-50 text-rose-700 border-rose-200"
                             )}>
                               {fbSummary.badgeText}
                             </span>
@@ -312,7 +321,7 @@ export default function InterviewHistoryDrawer({
                                 </div>
                               )}
                               {round.noShowNote && (
-                                <div className="bg-amber-50/70 px-3 py-2 rounded-lg border border-amber-200 text-amber-900">
+                                <div className="bg-rose-50/70 px-3 py-2 rounded-lg border border-rose-200 text-rose-900">
                                   <span className="font-bold">No-Show Note ({round.noShowWho || 'Candidate'}): </span>{round.noShowNote}
                                 </div>
                               )}
@@ -340,6 +349,7 @@ export default function InterviewHistoryDrawer({
                               {interviewers.map((inv) => {
                                 const isSubmitted = inv.feedbackStatus === 'Submitted';
                                 const isExpanded = expandedFeedbackIds[inv.id] ?? true;
+                                const isCancelledOrNoShow = round.status === 'No Show' || round.status === 'Cancelled';
 
                                 return (
                                   <div key={inv.id} className="bg-slate-50 rounded-xl p-3.5 border border-slate-200">
@@ -360,12 +370,17 @@ export default function InterviewHistoryDrawer({
 
                                       <div className="flex items-center gap-2">
                                         <span className={cn(
-                                          "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                                          isSubmitted ? "bg-emerald-100 text-emerald-800" :
-                                          fbSummary.status === 'Not Due' ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                                          "bg-amber-100 text-amber-800"
+                                          "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                                          isCancelledOrNoShow ? "bg-slate-100 text-slate-500 border-slate-200" :
+                                          isSubmitted ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                                          fbSummary.status === 'Not Due' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                                          "bg-rose-50 text-rose-700 border-rose-200"
                                         )}>
-                                          {isSubmitted ? 'Submitted' : (fbSummary.status === 'Not Due' ? 'Not Due' : 'Pending')}
+                                          {isCancelledOrNoShow
+                                            ? `${round.status} — N/A`
+                                            : isSubmitted
+                                            ? 'Submitted'
+                                            : (fbSummary.status === 'Not Due' ? 'Not Due' : 'Pending')}
                                         </span>
 
                                         {/* Action buttons for pending links (only when interview is Completed) */}

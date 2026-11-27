@@ -41,6 +41,7 @@ import SmartJobUpload from './SmartJobUpload';
 import SmartJobReview from './SmartJobReview';
 import { getAllocatedOpenings, getUnallocatedPositions } from '../lib/headcount';
 import { ExtractedJobData, JobSourceMetadata } from '../types';
+import Toast from './Toast';
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -192,13 +193,11 @@ export default function ProjectDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-bottom-5 ${toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <AlertTriangle className="w-5 h-5 text-red-600" />}
-          <p className="font-medium text-sm">{toast.message}</p>
-        </div>
-      )}
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
+      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">

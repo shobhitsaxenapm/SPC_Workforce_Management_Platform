@@ -15,6 +15,7 @@ import { getInterviewFeedbackSummary, getInterviewEndTime, normalizeInterviewers
 import InterviewHistoryDrawer from './InterviewHistoryDrawer';
 import RecruiterOutcomeModal from './RecruiterOutcomeModal';
 import Pagination from './Pagination';
+import Toast from './Toast';
 import { mockUsers } from '../data/mockData';
 
 type SummaryTab = 'All Interviews' | 'Upcoming' | 'Today' | 'Feedback Pending' | 'Overdue' | 'Completed' | 'No Show' | 'Cancelled';
@@ -885,27 +886,19 @@ export default function InterviewsList() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 animate-slide-in text-sm font-medium">
-          <Check className="w-4 h-4 text-green-400" />
-          {toast.message}
-        </div>
-      )}
+      {/* Shared Toast Notification */}
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Interviews</h1>
-          <p className="text-slate-600 mt-1">Schedule and manage Candidate interviews across active Jobs and Clients.</p>
-        </div>
+        <p className="text-slate-600">Schedule and manage Candidate interviews across active Jobs and Clients.</p>
         <button 
           onClick={() => {
             setSelectedInterview(null);
             setNextRoundToSchedule(undefined);
             setIsScheduleModalOpen(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-all flex items-center gap-2 shadow-sm"
         >
           <Calendar className="w-4 h-4" />
           Schedule Interview
@@ -1004,10 +997,14 @@ export default function InterviewsList() {
         {/* Footer Count & Active Queue Indicator */}
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
           <span>
-            {filtered.length > 0 ? (
-              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-semibold text-slate-700">{filtered.length}</span> interviews</>
+            {(activeFiltersCount > 0 || activeTab !== 'All Interviews') ? (
+              filtered.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filtered.length}</span> of <span className="font-semibold text-slate-700">{interviews.length}</span> interviews</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{interviews.length}</span> interviews found</>
+              )
             ) : (
-              '0 interviews found'
+              <>Total: <span className="font-semibold text-slate-700">{interviews.length}</span> interviews</>
             )}
             {activeTab !== 'All Interviews' && (
               <span className="text-slate-400 ml-1.5">• Queue: <strong className="text-slate-600">{activeTab}</strong></span>
@@ -1026,140 +1023,325 @@ export default function InterviewsList() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-visible">
+        <div className="overflow-x-auto min-h-[420px]">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-medium whitespace-nowrap">
               <tr>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Candidate & Role</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Client</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Date & Time</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Interviewer</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider">Status & Feedback</th>
-                <th className="px-5 py-3 text-xs font-medium uppercase tracking-wider text-right">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Candidate &amp; Role</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Round &amp; Format</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Schedule</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Interviewer Panel</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Status &amp; Outcome</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  <div className="w-[276px] ml-auto text-left">Actions</div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedInterviews.map(interview => {
+              {paginatedInterviews.map((interview, rowIdx) => {
                 const candidate = candidates.find(c => c.id === interview.candidateId);
                 const job = jobs.find(j => j.id === interview.jobId);
                 const client = clients.find(c => c.id === interview.clientId);
                 const isCompleted = interview.status === 'Completed';
                 const isScheduledOrRescheduled = interview.status === 'Scheduled' || interview.status === 'Rescheduled';
                 const isFeedbackComplete = interview.fbSummary.status === 'Received';
-                const pendingPanelist = interview.panelists.find(p => p.feedbackStatus !== 'Submitted');
+                const pendingPanelists = interview.panelists.filter(p => p.feedbackStatus !== 'Submitted');
+                const pendingPanelist = pendingPanelists[0];
+                const openTooltipDownward = rowIdx < 2;
 
                 // Determine single primary action per row based on current interview state
                 let primaryActionLabel = 'Reschedule';
                 let handlePrimaryAction = () => openRescheduleModal(interview);
+                let isUrgentPrimaryAction = false;
 
                 if (isScheduledOrRescheduled && interview.isOverdue) {
                   primaryActionLabel = 'Mark Completed';
                   handlePrimaryAction = () => handleStatusChange(interview.id, 'Completed');
+                  isUrgentPrimaryAction = true;
                 } else if (isScheduledOrRescheduled) {
                   primaryActionLabel = 'Reschedule';
                   handlePrimaryAction = () => openRescheduleModal(interview);
+                  isUrgentPrimaryAction = false;
                 } else if (isCompleted && !isFeedbackComplete) {
                   primaryActionLabel = 'Submit Feedback';
                   handlePrimaryAction = () => openFeedbackModal(interview);
+                  isUrgentPrimaryAction = !interview.recruiterOutcome;
                 } else if (isCompleted && isFeedbackComplete) {
                   primaryActionLabel = interview.recruiterOutcome ? 'Update Outcome' : 'Confirm Outcome';
                   handlePrimaryAction = () => setSelectedInterviewForOutcome(interview);
+                  isUrgentPrimaryAction = !interview.recruiterOutcome;
                 } else {
                   // No Show or Cancelled
                   primaryActionLabel = 'Reschedule';
                   handlePrimaryAction = () => openRescheduleModal(interview);
+                  isUrgentPrimaryAction = false;
                 }
+
+                const scheduledDateObj = new Date(interview.scheduledAt);
+                const formattedTime = isNaN(scheduledDateObj.getTime())
+                  ? ''
+                  : scheduledDateObj.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
                 
                 return (
                   <tr key={interview.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3">
-                      <div className="font-semibold text-slate-900 leading-tight">{candidate?.fullName}</div>
-                      <div className="text-xs text-slate-500 mt-0.5 leading-tight">{job?.title}</div>
-                      <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
-                        {interview.roundName} • {interview.mode === 'Video' ? <Video className="w-3.5 h-3.5" /> : 
-                         interview.mode === 'Phone' ? <Phone className="w-3.5 h-3.5" /> : 
-                         <Users className="w-3.5 h-3.5" />}
-                        {interview.interviewType}
+                    {/* 1. Candidate, Job Role & Client */}
+                    <td className="px-4 py-3.5 align-middle">
+                      <div className="font-semibold text-slate-900 leading-snug">{candidate?.fullName}</div>
+                      <div className="text-xs text-slate-600 mt-0.5 leading-snug font-medium">
+                        {job?.title}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5 leading-snug truncate max-w-[220px]" title={client?.name}>
+                        {client?.name}
                       </div>
                     </td>
-                    <td className="px-5 py-3">
-                      <div className="text-slate-700">{client?.name}</div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="text-slate-700 leading-tight">{formatDateTime(interview.scheduledAt)}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{interview.durationMinutes} mins • {interview.timezone || 'Local'}</div>
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">
-                      {interview.interviewerName}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn(
-                            "inline-flex items-center w-fit px-2 py-0.5 rounded text-xs font-bold border",
-                            interview.status === 'Completed' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            interview.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                            interview.status === 'Rescheduled' ? "bg-purple-50 text-purple-700 border-purple-200" :
-                            interview.status === 'No Show' ? "bg-rose-50 text-rose-800 border-rose-200" :
-                            "bg-slate-50 text-slate-600 border-slate-200"
-                          )}>
-                            {interview.status === 'No Show' 
-                              ? `No Show (${interview.noShowWho || 'Candidate'})` 
-                              : interview.status}
-                          </span>
 
-                          {interview.isOverdue && isScheduledOrRescheduled && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded border border-amber-200">
-                              Overdue
+                    {/* 2. Round & Format */}
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          {interview.roundName || `Round ${interview.roundNumber || 1}`}
+                        </span>
+                        <span className="text-xs font-medium text-slate-800">
+                          {interview.interviewType}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
+                        {interview.mode === 'Video' ? <Video className="w-3.5 h-3.5 text-slate-400" /> : 
+                         interview.mode === 'Phone' ? <Phone className="w-3.5 h-3.5 text-slate-400" /> : 
+                         <Users className="w-3.5 h-3.5 text-slate-400" />}
+                        <span>{interview.mode}</span>
+                        <span>•</span>
+                        <span>{interview.durationMinutes} mins</span>
+                      </div>
+                    </td>
+
+                    {/* 3. Schedule (Date & Time) */}
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                      <div className="text-slate-800 font-medium leading-snug">
+                        {formatDate(interview.scheduledAt)}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {formattedTime} • {interview.timezone || 'Local'}
+                      </div>
+                    </td>
+
+                    {/* 4. Interviewer Panel & Hoverable Breakdown Popover */}
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                      <div className="relative group/panel inline-block">
+                        <div className="flex items-center gap-1.5 cursor-pointer">
+                          <span className="text-slate-800 font-medium group-hover/panel:text-blue-600 transition-colors">
+                            {interview.interviewerName}
+                          </span>
+                          {interview.panelists.length > 1 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              +{interview.panelists.length - 1} more
                             </span>
                           )}
                         </div>
 
-                        {/* Dynamic Feedback Status Badge (Only shown for active / completed rounds; due only after Completed) */}
-                        {interview.status !== 'No Show' && interview.status !== 'Cancelled' && (
-                          <span className={cn(
-                            "inline-flex w-fit px-2 py-0.5 text-[11px] font-semibold rounded-full border",
-                            interview.fbSummary.status === 'Received' ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
-                            interview.fbSummary.status === 'Partially Received' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                            interview.fbSummary.status === 'Not Due' ? "bg-slate-100 text-slate-700 border-slate-200" :
-                            "bg-red-50 text-red-700 border-red-200"
-                          )}>
+                        {/* Sub-line explaining panel status or who is pending */}
+                        <div className="mt-0.5 text-[11px]">
+                          {isCompleted && interview.fbSummary.status === 'Partially Received' && pendingPanelists.length > 0 ? (
+                            <span className="text-amber-700 font-medium flex items-center gap-1">
+                              <Clock className="w-3 h-3 shrink-0 text-amber-600" />
+                              Waiting on {pendingPanelists.map(p => p.name.split(' ')[0]).join(', ')}
+                            </span>
+                          ) : isCompleted && interview.fbSummary.status === 'Pending' ? (
+                            <span className="text-rose-600 font-medium">
+                              Awaiting evaluator submission
+                            </span>
+                          ) : isCompleted && interview.fbSummary.status === 'Received' ? (
+                            <span className="text-emerald-700 font-medium">
+                              {interview.panelists.length > 1 ? `All ${interview.panelists.length} panelists submitted` : 'Evaluation submitted'}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">
+                              {interview.panelists[0]?.role || 'Assigned Evaluator'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Interactive Hoverable Card showing each Panelist's Feedback Status */}
+                        {interview.panelists.length > 0 && (
+                          <div
+                            className={cn(
+                              "absolute left-0 w-72 whitespace-normal opacity-0 invisible group-hover/panel:opacity-100 group-hover/panel:visible transition-all duration-150 z-40 pointer-events-auto",
+                              openTooltipDownward ? "top-full pt-2" : "bottom-full pb-2"
+                            )}
+                          >
+                            <div className="bg-slate-900 text-white rounded-xl p-3.5 shadow-xl border border-slate-800">
+                              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 pb-2 border-b border-slate-800 flex items-center justify-between gap-3">
+                                <span className="shrink-0">
+                                  Panel Feedback ({interview.fbSummary.submittedCount}/{interview.fbSummary.totalCount})
+                                </span>
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[9px] font-bold tracking-normal uppercase shrink-0",
+                                  interview.status === 'No Show' || interview.status === 'Cancelled'
+                                    ? "bg-slate-800 text-slate-400"
+                                    : interview.fbSummary.status === 'Received'
+                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                    : interview.fbSummary.status === 'Partially Received'
+                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                    : interview.fbSummary.status === 'Pending'
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                    : "bg-slate-800 text-slate-300"
+                                )}>
+                                  {interview.status === 'No Show' || interview.status === 'Cancelled'
+                                    ? 'N/A'
+                                    : interview.fbSummary.status}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {interview.panelists.map(p => {
+                                  const submitted = p.feedbackStatus === 'Submitted';
+                                  const isCancelledOrNoShow = interview.status === 'No Show' || interview.status === 'Cancelled';
+                                  return (
+                                    <div key={p.id} className="flex items-center justify-between gap-2.5 text-xs">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-medium text-white block truncate">{p.name}</span>
+                                        {p.role && <span className="text-[10px] text-slate-400 block truncate">{p.role}</span>}
+                                      </div>
+                                      <span className={cn(
+                                        "px-2 py-0.5 rounded text-[10px] font-semibold shrink-0",
+                                        isCancelledOrNoShow
+                                          ? "bg-slate-800 text-slate-400 border border-slate-700"
+                                          : submitted
+                                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                          : isCompleted
+                                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                          : "bg-slate-800 text-slate-300 border border-slate-700"
+                                      )}>
+                                        {isCancelledOrNoShow
+                                          ? 'N/A'
+                                          : submitted
+                                          ? (p.overallResult ? `✓ ${p.overallResult}` : '✓ Submitted')
+                                          : isCompleted
+                                          ? '⏳ Pending'
+                                          : 'Not Due'}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* 5. Status & Outcome (Max 1 status row + 1 clean sub-status line) */}
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        {/* Line 1: Single Primary Session Badge + Distinct Feedback Progress Pill when Completed */}
+                        <div className="flex items-center gap-1.5">
+                          {interview.isOverdue && isScheduledOrRescheduled ? (
+                            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                              Overdue
+                            </span>
+                          ) : (
+                            <span className={cn(
+                              "inline-flex items-center w-fit px-2 py-0.5 rounded text-xs font-bold border",
+                              interview.status === 'Completed' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                              interview.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                              interview.status === 'Rescheduled' ? "bg-purple-50 text-purple-700 border-purple-200" :
+                              interview.status === 'No Show' ? "bg-rose-50 text-rose-800 border-rose-200" :
+                              "bg-slate-100 text-slate-600 border-slate-200"
+                            )}>
+                              {interview.status === 'No Show' 
+                                ? `No Show (${interview.noShowWho || 'Candidate'})` 
+                                : interview.status}
+                            </span>
+                          )}
+
+                          {/* When Completed: Distinct color-coded Feedback Pill (Complete vs Partial vs Pending) */}
+                          {isCompleted && (
+                            <span
+                              title={`Feedback: ${interview.fbSummary.displayCount}`}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full border",
+                                interview.fbSummary.status === 'Received'
+                                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                  : interview.fbSummary.status === 'Partially Received'
+                                  ? "bg-amber-50 text-amber-800 border-amber-300"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
+                              )}
+                            >
+                              <span className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                interview.fbSummary.status === 'Received' ? "bg-emerald-600" :
+                                interview.fbSummary.status === 'Partially Received' ? "bg-amber-600" :
+                                "bg-rose-600"
+                              )} />
+                              {interview.fbSummary.status === 'Received'
+                                ? `Feedback ${interview.fbSummary.submittedCount}/${interview.fbSummary.totalCount}`
+                                : interview.fbSummary.status === 'Partially Received'
+                                ? `Partial ${interview.fbSummary.submittedCount}/${interview.fbSummary.totalCount}`
+                                : `Pending 0/${interview.fbSummary.totalCount}`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Line 2: Clean Plain-Text Sub-Status / Outcome */}
+                        {isScheduledOrRescheduled && (
+                          <span className="text-[11px] text-slate-400 font-medium">
                             Feedback: {interview.fbSummary.displayCount}
                           </span>
                         )}
 
-                        {/* Outcome is strictly shown ONLY when the interview is Completed */}
-                        {isCompleted && interview.recruiterOutcome && (
-                          <span className="text-[11px] font-bold text-slate-700">
-                            Outcome: <span className="text-blue-700">{interview.recruiterOutcome}</span>
-                          </span>
+                        {isCompleted && (
+                          <div className="text-[11px] font-semibold flex items-center gap-1">
+                            <span className="text-slate-500 font-medium">Outcome:</span>
+                            {interview.recruiterOutcome ? (
+                              <span className={cn(
+                                "font-bold",
+                                interview.recruiterOutcome === 'Selected' ? "text-emerald-700" :
+                                interview.recruiterOutcome === 'Rejected' ? "text-rose-700" :
+                                interview.recruiterOutcome === 'Next Round' ? "text-blue-700" :
+                                "text-amber-700"
+                              )}>
+                                {interview.recruiterOutcome}
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 font-semibold">
+                                Decision Pending
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex gap-2 justify-end items-center">
-                        {/* Single Primary Action */}
+
+                    {/* 6. Actions (Aligned directly under 'ACTIONS' header with uniform button widths) */}
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                      <div className="w-[276px] ml-auto flex gap-1.5 items-center justify-start">
+                        {/* Uniform-Width Context-Driven Primary Action */}
                         <button
                           type="button"
                           onClick={handlePrimaryAction}
-                          className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-colors"
+                          className={cn(
+                            "w-[132px] py-1.5 px-2.5 text-xs font-semibold rounded-lg shadow-2xs transition-colors inline-flex items-center justify-center text-center shrink-0",
+                            isUrgentPrimaryAction
+                              ? "text-white bg-blue-600 hover:bg-blue-700"
+                              : "text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200"
+                          )}
                         >
                           {primaryActionLabel}
                         </button>
 
-                        {/* View History — Single entry point for interview details, round history & feedback */}
+                        {/* Uniform-Width View History Button */}
                         <button
                           type="button"
                           onClick={() => openHistoryDrawer(interview.applicationId, interview.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg shadow-2xs transition-colors"
+                          className="w-[100px] py-1.5 px-2 text-xs font-medium text-slate-700 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg shadow-2xs transition-colors inline-flex items-center justify-center text-center shrink-0"
                           title="View interview details, round history, and feedback"
                         >
                           View History
                         </button>
 
-                        {/* Three-Dot Menu with remaining valid actions separated by concept */}
-                        <div className="relative group">
+                        {/* Three-Dot Menu with all valid stage actions */}
+                        <div className="relative group shrink-0">
                           <button
                             type="button"
                             aria-label="More actions"
@@ -1167,33 +1349,31 @@ export default function InterviewsList() {
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
-                          <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 py-1.5 flex flex-col text-left">
-                            {/* 1. Interview Actions */}
-                            {isScheduledOrRescheduled && (
-                              <>
-                                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                  Interview Actions
-                                </div>
-                                {(interview.mode === 'Video' || interview.mode === 'Manual Link') && interview.meetingLink && (
-                                  <a
-                                    href={interview.meetingLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full block text-left px-3.5 py-1.5 text-xs text-blue-600 hover:bg-blue-50 font-medium"
-                                  >
-                                    Join Meeting
-                                  </a>
-                                )}
-                                {primaryActionLabel !== 'Mark Completed' && (
+                          <div className="absolute right-0 top-full pt-1 w-52 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30">
+                            <div className="bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 flex flex-col text-left">
+                              {/* 1. Interview Actions (Scheduled / Rescheduled / Overdue) */}
+                              {isScheduledOrRescheduled && (
+                                <>
+                                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    Interview Actions
+                                  </div>
+                                  {(interview.mode === 'Video' || interview.mode === 'Manual Link') && interview.meetingLink && (
+                                    <a
+                                      href={interview.meetingLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="w-full block text-left px-3.5 py-1.5 text-xs text-blue-600 hover:bg-blue-50 font-medium"
+                                    >
+                                      Join Meeting
+                                    </a>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => handleStatusChange(interview.id, 'Completed')}
-                                    className="w-full block text-left px-3.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                                    className="w-full block text-left px-3.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium"
                                   >
                                     Mark Completed
                                   </button>
-                                )}
-                                {primaryActionLabel !== 'Reschedule' && (
                                   <button
                                     type="button"
                                     onClick={() => openRescheduleModal(interview)}
@@ -1201,23 +1381,22 @@ export default function InterviewsList() {
                                   >
                                     Reschedule
                                   </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedInterview(interview); setNoShowForm({ who: 'Candidate', note: '' }); setActiveModal('no_show'); }}
-                                  className="w-full block text-left px-3.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-                                >
-                                  Mark No-Show
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedInterview(interview); setCancelReason(''); setActiveModal('cancel'); }}
-                                  className="w-full block text-left px-3.5 py-1.5 text-xs text-red-600 hover:bg-red-50 font-medium"
-                                >
-                                  Cancel Interview
-                                </button>
-                              </>
-                            )}
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSelectedInterview(interview); setNoShowForm({ who: 'Candidate', note: '' }); setActiveModal('no_show'); }}
+                                    className="w-full block text-left px-3.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                                  >
+                                    Mark No-Show
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSelectedInterview(interview); setCancelReason(''); setActiveModal('cancel'); }}
+                                    className="w-full block text-left px-3.5 py-1.5 text-xs text-red-600 hover:bg-red-50 font-medium"
+                                  >
+                                    Cancel Interview
+                                  </button>
+                                </>
+                              )}
 
                             {/* 2. Feedback & Outcome Actions (Only for Completed interviews) */}
                             {isCompleted && (
@@ -1287,6 +1466,13 @@ export default function InterviewsList() {
                                 >
                                   Reschedule
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(interview.id, 'Completed')}
+                                  className="w-full block text-left px-3.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                                >
+                                  Mark Completed
+                                </button>
                                 {interview.status === 'No Show' && (
                                   <button
                                     type="button"
@@ -1298,6 +1484,7 @@ export default function InterviewsList() {
                                 )}
                               </>
                             )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1592,13 +1779,14 @@ export default function InterviewsList() {
                         <div className="flex justify-between items-start mb-2">
                           <div className="font-semibold text-slate-800">{round.roundName} - {round.interviewType}</div>
                           <span className={cn(
-                            "inline-flex items-center w-fit px-2 py-0.5 rounded text-xs font-medium border",
-                            round.status === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
+                            "inline-flex items-center w-fit px-2 py-0.5 rounded text-xs font-bold border",
+                            round.status === 'Completed' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                             round.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                            round.status === 'Cancelled' ? "bg-slate-100 text-slate-700 border-slate-300" :
-                            "bg-red-50 text-red-700 border-red-200"
+                            round.status === 'Rescheduled' ? "bg-purple-50 text-purple-700 border-purple-200" :
+                            round.status === 'No Show' ? "bg-rose-50 text-rose-800 border-rose-200" :
+                            "bg-slate-100 text-slate-600 border-slate-200"
                           )}>
-                            {round.status}
+                            {round.status === 'No Show' ? `No Show (${round.noShowWho || 'Candidate'})` : round.status}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">

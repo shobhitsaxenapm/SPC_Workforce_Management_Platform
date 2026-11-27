@@ -340,15 +340,15 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* ── Global Filters ── */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500 font-medium whitespace-nowrap">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium whitespace-nowrap">
           <Filter className="w-4 h-4" /> Filters:
         </div>
         
         <select 
           value={filterRecruiterId} 
           onChange={e => setFilterRecruiterId(e.target.value)}
-          className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
+          className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg font-medium text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none flex-1 min-w-[120px] max-w-[200px]"
         >
           <option value="">All Recruiters</option>
           {mockUsers.filter(u => u.role === 'RECRUITER' || (u.role === 'MANAGER' && jobs.some(j => j.assignedRecruiterId === u.id))).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -357,7 +357,7 @@ export default function Dashboard() {
         <select 
           value={filterClientId} 
           onChange={e => { setFilterClientId(e.target.value); setFilterJobId(''); }}
-          className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
+          className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg font-medium text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none flex-1 min-w-[120px] max-w-[200px]"
         >
           <option value="">All Clients</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -366,7 +366,7 @@ export default function Dashboard() {
         <select 
           value={filterJobId} 
           onChange={e => setFilterJobId(e.target.value)}
-          className="text-sm border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-[120px] max-w-[200px]"
+          className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg font-medium text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none flex-1 min-w-[120px] max-w-[200px]"
         >
           <option value="">All Jobs</option>
           {jobOptions.map(j => <option key={j.id} value={j.id}>{j.code} - {j.title}</option>)}
@@ -383,14 +383,14 @@ export default function Dashboard() {
           { label: `Interviews ${upcomingPeriod}`, value: upcomingInterviewsCount, icon: CalendarDays, color: 'text-amber-600', bg: 'bg-amber-50', link: '/interviews' },
           { label: 'Joining Pending', value: joiningPendingCount, icon: CheckCircle2, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/offers' },
         ].map((kpi, idx) => (
-          <Link to={kpi.link} key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:border-gray-300 transition-colors block group">
+          <Link to={kpi.link} key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors block group">
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider leading-tight w-2/3">{kpi.label}</span>
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider leading-tight w-2/3">{kpi.label}</span>
               <div className={cn("p-1.5 rounded-lg shrink-0 transition-colors group-hover:bg-white group-hover:shadow-sm", kpi.bg, kpi.color)}>
                 <kpi.icon className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{kpi.value}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{kpi.value}</p>
           </Link>
         ))}
       </div>
@@ -398,15 +398,15 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* ── Attention Required ── */}
-        <div className="xl:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-rose-50/40">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+        <div className="xl:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-rose-50/40">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500" />
               Attention Required
             </h2>
             {hasMoreAttention && <button onClick={() => setIsAttentionDrawerOpen(true)} className="text-xs font-medium text-blue-600 hover:underline cursor-pointer">View all ({attentionItems.length})</button>}
           </div>
-          <div className="divide-y divide-gray-50 flex-1">
+          <div className="divide-y divide-slate-50 flex-1">
             {topAttention.length > 0 ? topAttention.map(item => (
               <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-start gap-3">
@@ -417,21 +417,21 @@ export default function Dashboard() {
                     "bg-blue-100 text-blue-700"
                   )}>{item.label}</div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{item.subject}</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-sm font-semibold text-slate-900">{item.subject}</p>
+                    <p className="text-xs text-slate-500 mt-1">
                       {item.clientName} <span className="mx-1">•</span> {item.recruiterName} <span className="mx-1">•</span> 
-                      <span className="text-gray-900 font-medium">{item.issue}</span>
+                      <span className="text-slate-900 font-medium">{item.issue}</span>
                     </p>
                   </div>
                 </div>
-                <Link to={item.actionLink} className="shrink-0 text-xs font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 px-3 py-1.5 rounded-lg transition-colors">
+                <Link to={item.actionLink} className="shrink-0 text-xs font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors">
                   {item.actionText}
                 </Link>
               </div>
             )) : (
-              <div className="p-8 h-full flex flex-col justify-center items-center text-sm text-gray-500">
+              <div className="p-8 h-full flex flex-col justify-center items-center text-sm text-slate-500">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mb-3" />
-                <p className="font-medium text-gray-900">All caught up!</p>
+                <p className="font-medium text-slate-900">All caught up!</p>
                 <p>No urgent items require your attention.</p>
               </div>
             )}
@@ -439,16 +439,16 @@ export default function Dashboard() {
         </div>
 
         {/* ── Upcoming Work ── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-blue-500" />
-              Upcoming <span className="text-gray-400 font-normal ml-1">· {upcomingPeriod}</span>
+              Upcoming <span className="text-slate-400 font-normal ml-1">· {upcomingPeriod}</span>
             </h2>
             <select 
               value={upcomingPeriod} 
               onChange={e => setUpcomingPeriod(e.target.value as any)}
-              className="text-xs border-gray-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="text-xs border-slate-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             >
               <option>Next 7 Days</option>
               <option>Next 14 Days</option>
@@ -456,24 +456,24 @@ export default function Dashboard() {
               <option>Custom</option>
             </select>
           </div>
-          <div className="divide-y divide-gray-50 flex-1">
+          <div className="divide-y divide-slate-50 flex-1">
             {upcomingWorkList.length > 0 ? upcomingWorkList.slice(0, 5).map((item, idx) => (
               <div key={idx} className="p-4 flex items-start gap-3 hover:bg-slate-50/50 transition-colors">
                 <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-400 shrink-0" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                  <p className="text-sm font-medium text-slate-900 line-clamp-1">
                     <Link to={item.link} className="hover:text-blue-600">{item.title}</Link>
                   </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-medium text-gray-500">{item.type}</span>
-                    <span className="text-xs text-gray-300">•</span>
-                    <span className="text-xs font-medium text-gray-700">{new Date(item.dateDt).toLocaleDateString()}</span>
+                    <span className="text-xs font-medium text-slate-500">{item.type}</span>
+                    <span className="text-xs text-slate-300">•</span>
+                    <span className="text-xs font-medium text-slate-700">{new Date(item.dateDt).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
             )) : (
-              <div className="p-8 h-full flex flex-col justify-center items-center text-sm text-gray-500 text-center">
-                <CalendarDays className="w-8 h-8 text-gray-300 mb-3" />
+              <div className="p-8 h-full flex flex-col justify-center items-center text-sm text-slate-500 text-center">
+                <CalendarDays className="w-8 h-8 text-slate-300 mb-3" />
                 No upcoming recruitment events in the next seven days.
               </div>
             )}
@@ -485,29 +485,29 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* ── Current Pipeline Distribution ── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900">Current Pipeline Distribution</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-900">Current Pipeline Distribution</h2>
           </div>
           <div className="p-6 flex-1 flex flex-col justify-center gap-8">
-            <div className="flex justify-between items-center text-sm bg-gray-50/80 rounded-xl border border-gray-100 p-4 relative">
-              <div className="absolute top-1/2 left-8 right-8 h-px bg-gray-200 -translate-y-1/2" />
+            <div className="flex justify-between items-center text-sm bg-slate-50/80 rounded-xl border border-slate-100 p-4 relative">
+              <div className="absolute top-1/2 left-8 right-8 h-px bg-slate-200 -translate-y-1/2" />
               
               <div className="text-center w-full z-10">
-                <div className="w-10 h-10 mx-auto bg-white border border-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-900 shadow-sm">{distSourced}</div>
-                <div className="text-[11px] font-semibold text-gray-600 uppercase mt-2">Sourced</div>
+                <div className="w-10 h-10 mx-auto bg-white border border-slate-200 rounded-full flex items-center justify-center font-semibold text-slate-900 shadow-sm">{distSourced}</div>
+                <div className="text-[11px] font-semibold text-slate-600 uppercase mt-2">Sourced</div>
               </div>
               <div className="text-center w-full z-10">
-                <div className="w-10 h-10 mx-auto bg-white border border-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-900 shadow-sm">{distScreening}</div>
-                <div className="text-[11px] font-semibold text-gray-600 uppercase mt-2">Screening</div>
+                <div className="w-10 h-10 mx-auto bg-white border border-slate-200 rounded-full flex items-center justify-center font-semibold text-slate-900 shadow-sm">{distScreening}</div>
+                <div className="text-[11px] font-semibold text-slate-600 uppercase mt-2">Screening</div>
               </div>
               <div className="text-center w-full z-10">
-                <div className="w-10 h-10 mx-auto bg-white border border-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-900 shadow-sm">{distClientReview}</div>
-                <div className="text-[11px] font-semibold text-gray-600 uppercase mt-2">Client Rev.</div>
+                <div className="w-10 h-10 mx-auto bg-white border border-slate-200 rounded-full flex items-center justify-center font-semibold text-slate-900 shadow-sm">{distClientReview}</div>
+                <div className="text-[11px] font-semibold text-slate-600 uppercase mt-2">Client Rev.</div>
               </div>
               <div className="text-center w-full z-10">
-                <div className="w-10 h-10 mx-auto bg-white border border-gray-200 rounded-full flex items-center justify-center font-semibold text-gray-900 shadow-sm">{distInterviewing}</div>
-                <div className="text-[11px] font-semibold text-gray-600 uppercase mt-2">Interviewing</div>
+                <div className="w-10 h-10 mx-auto bg-white border border-slate-200 rounded-full flex items-center justify-center font-semibold text-slate-900 shadow-sm">{distInterviewing}</div>
+                <div className="text-[11px] font-semibold text-slate-600 uppercase mt-2">Interviewing</div>
               </div>
               <div className="text-center w-full z-10">
                 <div className="w-10 h-10 mx-auto bg-white border-2 border-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold shadow-sm">{distSelected}</div>
@@ -524,22 +524,22 @@ export default function Dashboard() {
                 <div className="text-lg font-bold text-rose-700">{distRejected}</div>
                 <div className="text-[11px] font-semibold text-rose-700 uppercase">Rejected</div>
               </div>
-              <div className="text-center bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 min-w-[100px]">
-                <div className="text-lg font-bold text-gray-700">{distWithdrawn}</div>
-                <div className="text-[11px] font-semibold text-gray-600 uppercase">Withdrawn</div>
+              <div className="text-center bg-slate-100 px-4 py-2 rounded-lg border border-slate-200 min-w-[100px]">
+                <div className="text-lg font-bold text-slate-700">{distWithdrawn}</div>
+                <div className="text-[11px] font-semibold text-slate-600 uppercase">Withdrawn</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Recruitment Activity ── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
-            <h2 className="text-sm font-semibold text-gray-900">Recruitment Activity <span className="text-gray-400 font-normal ml-1">· {activityPeriod}</span></h2>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h2 className="text-sm font-semibold text-slate-900">Recruitment Activity <span className="text-slate-400 font-normal ml-1">· {activityPeriod}</span></h2>
             <select 
               value={activityPeriod} 
               onChange={e => setActivityPeriod(e.target.value as any)}
-              className="text-xs border-gray-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm"
+              className="text-xs border-slate-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm"
             >
               <option>Today</option>
               <option>Last 7 Days</option>
@@ -550,29 +550,29 @@ export default function Dashboard() {
           <div className="p-6 flex-1 flex flex-col justify-center">
             {totalActivity > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.sourced}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">Candidates Sourced</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.sourced}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">Candidates Sourced</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.cvsSent}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">CVs Sent</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.cvsSent}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">CVs Sent</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.clientShortlisted}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">Client Shortlisted</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.clientShortlisted}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">Client Shortlisted</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.interviewsScheduled}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">Interviews Sch.</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.interviewsScheduled}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">Interviews Sch.</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm col-span-2 sm:col-span-1">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.offersIssued}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">Offers Issued</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.offersIssued}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">Offers Issued</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm col-span-2 sm:col-span-1">
-                  <div className="text-xl font-bold text-gray-900">{activityMetrics.offersAccepted}</div>
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mt-1">Offers Accepted</div>
+                <div className="text-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+                  <div className="text-xl font-bold text-slate-900">{activityMetrics.offersAccepted}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase mt-1">Offers Accepted</div>
                 </div>
                 <div className="text-center p-3 bg-emerald-50 rounded-xl border border-emerald-100 col-span-2 sm:col-span-2 shadow-sm">
                   <div className="text-xl font-bold text-emerald-700">{activityMetrics.candidatesJoined}</div>
@@ -580,8 +580,8 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-sm text-gray-500 flex flex-col items-center">
-                <Clock className="w-8 h-8 text-gray-300 mb-3" />
+              <div className="text-center py-8 text-sm text-slate-500 flex flex-col items-center">
+                <Clock className="w-8 h-8 text-slate-300 mb-3" />
                 <p>No recruitment activity recorded during the selected period.</p>
               </div>
             )}
@@ -591,13 +591,13 @@ export default function Dashboard() {
       </div>
 
       {/* ── Job Health Table ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-sm font-semibold text-gray-900">Job Health</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="text-sm font-semibold text-slate-900">Job Health</h2>
           <select 
             value={jobHealthFilter} 
             onChange={e => setJobHealthFilter(e.target.value as any)}
-            className="text-xs border-gray-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            className="text-xs border-slate-300 rounded-md bg-white py-1 pl-2 pr-6 shadow-sm focus:ring-blue-500 focus:border-blue-500"
           >
             <option>All</option>
             <option>Has Bottlenecks</option>
@@ -605,63 +605,63 @@ export default function Dashboard() {
           </select>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50/70">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Job</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Recruiter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lifecycle / Publication</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Positions Remaining</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Candidates</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bottleneck</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Activity</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target Date</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Published Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Job</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Client</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Recruiter</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Lifecycle / Publication</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions Remaining</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Candidates</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Bottleneck</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Activity</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Target Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Published Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {jobHealth.filter(job => {
                 if (jobHealthFilter === 'All') return true;
                 if (jobHealthFilter === 'Has Bottlenecks') return job.bottleneck !== 'None';
                 if (jobHealthFilter === 'On Track') return job.bottleneck === 'None';
                 return true;
               }).map(job => (
-                <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-3">
+                <tr key={job.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-4 py-3.5 align-middle">
                     <Link to={`/job-desk/${job.id}`} className="text-sm font-semibold text-blue-600 hover:underline">{job.title}</Link>
                   </td>
-                  <td className="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">{job.clientName}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">{job.recruiterName}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3.5 align-middle text-sm text-slate-700 whitespace-nowrap">{job.clientName}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm text-slate-700 whitespace-nowrap">{job.recruiterName}</td>
+                  <td className="px-4 py-3.5 align-middle">
                     <div className="flex flex-col gap-1 w-max">
                       <span className={cn(
                         "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
                         job.lifecycle === 'Open' ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" :
-                        job.lifecycle === 'Draft' ? "bg-gray-50 text-gray-700 ring-gray-600/20" :
+                        job.lifecycle === 'Draft' ? "bg-slate-50 text-slate-700 ring-slate-600/20" :
                         "bg-amber-50 text-amber-700 ring-amber-600/20"
                       )}>
                         {job.lifecycle}
                       </span>
-                      <span className={cn("text-[10px] font-medium tracking-wide uppercase px-1", job.published ? "text-blue-600" : "text-gray-400")}>
+                      <span className={cn("text-[10px] font-medium tracking-wide uppercase px-1", job.published ? "text-blue-600" : "text-slate-400")}>
                         {job.published ? 'Published' : 'Unpublished'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-sm font-bold text-gray-900 text-center">{job.positionsRem}</td>
-                  <td className="px-5 py-3 text-sm font-bold text-gray-900 text-center">{job.actPipe}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3.5 align-middle text-sm font-bold text-slate-900 text-center">{job.positionsRem}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm font-bold text-slate-900 text-center">{job.actPipe}</td>
+                  <td className="px-4 py-3.5 align-middle">
                     <span className={cn("text-xs font-medium px-2 py-1 rounded-md", 
-                      job.bottleneck !== 'None' ? "bg-rose-50 text-rose-700 border border-rose-100" : "text-gray-500"
+                      job.bottleneck !== 'None' ? "bg-rose-50 text-rose-700 border border-rose-100" : "text-slate-500"
                     )}>
                       {job.bottleneck}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3.5 align-middle text-sm text-slate-600 whitespace-nowrap">
                     {!isNaN(job.lastActivityDt) ? new Date(job.lastActivityDt).toLocaleDateString() : 'None'}
                   </td>
-                  <td className="px-5 py-3 text-sm whitespace-nowrap">
-                    <span className={job.isOverdue ? "text-rose-600 font-semibold" : "text-gray-700 font-medium"}>
+                  <td className="px-4 py-3.5 align-middle text-sm whitespace-nowrap">
+                    <span className={job.isOverdue ? "text-rose-600 font-semibold" : "text-slate-700 font-medium"}>
                       {job.targetLabel}
                     </span>
                   </td>
@@ -674,7 +674,7 @@ export default function Dashboard() {
                 return true;
               }).length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-5 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-500">
                     No jobs found matching the selected filters.
                   </td>
                 </tr>
@@ -685,47 +685,47 @@ export default function Dashboard() {
       </div>
 
       {/* ── Team Workload ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
             <UserCheck className="w-4 h-4 text-indigo-500" />
             Team Workload
           </h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50/70">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Recruiter</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Open Jobs</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Positions Remaining</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Candidates</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Feedback Overdue</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Interviews Pending Feedback</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Jobs (7+ Days)</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Recruiter</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Open Jobs</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions Remaining</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Candidates</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Feedback Overdue</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Interviews Pending Feedback</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Inactive Jobs (7+ Days)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {workloadList.map(mw => (
-                <tr key={mw.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">{mw.name}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-center text-gray-700">{mw.openJobs}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-center text-gray-700">{mw.positionsRem}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-center text-gray-700">{mw.actPipe}</td>
-                  <td className="px-5 py-3 text-sm text-center">
-                    <span className={mw.fbOverdue > 0 ? "text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full" : "text-gray-400 font-medium"}>{mw.fbOverdue}</span>
+                <tr key={mw.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-4 py-3.5 align-middle text-sm font-semibold text-slate-900 whitespace-nowrap">{mw.name}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm font-medium text-center text-slate-700">{mw.openJobs}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm font-medium text-center text-slate-700">{mw.positionsRem}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm font-medium text-center text-slate-700">{mw.actPipe}</td>
+                  <td className="px-4 py-3.5 align-middle text-sm text-center">
+                    <span className={mw.fbOverdue > 0 ? "text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full" : "text-slate-400 font-medium"}>{mw.fbOverdue}</span>
                   </td>
-                  <td className="px-5 py-3 text-sm text-center">
-                    <span className={mw.intPending > 0 ? "text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-full" : "text-gray-400 font-medium"}>{mw.intPending}</span>
+                  <td className="px-4 py-3.5 align-middle text-sm text-center">
+                    <span className={mw.intPending > 0 ? "text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-full" : "text-slate-400 font-medium"}>{mw.intPending}</span>
                   </td>
-                  <td className="px-5 py-3 text-sm text-center">
-                    <span className={mw.inactiveJobs > 0 ? "text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full" : "text-gray-400 font-medium"}>{mw.inactiveJobs}</span>
+                  <td className="px-4 py-3.5 align-middle text-sm text-center">
+                    <span className={mw.inactiveJobs > 0 ? "text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full" : "text-slate-400 font-medium"}>{mw.inactiveJobs}</span>
                   </td>
                 </tr>
               ))}
               {workloadList.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                     No workload data found.
                   </td>
                 </tr>
@@ -739,24 +739,24 @@ export default function Dashboard() {
       {/* ── Attention Required Drawer ── */}
       {isAttentionDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setIsAttentionDrawerOpen(false)} />
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsAttentionDrawerOpen(false)} />
           <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-rose-50/40">
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-rose-50/40">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-rose-500" />
                 All Attention Required ({attentionItems.length})
               </h2>
-              <button onClick={() => setIsAttentionDrawerOpen(false)} className="p-2 text-gray-400 hover:bg-white hover:text-gray-600 rounded-lg transition-colors shadow-sm border border-transparent hover:border-gray-200">
+              <button onClick={() => setIsAttentionDrawerOpen(false)} className="p-2 text-slate-400 hover:bg-white hover:text-slate-600 rounded-lg transition-colors shadow-sm border border-transparent hover:border-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
               {attentionItems.map(item => (
                 <div key={item.id} className="p-5 flex flex-col gap-3 hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-start gap-3 justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{item.subject}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-sm font-semibold text-slate-900">{item.subject}</p>
+                      <p className="text-xs text-slate-500 mt-1">
                         {item.clientName} <span className="mx-1">•</span> {item.recruiterName}
                       </p>
                     </div>
@@ -768,8 +768,8 @@ export default function Dashboard() {
                     )}>{item.label}</div>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-sm text-gray-900 font-medium">{item.issue}</span>
-                    <Link onClick={() => setIsAttentionDrawerOpen(false)} to={item.actionLink} className="shrink-0 text-xs font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 px-3 py-1.5 rounded-lg transition-colors">
+                    <span className="text-sm text-slate-900 font-medium">{item.issue}</span>
+                    <Link onClick={() => setIsAttentionDrawerOpen(false)} to={item.actionLink} className="shrink-0 text-xs font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors">
                       {item.actionText}
                     </Link>
                   </div>

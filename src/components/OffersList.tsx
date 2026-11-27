@@ -12,6 +12,7 @@ import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import { Offer, OfferStatus } from '../types';
 import Pagination from './Pagination';
+import Toast from './Toast';
 
 export default function OffersList() {
   const { 
@@ -452,16 +453,11 @@ export default function OffersList() {
 
   return (
     <div className="space-y-6">
-      {/* Toast popup */}
-      {toast && (
-        <div className={cn(
-          "fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 text-white rounded-xl shadow-lg border text-sm font-medium animate-slide-in",
-          toast.type === 'error' ? "bg-red-600 border-red-500" : "bg-slate-900 border-slate-800"
-        )}>
-          {toast.type === 'error' ? <ShieldAlert className="w-4 h-4 text-red-300" /> : <Check className="w-4 h-4 text-green-400" />}
-          {toast.message}
-        </div>
-      )}
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
+      />
 
       {handoffState && handoffState.candidateId && !handoffState.openOfferId && (() => {
         const appOffers = offers.filter(o => o.applicationId === handoffState.applicationId);
@@ -655,10 +651,14 @@ export default function OffersList() {
 
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
           <span>
-            {filtered.length > 0 ? (
-              <>Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-semibold text-slate-700">{filtered.length}</span> offers</>
+            {(activeFiltersCount > 0 || searchTerm.trim()) ? (
+              filtered.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filtered.length}</span> of <span className="font-semibold text-slate-700">{latestOffers.length}</span> offers</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{latestOffers.length}</span> offers found</>
+              )
             ) : (
-              '0 offers found'
+              <>Total: <span className="font-semibold text-slate-700">{latestOffers.length}</span> offers</>
             )}
           </span>
           {(activeFiltersCount > 0 || searchTerm) && (
@@ -682,15 +682,15 @@ export default function OffersList() {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 font-medium">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500">
               <tr>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Candidate</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Job & Client</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider">Current Offer</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Joining Date</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider whitespace-nowrap">Last Activity</th>
-                <th className="px-6 py-3.5 text-xs font-medium uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Candidate</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Job & Client</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Current Offer</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Joining Date</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Last Activity</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -702,30 +702,31 @@ export default function OffersList() {
                 const lastActivityDate = getLastActivity(offer);
 
                 return (
-                  <tr key={offer.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={offer.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="font-medium text-slate-800">{candidate?.fullName}</div>
                       {candidate?.phone && <div className="text-xs text-slate-500 mt-1">{candidate.phone}</div>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="text-slate-800 font-medium">{offer.offeredRole}</div>
                       <div className="text-xs text-slate-500 mt-1">{client?.name}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="text-slate-800 font-medium">{offer.offeredCompensation}</div>
                       <div className="text-xs text-slate-500 mt-1">{offer.contractDuration}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                       {offer.proposedJoiningDate ? formatDate(offer.proposedJoiningDate) : <span className="text-slate-400 italic">Not set</span>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span className={cn(
                           "inline-flex items-center w-fit px-2.5 py-0.5 rounded text-xs font-semibold border",
-                          displayStatus === 'Accepted' ? "bg-green-50 text-green-700 border-green-200" :
+                          displayStatus === 'Accepted' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                           displayStatus === 'Sent' ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          displayStatus === 'Pending Approval' || displayStatus === 'Negotiating' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                          displayStatus === 'Declined' || displayStatus === 'Expired' ? "bg-red-50 text-red-700 border-red-200" :
+                          displayStatus === 'Negotiating' ? "bg-purple-50 text-purple-700 border-purple-200" :
+                          displayStatus === 'Pending Approval' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          displayStatus === 'Declined' || displayStatus === 'Expired' ? "bg-rose-50 text-rose-700 border-rose-200" :
                           "bg-slate-50 text-slate-600 border-slate-200"
                         )}>
                           {displayStatus}
@@ -736,16 +737,16 @@ export default function OffersList() {
                           </span>
                         )}
                         {offer.onboardingStarted && (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-green-600 font-semibold">
+                          <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
                             <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">Onboarding Started</span>
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-700 whitespace-nowrap">
+                    <td className="px-4 py-3.5 align-middle text-slate-700 whitespace-nowrap">
                       {lastActivityDate ? formatDate(lastActivityDate) : <span className="text-slate-400 italic">Not available</span>}
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-4 py-3.5 align-middle text-right whitespace-nowrap">
                       <div className="flex gap-2 justify-end">
                         <button 
                           onClick={() => {
@@ -774,7 +775,7 @@ export default function OffersList() {
                                 setFormError('');
                                 setActiveModal('onboarding_confirm');
                               }} 
-                              className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-2.5 py-1.5 rounded shadow-sm flex items-center gap-1 shrink-0 whitespace-nowrap"
+                              className="text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 rounded shadow-sm flex items-center gap-1 shrink-0 whitespace-nowrap"
                             >
                               <ArrowRight className="w-3.5 h-3.5 shrink-0" /> Start Onboarding
                             </button>
@@ -787,7 +788,7 @@ export default function OffersList() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
                     No offers found matching your criteria.
                   </td>
                 </tr>

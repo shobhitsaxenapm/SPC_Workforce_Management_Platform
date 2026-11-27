@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { mockUsers } from '../data/mockData';
 import { Plus, Search, X, Trash2, AlertTriangle, MoreVertical, Edit2, Ban, PauseCircle, PlayCircle, Eye, FileText } from 'lucide-react';
 import { cn, formatDate } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import FilterPanel, { FilterField } from './FilterPanel';
-import DateRangeFilter from './DateRangeFilter';
 import { DatePreset, isDateInPreset } from '../lib/dateUtils';
 import ProjectFormModal from './ProjectFormModal';
+import Pagination from './Pagination';
 import { Project } from '../types';
 
 export default function ProjectsList() {
@@ -34,6 +34,17 @@ export default function ProjectsList() {
     { key: 'clientId', label: 'Client', options: clientOptions },
     { key: 'status', label: 'Status', options: statusOptions },
     { key: 'engagementType', label: 'Engagement Type', options: engagementTypeOptions },
+    {
+      key: 'datePreset',
+      label: 'Created Date',
+      options: [
+        { value: 'Today', label: 'Today' },
+        { value: 'Last 7 Days', label: 'Last 7 Days' },
+        { value: 'Last 30 Days', label: 'Last 30 Days' },
+        { value: 'This Month', label: 'This Month' },
+        { value: 'Last Quarter', label: 'Last Quarter' },
+      ],
+    },
   ];
 
   const calculateFilled = (projectId: string) => {
@@ -58,6 +69,16 @@ export default function ProjectsList() {
     const matchDate = isDateInPreset(proj.createdAt, datePreset, customStart, customEnd);
     return matchSearch && matchClient && matchStatus && matchEngagementType && matchDate;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, datePreset, customStart, customEnd]);
+
+  const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const hasActiveFilters = Boolean(Object.values(filters).some(Boolean) || datePreset !== 'All Time' || searchTerm.trim());
 
   return (
     <div className="space-y-6" onClick={() => setOpenActionMenuId(null)}>
@@ -91,21 +112,22 @@ export default function ProjectsList() {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <DateRangeFilter
-              preset={datePreset}
-              customStart={customStart}
-              customEnd={customEnd}
-              onChange={(preset, start, end) => {
-                setDatePreset(preset);
-                setCustomStart(start);
-                setCustomEnd(end);
-              }}
-            />
+          <div className="flex items-center justify-end">
             <FilterPanel
               fields={filterFields}
-              values={filters}
-              onChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
+              values={{
+                ...filters,
+                datePreset: datePreset !== 'All Time' ? datePreset : '',
+              }}
+              onChange={(k, v) => {
+                if (k === 'datePreset') {
+                  setDatePreset((v || 'All Time') as DatePreset);
+                  setCustomStart('');
+                  setCustomEnd('');
+                } else {
+                  setFilters(prev => ({ ...prev, [k]: v }));
+                }
+              }}
               onClear={() => {
                 setFilters({ clientId: '', status: '', engagementType: '' });
                 setDatePreset('All Time');
@@ -116,40 +138,108 @@ export default function ProjectsList() {
           </div>
         </div>
 
-        {datePreset !== 'All Time' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
-              <button 
-                onClick={() => {
-                  setDatePreset('All Time');
-                  setCustomStart('');
-                  setCustomEnd('');
-                }} 
-                className="hover:text-blue-900 focus:outline-none"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
+        {(Object.values(filters).some(Boolean) || datePreset !== 'All Time') && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {filters.clientId && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Client: {clients.find(c => c.id === filters.clientId)?.name || filters.clientId}
+                <button type="button" onClick={() => setFilters({ ...filters, clientId: '' })} className="hover:text-blue-900 focus:outline-none">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.status && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Status: {filters.status}
+                <button type="button" onClick={() => setFilters({ ...filters, status: '' })} className="hover:text-blue-900 focus:outline-none">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.engagementType && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Engagement: {filters.engagementType}
+                <button type="button" onClick={() => setFilters({ ...filters, engagementType: '' })} className="hover:text-blue-900 focus:outline-none">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {datePreset !== 'All Time' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Date: {datePreset === 'Custom' ? `${customStart || 'Any'} to ${customEnd || 'Any'}` : datePreset}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setDatePreset('All Time');
+                    setCustomStart('');
+                    setCustomEnd('');
+                  }} 
+                  className="hover:text-blue-900 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setFilters({ clientId: '', status: '', engagementType: '' });
+                setDatePreset('All Time');
+                setCustomStart('');
+                setCustomEnd('');
+              }}
+              className="text-xs text-slate-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+            >
+              Clear all
+            </button>
           </div>
         )}
+
+        <div className="text-xs text-slate-500 font-medium flex items-center justify-between pt-2 border-t border-slate-100">
+          <span>
+            {hasActiveFilters ? (
+              filteredProjects.length > 0 ? (
+                <>Showing <span className="font-semibold text-slate-700">{filteredProjects.length}</span> of <span className="font-semibold text-slate-700">{projects.length}</span> projects</>
+              ) : (
+                <>0 of <span className="font-semibold text-slate-700">{projects.length}</span> projects found</>
+              )
+            ) : (
+              <>Total: <span className="font-semibold text-slate-700">{projects.length}</span> projects</>
+            )}
+          </span>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setFilters({ clientId: '', status: '', engagementType: '' });
+                setDatePreset('All Time');
+                setCustomStart('');
+                setCustomEnd('');
+              }}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              Reset View
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-visible">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-visible">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full text-left text-sm whitespace-nowrap table-fixed">
-            <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500 font-medium">
+            <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left w-3/12">Project Name & Code</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left w-3/12">Client & Engagement</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left w-2/12">Fulfillment Progress</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left w-2/12">Owner & Deadline</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left w-2/12">Status</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right w-1/12">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-3/12">Project Name & Code</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-3/12">Client & Engagement</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-2/12">Fulfillment Progress</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-2/12">Owner & Deadline</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-2/12">Status</th>
+                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right w-1/12">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProjects.map(proj => {
+              {paginatedProjects.map(proj => {
                 const client = clients.find(c => c.id === proj.clientId);
                 const filled = calculateFilled(proj.id);
                 const progress = (filled / proj.totalRequestedHeadcount) * 100;
@@ -157,8 +247,8 @@ export default function ProjectsList() {
                 const isReadonly = proj.status === 'Completed' || proj.status === 'Cancelled';
                 
                 return (
-                  <tr key={proj.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-4 py-3">
+                  <tr key={proj.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="flex flex-col">
                         <Link to={`/projects/${proj.id}`} className="font-semibold text-slate-800 hover:text-blue-600 transition-colors truncate">
                           {proj.projectName}
@@ -166,7 +256,7 @@ export default function ProjectsList() {
                         <span className="text-xs text-slate-500 mt-0.5">{proj.code}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="flex flex-col">
                         <button 
                           onClick={() => setQuickViewClientId(proj.clientId)}
@@ -177,7 +267,7 @@ export default function ProjectsList() {
                         <span className="text-xs text-slate-500 mt-0.5 truncate">{proj.engagementType}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="w-full max-w-[120px]">
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-slate-600 font-medium">{filled} / {proj.totalRequestedHeadcount}</span>
@@ -185,31 +275,31 @@ export default function ProjectsList() {
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-1.5">
                           <div 
-                            className={`bg-blue-500 h-1.5 rounded-full ${progress >= 100 ? 'bg-green-500' : ''}`} 
+                            className={`bg-blue-500 h-1.5 rounded-full ${progress >= 100 ? 'bg-emerald-500' : ''}`} 
                             style={{ width: `${Math.min(progress, 100)}%` }}
                           ></div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="flex flex-col">
                         <span className="text-slate-800 text-sm">{proj.projectOwner || 'Unassigned'}</span>
                         <span className="text-xs text-slate-500 mt-0.5">{proj.targetJoiningDate ? formatDate(proj.targetJoiningDate) : 'No Date'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 align-middle">
                       <span className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
+                        "inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border",
                         proj.status === 'Active' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                        proj.status === 'Draft' && "bg-slate-50 text-slate-700 border-slate-200",
-                        proj.status === 'On Hold' && "bg-amber-50 text-amber-700 border-amber-200",
+                        proj.status === 'Draft' && "bg-slate-100 text-slate-600 border-slate-200",
+                        proj.status === 'On Hold' && "bg-amber-50 text-amber-800 border-amber-300",
                         proj.status === 'Completed' && "bg-blue-50 text-blue-700 border-blue-200",
-                        proj.status === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
+                        proj.status === 'Cancelled' && "bg-slate-100 text-slate-600 border-slate-200"
                       )}>
                         {proj.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3.5 align-middle text-right">
                       <div className="relative inline-block text-left">
                         <button
                           onClick={(e) => {
@@ -324,6 +414,13 @@ export default function ProjectsList() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredProjects.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemLabel="projects"
+        />
       </div>
 
       <ProjectFormModal 
